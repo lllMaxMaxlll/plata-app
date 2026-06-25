@@ -307,7 +307,7 @@ export function TransactionSheet({
           {/* Date */}
           <Field label="Fecha">
             <Popover>
-              <PopoverTrigger asChild>
+              <PopoverTrigger>
                 <Button
                   type="button"
                   variant="outline"
@@ -327,7 +327,6 @@ export function TransactionSheet({
                   mode="single"
                   selected={date}
                   onSelect={setDate}
-                  initialFocus
                   locale={es}
                 />
               </PopoverContent>

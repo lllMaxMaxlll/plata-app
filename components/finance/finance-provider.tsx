@@ -163,7 +163,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       
       defaults.forEach((cat) => {
         const newRef = doc(collection(db, "users", uid, "categories"))
-        batch.set(newRef, cat)
+        batch.set(newRef, { id: newRef.id, ...cat })
       })
       
       await batch.commit()
@@ -222,7 +222,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     })
 
     // Sync stock transactions subcollection (ordered by date descending)
-    const stockTxsRef = collection(db, "users", user.uid, "stock_transactions")
+    const stockTxsRef = collection(db, "users", user.uid, "stockTransactions")
     const stockTxsQuery = query(stockTxsRef, orderBy("date", "desc"))
     const unsubscribeStockTxs = onSnapshot(
       stockTxsQuery,
@@ -326,7 +326,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   async function addAccount(input: Omit<Account, "id">) {
     if (!user) throw new Error("Usuario no autenticado.")
     const newAccRef = doc(collection(db, "users", user.uid, "accounts"))
-    await setDoc(newAccRef, input)
+    await setDoc(newAccRef, { id: newAccRef.id, ...input })
   }
 
   async function updateAccount(id: string, input: Partial<Omit<Account, "id">>) {
@@ -405,6 +405,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
 
         // 3. Write transaction document
         transaction.set(txDocRef, {
+          id: txId,
           type: input.type,
           amount: input.amount,
           accountId: input.accountId,
@@ -489,7 +490,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         }
 
         const newPrimaryAccRef = doc(db, "users", user.uid, "accounts", input.accountId)
-        let newPrimarySnap = oldPrimarySnap
+        let newPrimarySnap: any = oldPrimarySnap
         if (input.accountId !== currentOldTx.accountId) {
           newPrimarySnap = await transaction.get(newPrimaryAccRef)
           if (!newPrimarySnap.exists()) throw new Error("Nueva cuenta de origen no existe.")
@@ -508,7 +509,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
 
         // WRITES:
         // 1. Reverse old balance changes
-        let oldPrimaryBalance = Number(oldPrimarySnap.data().balance)
+        let oldPrimaryBalance = Number(oldPrimarySnap.data()?.balance ?? 0)
         if (currentOldTx.type === "income") {
           oldPrimaryBalance -= currentOldTx.amount
         } else if (currentOldTx.type === "expense") {
@@ -519,17 +520,17 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
 
         let oldSecondaryBalance = 0
         if (oldSecondarySnap && oldSecondarySnap.exists()) {
-          oldSecondaryBalance = Number(oldSecondarySnap.data().balance) - (currentOldTx.toAmount ?? currentOldTx.amount)
+          oldSecondaryBalance = Number(oldSecondarySnap.data()?.balance ?? 0) - (currentOldTx.toAmount ?? currentOldTx.amount)
         }
 
         // 2. Set base reversed balances for target accounts
-        let newPrimaryBalance = input.accountId === currentOldTx.accountId ? oldPrimaryBalance : Number(newPrimarySnap.data().balance)
+        let newPrimaryBalance = input.accountId === currentOldTx.accountId ? oldPrimaryBalance : Number(newPrimarySnap.data()?.balance ?? 0)
         let newSecondaryBalance = 0
         if (newSecondarySnap) {
           if (currentOldTx.type === "transfer" && input.toAccountId === currentOldTx.toAccountId) {
             newSecondaryBalance = oldSecondaryBalance
           } else {
-            newSecondaryBalance = Number(newSecondarySnap.data().balance)
+            newSecondaryBalance = Number(newSecondarySnap.data()?.balance ?? 0)
           }
         }
 
@@ -545,6 +546,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
 
         // 4. Update Firestore documents
         transaction.set(txDocRef, {
+          id: id,
           type: input.type,
           amount: input.amount,
           accountId: input.accountId,
@@ -660,7 +662,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   async function addCategory(name: string, type: "income" | "expense", color: string) {
     if (!user) throw new Error("Usuario no autenticado.")
     const newCatRef = doc(collection(db, "users", user.uid, "categories"))
-    await setDoc(newCatRef, { name, type, color })
+    await setDoc(newCatRef, { id: newCatRef.id, name, type, color })
   }
 
   async function updateCategory(id: string, name: string, color: string) {
@@ -844,6 +846,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
 
     const docRef = doc(db, "users", user.uid, "watchlist", cleanSym)
     await setDoc(docRef, {
+      id: cleanSym,
       symbol: cleanSym,
       name,
       addedAt: new Date().toISOString(),
@@ -869,7 +872,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
 
     const symbol = input.symbol.trim().toUpperCase()
     const txId = `st-${Date.now()}`
-    const txDocRef = doc(db, "users", user.uid, "stock_transactions", txId)
+    const txDocRef = doc(db, "users", user.uid, "stockTransactions", txId)
     const accountRef = doc(db, "users", user.uid, "accounts", input.accountId)
 
     const totalAmount = input.shares * input.price
@@ -917,6 +920,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         const finTxDocRef = doc(db, "users", user.uid, "transactions", finTxId)
 
         transaction.set(finTxDocRef, {
+          id: finTxId,
           type: input.type === "buy" ? "expense" : "income",
           amount: totalAmount,
           accountId: input.accountId,
