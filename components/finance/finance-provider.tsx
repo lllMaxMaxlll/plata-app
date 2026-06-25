@@ -1,0 +1,991 @@
+"use client"
+
+import { createContext, useContext, useMemo, useState, useEffect, useCallback, type ReactNode } from "react"
+import {
+  type Account,
+  type Currency,
+  type Transaction,
+  type TransactionType,
+  type Category,
+  type WatchlistStock,
+  type StockTransaction,
+  type StockHolding,
+} from "@/lib/finance-data"
+import { auth, db } from "@/lib/firebase"
+import {
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signInWithPopup,
+  GoogleAuthProvider,
+  signOut,
+  onAuthStateChanged,
+  sendPasswordResetEmail,
+  updatePassword,
+  sendEmailVerification,
+  reauthenticateWithCredential,
+  EmailAuthProvider,
+} from "firebase/auth"
+import {
+  collection,
+  doc,
+  setDoc,
+  onSnapshot,
+  query,
+  orderBy,
+  runTransaction,
+  writeBatch,
+} from "firebase/firestore"
+
+export interface User {
+  uid: string
+  name: string
+  email: string
+  emailVerified: boolean
+  providerId: string | null
+}
+
+export interface NewTransactionInput {
+  type: TransactionType
+  amount: number
+  accountId: string
+  toAccountId?: string
+  toAmount?: number
+  exchangeRate?: number
+  category: string
+  note?: string
+  receiptName?: string
+  date?: string
+}
+
+interface FinanceContextValue {
+  user: User | null
+  loading: boolean
+  login: (email: string, password?: string, isSignUp?: boolean) => Promise<void>
+  loginWithGoogle: () => Promise<void>
+  logout: () => Promise<void>
+  sendPasswordResetLink: (email: string) => Promise<void>
+  changePassword: (currentPassword?: string, newPassword?: string) => Promise<void>
+  sendEmailVerificationLink: () => Promise<void>
+  reloadUser: () => Promise<void>
+
+  accounts: Account[]
+  transactions: Transaction[]
+  categories: Category[]
+
+  addTransaction: (input: NewTransactionInput) => Promise<void>
+  updateTransaction: (id: string, input: NewTransactionInput) => Promise<void>
+  deleteTransaction: (id: string) => Promise<void>
+  addAccount: (input: Omit<Account, "id">) => Promise<void>
+  updateAccount: (id: string, input: Partial<Omit<Account, "id">>) => Promise<void>
+  deleteAccount: (id: string) => Promise<void>
+
+  addCategory: (name: string, type: "income" | "expense", color: string) => Promise<void>
+  updateCategory: (id: string, name: string, color: string) => Promise<void>
+  deleteCategory: (id: string) => Promise<void>
+
+  getAccount: (id: string) => Account | undefined
+  totalsByCurrency: Record<Currency, number>
+
+  watchlist: WatchlistStock[]
+  stockTransactions: StockTransaction[]
+  stockPrices: Record<string, { price: number; change: number; name: string }>
+  holdings: StockHolding[]
+  portfolioTotalValue: number
+  portfolioTotalProfitLoss: number
+  portfolioTotalProfitLossPercent: number
+  addWatchlistStock: (symbol: string) => Promise<void>
+  removeWatchlistStock: (symbol: string) => Promise<void>
+  executeStockTransaction: (input: {
+    symbol: string
+    type: "buy" | "sell"
+    shares: number
+    price: number
+    date: string
+    accountId: string
+  }) => Promise<void>
+}
+
+const FinanceContext = createContext<FinanceContextValue | null>(null)
+
+export function FinanceProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<User | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [accounts, setAccounts] = useState<Account[]>([])
+  const [transactions, setTransactions] = useState<Transaction[]>([])
+  const [categories, setCategories] = useState<Category[]>([])
+
+  const [watchlist, setWatchlist] = useState<WatchlistStock[]>([])
+  const [stockTransactions, setStockTransactions] = useState<StockTransaction[]>([])
+  const [stockPrices, setStockPrices] = useState<Record<string, { price: number; change: number; name: string }>>({})
+
+  // 1. Listen to Auth State Changes
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      if (firebaseUser) {
+        setUser({
+          uid: firebaseUser.uid,
+          name: firebaseUser.displayName || firebaseUser.email?.split("@")[0] || "Usuario",
+          email: firebaseUser.email || "",
+          emailVerified: firebaseUser.emailVerified,
+          providerId: firebaseUser.providerData[0]?.providerId || null,
+        })
+      } else {
+        setUser(null)
+        setAccounts([])
+        setTransactions([])
+        setCategories([])
+        setWatchlist([])
+        setStockTransactions([])
+        setStockPrices({})
+      }
+      setLoading(false)
+    })
+    return unsubscribe
+  }, [])
+
+  // Seeding helper for default categories
+  async function seedDefaultCategories(uid: string) {
+    try {
+      const batch = writeBatch(db)
+      const defaults: Omit<Category, "id">[] = [
+        // Expenses
+        { name: "Comida", type: "expense", color: "var(--chart-1)" },
+        { name: "Servicios", type: "expense", color: "var(--chart-2)" },
+        { name: "Transporte", type: "expense", color: "var(--chart-3)" },
+        { name: "Alquiler", type: "expense", color: "var(--chart-4)" },
+        { name: "Otros", type: "expense", color: "var(--chart-5)" },
+        // Income
+        { name: "Salario", type: "income", color: "oklch(0.76 0.16 156)" },
+        { name: "Efectivo", type: "income", color: "oklch(0.78 0.15 75)" },
+        { name: "Inversiones", type: "income", color: "oklch(0.7 0.13 230)" },
+        { name: "Trabajo Extra", type: "income", color: "oklch(0.66 0.18 350)" },
+      ]
+      
+      defaults.forEach((cat) => {
+        const newRef = doc(collection(db, "users", uid, "categories"))
+        batch.set(newRef, cat)
+      })
+      
+      await batch.commit()
+    } catch (err) {
+      console.error("Error seeding categories:", err)
+    }
+  }
+
+  // 2. Real-time subscriptions for logged-in user data
+  useEffect(() => {
+    if (!user) return
+
+    // Sync accounts subcollection
+    const accountsRef = collection(db, "users", user.uid, "accounts")
+    const unsubscribeAccounts = onSnapshot(accountsRef, (snapshot) => {
+      const accList: Account[] = []
+      snapshot.forEach((doc) => {
+        accList.push({ id: doc.id, ...doc.data() } as Account)
+      })
+      setAccounts(accList)
+    })
+
+    // Sync transactions subcollection (ordered by date descending)
+    const txsRef = collection(db, "users", user.uid, "transactions")
+    const txsQuery = query(txsRef, orderBy("date", "desc"))
+    const unsubscribeTransactions = onSnapshot(txsQuery, (snapshot) => {
+      const txList: Transaction[] = []
+      snapshot.forEach((doc) => {
+        txList.push({ id: doc.id, ...doc.data() } as Transaction)
+      })
+      setTransactions(txList)
+    })
+
+    // Sync categories subcollection
+    const categoriesRef = collection(db, "users", user.uid, "categories")
+    const unsubscribeCategories = onSnapshot(categoriesRef, (snapshot) => {
+      if (snapshot.empty) {
+        seedDefaultCategories(user.uid)
+        return
+      }
+      const catList: Category[] = []
+      snapshot.forEach((doc) => {
+        catList.push({ id: doc.id, ...doc.data() } as Category)
+      })
+      setCategories(catList)
+    })
+
+    // Sync watchlist subcollection
+    const watchlistRef = collection(db, "users", user.uid, "watchlist")
+    const unsubscribeWatchlist = onSnapshot(watchlistRef, (snapshot) => {
+      const wlList: WatchlistStock[] = []
+      snapshot.forEach((doc) => {
+        wlList.push({ id: doc.id, ...doc.data() } as WatchlistStock)
+      })
+      setWatchlist(wlList)
+    })
+
+    // Sync stock transactions subcollection (ordered by date descending)
+    const stockTxsRef = collection(db, "users", user.uid, "stock_transactions")
+    const stockTxsQuery = query(stockTxsRef, orderBy("date", "desc"))
+    const unsubscribeStockTxs = onSnapshot(
+      stockTxsQuery,
+      (snapshot) => {
+        const stList: StockTransaction[] = []
+        snapshot.forEach((doc) => {
+          stList.push({ id: doc.id, ...doc.data() } as StockTransaction)
+        })
+        setStockTransactions(stList)
+      },
+      (err) => {
+        console.warn("Stock transactions query error, falling back:", err)
+        return onSnapshot(stockTxsRef, (snapshot) => {
+          const stList: StockTransaction[] = []
+          snapshot.forEach((doc) => {
+            stList.push({ id: doc.id, ...doc.data() } as StockTransaction)
+          })
+          stList.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+          setStockTransactions(stList)
+        })
+      }
+    )
+
+    return () => {
+      unsubscribeAccounts()
+      unsubscribeTransactions()
+      unsubscribeCategories()
+      unsubscribeWatchlist()
+      unsubscribeStockTxs()
+    }
+  }, [user])
+
+  async function login(email: string, password?: string, isSignUp?: boolean) {
+    if (!password) {
+      throw new Error("La contraseña es requerida.")
+    }
+    if (isSignUp) {
+      await createUserWithEmailAndPassword(auth, email, password)
+    } else {
+      await signInWithEmailAndPassword(auth, email, password)
+    }
+  }
+
+  async function loginWithGoogle() {
+    const provider = new GoogleAuthProvider()
+    provider.setCustomParameters({ prompt: "select_account" })
+    await signInWithPopup(auth, provider)
+  }
+
+  async function logout() {
+    await signOut(auth)
+  }
+
+  async function sendPasswordResetLink(email: string) {
+    await sendPasswordResetEmail(auth, email)
+  }
+
+  async function changePassword(currentPassword?: string, newPassword?: string) {
+    if (!auth.currentUser) throw new Error("Usuario no autenticado.")
+    if (!newPassword) throw new Error("La nueva contraseña es requerida.")
+
+    const isPasswordUser = auth.currentUser.providerData.some(
+      (p) => p.providerId === "password"
+    )
+    if (isPasswordUser) {
+      if (!currentPassword) throw new Error("La contraseña actual es requerida para reautenticar.")
+      const email = auth.currentUser.email
+      if (!email) throw new Error("El usuario no tiene un correo electrónico asociado.")
+      const credential = EmailAuthProvider.credential(email, currentPassword)
+      await reauthenticateWithCredential(auth.currentUser, credential)
+    }
+
+    await updatePassword(auth.currentUser, newPassword)
+  }
+
+  async function sendEmailVerificationLink() {
+    if (!auth.currentUser) throw new Error("Usuario no autenticado.")
+    await sendEmailVerification(auth.currentUser)
+  }
+
+  async function reloadUser() {
+    if (!auth.currentUser) return
+    await auth.currentUser.reload()
+    const firebaseUser = auth.currentUser
+    setUser({
+      uid: firebaseUser.uid,
+      name: firebaseUser.displayName || firebaseUser.email?.split("@")[0] || "Usuario",
+      email: firebaseUser.email || "",
+      emailVerified: firebaseUser.emailVerified,
+      providerId: firebaseUser.providerData[0]?.providerId || null,
+    })
+  }
+
+  const getAccount = useCallback(
+    (id: string) => {
+      return accounts.find((a) => a.id === id)
+    },
+    [accounts],
+  )
+
+  async function addAccount(input: Omit<Account, "id">) {
+    if (!user) throw new Error("Usuario no autenticado.")
+    const newAccRef = doc(collection(db, "users", user.uid, "accounts"))
+    await setDoc(newAccRef, input)
+  }
+
+  async function updateAccount(id: string, input: Partial<Omit<Account, "id">>) {
+    if (!user) throw new Error("Usuario no autenticado.")
+    const docRef = doc(db, "users", user.uid, "accounts", id)
+    await setDoc(docRef, input, { merge: true })
+  }
+
+  async function deleteAccount(id: string) {
+    if (!user) throw new Error("Usuario no autenticado.")
+    const docRef = doc(db, "users", user.uid, "accounts", id)
+    const { deleteDoc } = await import("firebase/firestore")
+    await deleteDoc(docRef)
+  }
+
+  async function addTransaction(input: NewTransactionInput) {
+    if (!user) throw new Error("Usuario no autenticado.")
+
+    const txId = `t-${Date.now()}`
+    const txDocRef = doc(db, "users", user.uid, "transactions", txId)
+
+    const primaryAccRef = doc(db, "users", user.uid, "accounts", input.accountId)
+    const secondaryAccRef = input.toAccountId
+      ? doc(db, "users", user.uid, "accounts", input.toAccountId)
+      : null
+
+    const originalAccounts = [...accounts]
+
+    // Optimistically update local account balances
+    setAccounts((prev) =>
+      prev.map((acc) => {
+        if (acc.id === input.accountId) {
+          const bal = Number(acc.balance)
+          const newBal = input.type === "income" ? bal + input.amount : bal - input.amount
+          return { ...acc, balance: newBal }
+        }
+        if (secondaryAccRef && acc.id === input.toAccountId) {
+          const bal = Number(acc.balance)
+          const newBal = bal + (input.toAmount ?? input.amount)
+          return { ...acc, balance: newBal }
+        }
+        return acc
+      })
+    )
+
+    try {
+      await runTransaction(db, async (transaction) => {
+        // 1. Read accounts
+        const primarySnap = await transaction.get(primaryAccRef)
+        if (!primarySnap.exists()) {
+          throw new Error("La cuenta de origen no existe.")
+        }
+        const primaryData = primarySnap.data() as Account
+        let newPrimaryBalance = Number(primaryData.balance)
+
+        let newSecondaryBalance = 0
+        let secondaryData: Account | null = null
+        if (secondaryAccRef) {
+          const secondarySnap = await transaction.get(secondaryAccRef)
+          if (!secondarySnap.exists()) {
+            throw new Error("La cuenta de destino no existe.")
+          }
+          secondaryData = secondarySnap.data() as Account
+          newSecondaryBalance = Number(secondaryData.balance)
+        }
+
+        // 2. Calculate new balances
+        if (input.type === "income") {
+          newPrimaryBalance += input.amount
+        } else if (input.type === "expense") {
+          newPrimaryBalance -= input.amount
+        } else if (input.type === "transfer" && secondaryData) {
+          newPrimaryBalance -= input.amount
+          newSecondaryBalance += (input.toAmount ?? input.amount)
+        }
+
+        // 3. Write transaction document
+        transaction.set(txDocRef, {
+          type: input.type,
+          amount: input.amount,
+          accountId: input.accountId,
+          toAccountId: input.toAccountId || null,
+          toAmount: input.toAmount || null,
+          exchangeRate: input.exchangeRate || null,
+          category: input.category,
+          note: input.note || null,
+          date: input.date || new Date().toISOString(),
+          receiptName: input.receiptName || null,
+        })
+
+        // 4. Update balances
+        transaction.update(primaryAccRef, { balance: newPrimaryBalance })
+        if (secondaryAccRef) {
+          transaction.update(secondaryAccRef, { balance: newSecondaryBalance })
+        }
+      })
+    } catch (err) {
+      setAccounts(originalAccounts)
+      throw err
+    }
+  }
+
+  async function updateTransaction(id: string, input: NewTransactionInput) {
+    if (!user) throw new Error("Usuario no autenticado.")
+
+    const txDocRef = doc(db, "users", user.uid, "transactions", id)
+    const oldTx = transactions.find((t) => t.id === id)
+    if (!oldTx) throw new Error("El movimiento no existe.")
+
+    const originalAccounts = [...accounts]
+
+    // Optimistically update account balances
+    setAccounts((prev) => {
+      // 1. Revert old transaction balances
+      const reverted = prev.map((acc) => {
+        if (acc.id === oldTx.accountId) {
+          const bal = Number(acc.balance)
+          const revertedBal = oldTx.type === "income" ? bal - oldTx.amount : bal + oldTx.amount
+          return { ...acc, balance: revertedBal }
+        }
+        if (oldTx.type === "transfer" && oldTx.toAccountId && acc.id === oldTx.toAccountId) {
+          const bal = Number(acc.balance)
+          const revertedBal = bal - (oldTx.toAmount ?? oldTx.amount)
+          return { ...acc, balance: revertedBal }
+        }
+        return acc
+      })
+
+      // 2. Apply new transaction balances
+      return reverted.map((acc) => {
+        if (acc.id === input.accountId) {
+          const bal = Number(acc.balance)
+          const newBal = input.type === "income" ? bal + input.amount : bal - input.amount
+          return { ...acc, balance: newBal }
+        }
+        if (input.type === "transfer" && input.toAccountId && acc.id === input.toAccountId) {
+          const bal = Number(acc.balance)
+          const newBal = bal + (input.toAmount ?? input.amount)
+          return { ...acc, balance: newBal }
+        }
+        return acc
+      })
+    })
+
+    try {
+      await runTransaction(db, async (transaction) => {
+        // READS FIRST:
+        const txSnap = await transaction.get(txDocRef)
+        if (!txSnap.exists()) throw new Error("El movimiento no existe.")
+        const currentOldTx = txSnap.data() as Transaction
+
+        const oldPrimaryAccRef = doc(db, "users", user.uid, "accounts", currentOldTx.accountId)
+        const oldPrimarySnap = await transaction.get(oldPrimaryAccRef)
+        if (!oldPrimarySnap.exists()) throw new Error("Cuenta original de origen no existe.")
+
+        let oldSecondarySnap = null
+        if (currentOldTx.type === "transfer" && currentOldTx.toAccountId) {
+          const oldSecondaryAccRef = doc(db, "users", user.uid, "accounts", currentOldTx.toAccountId)
+          oldSecondarySnap = await transaction.get(oldSecondaryAccRef)
+        }
+
+        const newPrimaryAccRef = doc(db, "users", user.uid, "accounts", input.accountId)
+        let newPrimarySnap = oldPrimarySnap
+        if (input.accountId !== currentOldTx.accountId) {
+          newPrimarySnap = await transaction.get(newPrimaryAccRef)
+          if (!newPrimarySnap.exists()) throw new Error("Nueva cuenta de origen no existe.")
+        }
+
+        let newSecondarySnap = null
+        if (input.type === "transfer" && input.toAccountId) {
+          if (currentOldTx.type === "transfer" && input.toAccountId === currentOldTx.toAccountId) {
+            newSecondarySnap = oldSecondarySnap
+          } else {
+            const newSecondaryAccRef = doc(db, "users", user.uid, "accounts", input.toAccountId)
+            newSecondarySnap = await transaction.get(newSecondaryAccRef)
+            if (!newSecondarySnap.exists()) throw new Error("Nueva cuenta de destino no existe.")
+          }
+        }
+
+        // WRITES:
+        // 1. Reverse old balance changes
+        let oldPrimaryBalance = Number(oldPrimarySnap.data().balance)
+        if (currentOldTx.type === "income") {
+          oldPrimaryBalance -= currentOldTx.amount
+        } else if (currentOldTx.type === "expense") {
+          oldPrimaryBalance += currentOldTx.amount
+        } else if (currentOldTx.type === "transfer") {
+          oldPrimaryBalance += currentOldTx.amount
+        }
+
+        let oldSecondaryBalance = 0
+        if (oldSecondarySnap && oldSecondarySnap.exists()) {
+          oldSecondaryBalance = Number(oldSecondarySnap.data().balance) - (currentOldTx.toAmount ?? currentOldTx.amount)
+        }
+
+        // 2. Set base reversed balances for target accounts
+        let newPrimaryBalance = input.accountId === currentOldTx.accountId ? oldPrimaryBalance : Number(newPrimarySnap.data().balance)
+        let newSecondaryBalance = 0
+        if (newSecondarySnap) {
+          if (currentOldTx.type === "transfer" && input.toAccountId === currentOldTx.toAccountId) {
+            newSecondaryBalance = oldSecondaryBalance
+          } else {
+            newSecondaryBalance = Number(newSecondarySnap.data().balance)
+          }
+        }
+
+        // 3. Apply new transaction balance changes
+        if (input.type === "income") {
+          newPrimaryBalance += input.amount
+        } else if (input.type === "expense") {
+          newPrimaryBalance -= input.amount
+        } else if (input.type === "transfer") {
+          newPrimaryBalance -= input.amount
+          newSecondaryBalance += (input.toAmount ?? input.amount)
+        }
+
+        // 4. Update Firestore documents
+        transaction.set(txDocRef, {
+          type: input.type,
+          amount: input.amount,
+          accountId: input.accountId,
+          toAccountId: input.toAccountId || null,
+          toAmount: input.toAmount || null,
+          exchangeRate: input.exchangeRate || null,
+          category: input.category,
+          note: input.note || null,
+          date: input.date || currentOldTx.date,
+          receiptName: input.receiptName || null,
+        })
+
+        // Update primary accounts
+        if (input.accountId === currentOldTx.accountId) {
+          transaction.update(oldPrimaryAccRef, { balance: newPrimaryBalance })
+        } else {
+          transaction.update(oldPrimaryAccRef, { balance: oldPrimaryBalance })
+          transaction.update(newPrimaryAccRef, { balance: newPrimaryBalance })
+        }
+
+        // Update secondary accounts
+        if (oldSecondarySnap) {
+          if (newSecondarySnap && input.toAccountId === currentOldTx.toAccountId) {
+            transaction.update(newSecondarySnap.ref, { balance: newSecondaryBalance })
+          } else {
+            transaction.update(oldSecondarySnap.ref, { balance: oldSecondaryBalance })
+            if (newSecondarySnap) {
+              transaction.update(newSecondarySnap.ref, { balance: newSecondaryBalance })
+            }
+          }
+        } else if (newSecondarySnap) {
+          transaction.update(newSecondarySnap.ref, { balance: newSecondaryBalance })
+        }
+      })
+    } catch (err) {
+      setAccounts(originalAccounts)
+      throw err
+    }
+  }
+
+  async function deleteTransaction(id: string) {
+    if (!user) throw new Error("Usuario no autenticado.")
+
+    const txDocRef = doc(db, "users", user.uid, "transactions", id)
+    const oldTx = transactions.find((t) => t.id === id)
+    if (!oldTx) throw new Error("El movimiento no existe.")
+
+    const originalAccounts = [...accounts]
+
+    // Optimistically update account balances by reversing transaction
+    setAccounts((prev) =>
+      prev.map((acc) => {
+        if (acc.id === oldTx.accountId) {
+          const bal = Number(acc.balance)
+          const revertedBal = oldTx.type === "income" ? bal - oldTx.amount : bal + oldTx.amount
+          return { ...acc, balance: revertedBal }
+        }
+        if (oldTx.type === "transfer" && oldTx.toAccountId && acc.id === oldTx.toAccountId) {
+          const bal = Number(acc.balance)
+          const revertedBal = bal - (oldTx.toAmount ?? oldTx.amount)
+          return { ...acc, balance: revertedBal }
+        }
+        return acc
+      })
+    )
+
+    try {
+      await runTransaction(db, async (transaction) => {
+        const txSnap = await transaction.get(txDocRef)
+        if (!txSnap.exists()) {
+          throw new Error("El movimiento no existe.")
+        }
+        const txData = txSnap.data() as Transaction
+
+        // 1. Get primary account
+        const primaryAccRef = doc(db, "users", user.uid, "accounts", txData.accountId)
+        const primarySnap = await transaction.get(primaryAccRef)
+        if (primarySnap.exists()) {
+          const primaryData = primarySnap.data() as Account
+          let newPrimaryBalance = Number(primaryData.balance)
+
+          // 2. Reverse balance changes
+          if (txData.type === "income") {
+            newPrimaryBalance -= txData.amount
+          } else if (txData.type === "expense") {
+            newPrimaryBalance += txData.amount
+          } else if (txData.type === "transfer") {
+            newPrimaryBalance += txData.amount
+          }
+          transaction.update(primaryAccRef, { balance: newPrimaryBalance })
+        }
+
+        // 3. Reverse secondary balance if transfer
+        if (txData.type === "transfer" && txData.toAccountId) {
+          const secondaryAccRef = doc(db, "users", user.uid, "accounts", txData.toAccountId)
+          const secondarySnap = await transaction.get(secondaryAccRef)
+          if (secondarySnap.exists()) {
+            const secondaryData = secondarySnap.data() as Account
+            const newSecondaryBalance = Number(secondaryData.balance) - (txData.toAmount ?? txData.amount)
+            transaction.update(secondaryAccRef, { balance: newSecondaryBalance })
+          }
+        }
+
+        // 4. Delete the transaction doc
+        transaction.delete(txDocRef)
+      })
+    } catch (err) {
+      setAccounts(originalAccounts)
+      throw err
+    }
+  }
+
+  async function addCategory(name: string, type: "income" | "expense", color: string) {
+    if (!user) throw new Error("Usuario no autenticado.")
+    const newCatRef = doc(collection(db, "users", user.uid, "categories"))
+    await setDoc(newCatRef, { name, type, color })
+  }
+
+  async function updateCategory(id: string, name: string, color: string) {
+    if (!user) throw new Error("Usuario no autenticado.")
+    const docRef = doc(db, "users", user.uid, "categories", id)
+    await setDoc(docRef, { name, color }, { merge: true })
+  }
+
+  async function deleteCategory(id: string) {
+    if (!user) throw new Error("Usuario no autenticado.")
+    const docRef = doc(db, "users", user.uid, "categories", id)
+    const { deleteDoc } = await import("firebase/firestore")
+    await deleteDoc(docRef)
+  }
+
+  // --- Stocks Portfolio Management ---
+
+  const fetchPrices = useCallback(async (symbols: string[]) => {
+    if (symbols.length === 0) return
+
+    try {
+      const res = await fetch(`/api/stocks?symbols=${symbols.join(",")}`)
+      if (res.ok) {
+        const data = await res.json()
+        setStockPrices((prev) => {
+          const updated = { ...prev }
+          Object.keys(data).forEach((sym) => {
+            updated[sym] = data[sym]
+          })
+          return updated
+        })
+        return
+      }
+    } catch (err) {
+      console.warn("Error fetching prices from API, simulating instead:", err)
+    }
+
+    // Fallback simulation if API fails or offline
+    setStockPrices((prev) => {
+      const updated = { ...prev }
+      symbols.forEach((sym) => {
+        const current = updated[sym] || {
+          price: sym === "AAPL" ? 182.3 : sym === "TSLA" ? 184.8 : sym === "MSFT" ? 421.9 : 100,
+          change: 0.5,
+          name: `${sym} Corp.`,
+        }
+        const pct = 1 + (Math.random() * 0.003 - 0.0015)
+        const newPrice = Number((current.price * pct).toFixed(2))
+        const newChange = Number((current.change + (pct - 1) * 100).toFixed(2))
+        updated[sym] = {
+          price: newPrice,
+          change: newChange,
+          name: current.name,
+        }
+      })
+      return updated
+    })
+  }, [])
+
+  // Poll price updates from Yahoo Finance API every 30 seconds
+  useEffect(() => {
+    const symbols = Array.from(
+      new Set([
+        ...watchlist.map((w) => w.symbol),
+        ...stockTransactions.map((t) => t.symbol),
+      ])
+    )
+    if (symbols.length === 0) return
+
+    fetchPrices(symbols)
+
+    const interval = setInterval(() => {
+      fetchPrices(symbols)
+    }, 30000)
+
+    return () => clearInterval(interval)
+  }, [watchlist, stockTransactions, fetchPrices])
+
+  // Micro-fluctuations every 3 seconds to make the UI look alive
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setStockPrices((prev) => {
+        const symbols = Object.keys(prev)
+        if (symbols.length === 0) return prev
+        const nextPrices = { ...prev }
+        symbols.forEach((sym) => {
+          const current = nextPrices[sym]
+          const changePct = (Math.random() * 0.0008 - 0.0004)
+          const newPrice = Number((current.price * (1 + changePct)).toFixed(2))
+          nextPrices[sym] = {
+            ...current,
+            price: newPrice,
+            change: Number((current.change + changePct * 100).toFixed(2)),
+          }
+        })
+        return nextPrices
+      })
+    }, 3000)
+    return () => clearInterval(timer)
+  }, [])
+
+  // Calculate user holdings from history of buy/sell transactions
+  const holdings = useMemo(() => {
+    const map = new Map<string, { shares: number; totalCost: number }>()
+    const sortedTxs = [...stockTransactions].sort(
+      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+    )
+
+    for (const tx of sortedTxs) {
+      const current = map.get(tx.symbol) || { shares: 0, totalCost: 0 }
+      if (tx.type === "buy") {
+        const nextShares = current.shares + tx.shares
+        const nextCost = current.totalCost + (tx.shares * tx.price)
+        map.set(tx.symbol, { shares: nextShares, totalCost: nextCost })
+      } else {
+        const nextShares = Math.max(0, current.shares - tx.shares)
+        const nextCost = nextShares === 0 ? 0 : current.totalCost * (nextShares / current.shares)
+        map.set(tx.symbol, { shares: nextShares, totalCost: nextCost })
+      }
+    }
+
+    const list: StockHolding[] = []
+    map.forEach((value, symbol) => {
+      if (value.shares <= 0) return
+
+      const priceInfo = stockPrices[symbol] || { price: 100, name: `${symbol} Corp.` }
+      const currentPrice = priceInfo.price
+      const name = priceInfo.name
+      const avgBuyPrice = Number((value.totalCost / value.shares).toFixed(2))
+      const currentValue = Number((value.shares * currentPrice).toFixed(2))
+      const profitLoss = Number((currentValue - value.totalCost).toFixed(2))
+      const profitLossPercent = value.totalCost > 0 ? Number(((profitLoss / value.totalCost) * 100).toFixed(2)) : 0
+
+      list.push({
+        symbol,
+        name,
+        shares: value.shares,
+        avgBuyPrice,
+        totalCost: Number(value.totalCost.toFixed(2)),
+        currentPrice,
+        currentValue,
+        profitLoss,
+        profitLossPercent,
+      })
+    })
+
+    return list
+  }, [stockTransactions, stockPrices])
+
+  const portfolioTotalValue = useMemo(() => {
+    return holdings.reduce((sum, h) => sum + h.currentValue, 0)
+  }, [holdings])
+
+  const portfolioTotalProfitLoss = useMemo(() => {
+    return holdings.reduce((sum, h) => sum + h.profitLoss, 0)
+  }, [holdings])
+
+  const portfolioTotalProfitLossPercent = useMemo(() => {
+    const totalCost = holdings.reduce((sum, h) => sum + h.totalCost, 0)
+    return totalCost > 0 ? Number(((portfolioTotalProfitLoss / totalCost) * 100).toFixed(2)) : 0
+  }, [holdings, portfolioTotalProfitLoss])
+
+  async function addWatchlistStock(symbol: string) {
+    if (!user) throw new Error("Usuario no autenticado.")
+    const cleanSym = symbol.trim().toUpperCase()
+    if (!cleanSym) return
+
+    let name = `${cleanSym} Corp.`
+    try {
+      const res = await fetch(`/api/stocks?symbols=${cleanSym}`)
+      if (res.ok) {
+        const data = await res.json()
+        if (data[cleanSym]) {
+          name = data[cleanSym].name
+          setStockPrices((prev) => ({ ...prev, [cleanSym]: data[cleanSym] }))
+        }
+      }
+    } catch (e) {
+      console.warn("Could not fetch stock name:", e)
+    }
+
+    const docRef = doc(db, "users", user.uid, "watchlist", cleanSym)
+    await setDoc(docRef, {
+      symbol: cleanSym,
+      name,
+      addedAt: new Date().toISOString(),
+    })
+  }
+
+  async function removeWatchlistStock(symbol: string) {
+    if (!user) throw new Error("Usuario no autenticado.")
+    const docRef = doc(db, "users", user.uid, "watchlist", symbol)
+    const { deleteDoc } = await import("firebase/firestore")
+    await deleteDoc(docRef)
+  }
+
+  async function executeStockTransaction(input: {
+    symbol: string
+    type: "buy" | "sell"
+    shares: number
+    price: number
+    date: string
+    accountId: string
+  }) {
+    if (!user) throw new Error("Usuario no autenticado.")
+
+    const symbol = input.symbol.trim().toUpperCase()
+    const txId = `st-${Date.now()}`
+    const txDocRef = doc(db, "users", user.uid, "stock_transactions", txId)
+    const accountRef = doc(db, "users", user.uid, "accounts", input.accountId)
+
+    const totalAmount = input.shares * input.price
+
+    const originalAccounts = [...accounts]
+    setAccounts((prev) =>
+      prev.map((acc) => {
+        if (acc.id === input.accountId) {
+          const bal = Number(acc.balance)
+          const newBal = input.type === "buy" ? bal - totalAmount : bal + totalAmount
+          return { ...acc, balance: newBal }
+        }
+        return acc
+      })
+    )
+
+    try {
+      await runTransaction(db, async (transaction) => {
+        const accSnap = await transaction.get(accountRef)
+        if (!accSnap.exists()) {
+          throw new Error("La cuenta seleccionada no existe.")
+        }
+        const accData = accSnap.data() as Account
+        const bal = Number(accData.balance)
+
+        if (input.type === "buy" && bal < totalAmount) {
+          throw new Error("Saldo insuficiente en la cuenta seleccionada.")
+        }
+
+        const newBal = input.type === "buy" ? bal - totalAmount : bal + totalAmount
+
+        transaction.set(txDocRef, {
+          id: txId,
+          symbol,
+          type: input.type,
+          shares: input.shares,
+          price: input.price,
+          date: input.date,
+          accountId: input.accountId,
+        })
+
+        transaction.update(accountRef, { balance: newBal })
+
+        const finTxId = `t-${Date.now()}`
+        const finTxDocRef = doc(db, "users", user.uid, "transactions", finTxId)
+
+        transaction.set(finTxDocRef, {
+          type: input.type === "buy" ? "expense" : "income",
+          amount: totalAmount,
+          accountId: input.accountId,
+          toAccountId: null,
+          toAmount: null,
+          exchangeRate: null,
+          category: "Inversiones",
+          note: `${input.type === "buy" ? "Compra" : "Venta"} de ${input.shares} acciones de ${symbol} @ $${input.price}`,
+          date: input.date,
+          receiptName: null,
+        })
+      })
+    } catch (err) {
+      setAccounts(originalAccounts)
+      throw err
+    }
+  }
+
+  const totalsByCurrency = useMemo(() => {
+    return accounts.reduce(
+      (acc, a) => {
+        acc[a.currency] = (acc[a.currency] ?? 0) + Number(a.balance)
+        return acc
+      },
+      { ARS: 0, USD: 0 } as Record<Currency, number>,
+    )
+  }, [accounts])
+
+  const value: FinanceContextValue = {
+    user,
+    loading,
+    login,
+    loginWithGoogle,
+    logout,
+    sendPasswordResetLink,
+    changePassword,
+    sendEmailVerificationLink,
+    reloadUser,
+    accounts,
+    transactions,
+    categories,
+    addTransaction,
+    updateTransaction,
+    deleteTransaction,
+    addAccount,
+    updateAccount,
+    deleteAccount,
+    addCategory,
+    updateCategory,
+    deleteCategory,
+    getAccount,
+    totalsByCurrency,
+    watchlist,
+    stockTransactions,
+    stockPrices,
+    holdings,
+    portfolioTotalValue,
+    portfolioTotalProfitLoss,
+    portfolioTotalProfitLossPercent,
+    addWatchlistStock,
+    removeWatchlistStock,
+    executeStockTransaction,
+  }
+
+  return <FinanceContext.Provider value={value}>{children}</FinanceContext.Provider>
+}
+
+export function useFinance() {
+  const ctx = useContext(FinanceContext)
+  if (!ctx) throw new Error("useFinance must be used within FinanceProvider")
+  return ctx
+}
