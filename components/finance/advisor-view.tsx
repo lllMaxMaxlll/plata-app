@@ -221,7 +221,7 @@ export function AdvisorView({ isDesktop = false }: { isDesktop?: boolean }) {
         {
           role: "assistant",
           content:
-            "¡Hola! Soy **Plata AI**, tu asistente financiero personal. Puedo analizar tus cuentas, transacciones y portafolio de inversiones para responder tus preguntas y darte consejos para optimizar tus finanzas.\n\n¿En qué te puedo ayudar hoy? Podés escribirme o elegir una de las sugerencias de abajo.",
+            "¡Hola! Soy **PLATA AI**, tu asistente financiero personal. Puedo analizar tus cuentas, transacciones y portafolio de inversiones para responder tus preguntas y darte consejos para optimizar tus finanzas.\n\n¿En qué te puedo ayudar hoy? Podés escribirme o elegir una de las sugerencias de abajo.",
           timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         },
       ])
@@ -292,7 +292,7 @@ export function AdvisorView({ isDesktop = false }: { isDesktop?: boolean }) {
       const errorMessage: Message = {
         role: "assistant",
         content:
-          "⚠️ **Hubo un problema al conectarme con Plata AI.** Por favor, verificá tu conexión a internet o intentá de nuevo más tarde.",
+          "⚠️ **Hubo un problema al conectarme con PLATA AI.** Por favor, verificá tu conexión a internet o intentá de nuevo más tarde.",
         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
       }
       setMessages((prev) => [...prev, errorMessage])
@@ -352,7 +352,7 @@ export function AdvisorView({ isDesktop = false }: { isDesktop?: boolean }) {
           </div>
           <div>
             <h1 className="text-base font-bold tracking-tight text-foreground flex items-center gap-1.5">
-              Plata AI
+              PLATA AI
               <span className="inline-flex items-center rounded-full bg-primary/20 px-1.5 py-0.5 text-[9px] font-semibold text-primary uppercase">
                 Beta
               </span>

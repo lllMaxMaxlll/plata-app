@@ -10,11 +10,11 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'Plata — Finanzas ARS & USD',
+  title: 'PLATA — Finanzas ARS & USD',
   description:
     'App de finanzas personales para Argentina: cuentas en pesos y dólares, ingresos, gastos y transferencias.',
   generator: 'v0.app',
-  appleWebApp: { capable: true, statusBarStyle: 'black-translucent', title: 'Plata' },
+  appleWebApp: { capable: true, statusBarStyle: 'black-translucent', title: 'PLATA' },
   icons: {
     icon: [
       {

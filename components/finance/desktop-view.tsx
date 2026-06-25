@@ -96,7 +96,7 @@ export function DesktopView({
             </span>
             <div className="flex flex-col">
               <span className="text-lg font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text">
-                Plata
+                PLATA
               </span>
               <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
                 Finanzas Personales
@@ -118,7 +118,7 @@ export function DesktopView({
             {[
               { id: "home", label: "Inicio", Icon: Home },
               { id: "accounts", label: "Cuentas", Icon: Wallet },
-              { id: "advisor", label: "Plata AI", Icon: Sparkles },
+              { id: "advisor", label: "PLATA AI", Icon: Sparkles },
               { id: "stocks", label: "Portafolio", Icon: LineChart },
               { id: "activity", label: "Actividad", Icon: ReceiptText },
               { id: "profile", label: "Perfil", Icon: User },
@@ -921,7 +921,7 @@ function DesktopProfile({
         </ul>
 
         <div className="mt-8 text-center">
-          <p className="text-[10px] text-muted-foreground font-medium">Plata · Demostración PWA v1.0</p>
+          <p className="text-[10px] text-muted-foreground font-medium">PLATA · Demostración PWA v1.0</p>
           <p className="text-[9px] text-muted-foreground/60 mt-0.5">Conexión de base de datos segura y en tiempo real vía Firebase Firestore</p>
         </div>
       </section>

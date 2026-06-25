@@ -92,7 +92,7 @@ export function AuthView() {
           <div className="mb-5 flex size-14 items-center justify-center rounded-2xl bg-primary text-primary-foreground">
             <Wallet className="size-7" />
           </div>
-          <h1 className="text-2xl font-semibold tracking-tight">Plata</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">PLATA</h1>
           <p className="mt-1 text-sm text-muted-foreground text-balance">
             Tus finanzas en pesos y dólares, en un solo lugar.
           </p>

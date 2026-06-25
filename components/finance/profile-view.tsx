@@ -69,7 +69,7 @@ export function ProfileView({
         Cerrar sesión
       </Button>
 
-      <p className="mt-4 text-center text-xs text-muted-foreground">Plata · demo v1.0</p>
+      <p className="mt-4 text-center text-xs text-muted-foreground">PLATA · demo v1.0</p>
     </section>
   )
 }

@@ -25,7 +25,7 @@ export async function POST(request: Request) {
     })
 
     // Construct the system instruction containing identity and financial context
-    const systemInstructionText = `Eres "Plata AI", un asistente de inteligencia artificial experto en finanzas personales y asesoramiento financiero.
+    const systemInstructionText = `Eres "PLATA AI", un asistente de inteligencia artificial experto en finanzas personales y asesoramiento financiero.
 Tu objetivo es dar consejos financieros prácticos, responder preguntas y ayudar al usuario de forma conversacional.
 
 Normas de comportamiento:

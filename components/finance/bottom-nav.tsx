@@ -7,7 +7,7 @@ export type View = "home" | "accounts" | "stocks" | "activity" | "profile" | "ad
 const ITEMS: { view: View; label: string; Icon: typeof Home }[] = [
   { view: "home", label: "Inicio", Icon: Home },
   { view: "accounts", label: "Cuentas", Icon: Wallet },
-  { view: "advisor", label: "Plata AI", Icon: Sparkles },
+  { view: "advisor", label: "PLATA AI", Icon: Sparkles },
   { view: "stocks", label: "Portafolio", Icon: LineChart },
   { view: "profile", label: "Perfil", Icon: User },
 ]
