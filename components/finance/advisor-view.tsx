@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react"
 import { Sparkles, Send, Trash2, Bot, User as UserIcon, RefreshCw, ChevronRight } from "lucide-react"
 import { useFinance } from "./finance-provider"
-import { type Account, type StockHolding, type WatchlistStock, type Transaction } from "@/lib/finance-data"
+import { type Account, type StockHolding, type WatchlistStock, type Transaction, type Vehicle, type VehicleLog } from "@/lib/finance-data"
 
 interface Message {
   role: "user" | "assistant"
@@ -139,7 +139,9 @@ function buildFinanceContext(
   accounts: Account[],
   transactions: Transaction[],
   holdings: StockHolding[],
-  watchlist: WatchlistStock[]
+  watchlist: WatchlistStock[],
+  vehicles: Vehicle[],
+  vehicleLogs: VehicleLog[]
 ): string {
   let context = ""
 
@@ -174,7 +176,36 @@ function buildFinanceContext(
     context += `- Símbolos en seguimiento: ${watchlist.map((w) => w.symbol).join(", ")}\n`
   }
 
-  // 4. Transactions Section
+  // 4. Vehicles Section
+  context += "\nVEHÍCULOS Y GASTOS DE VEHÍCULOS:\n"
+  if (vehicles.length === 0) {
+    context += "- El usuario no tiene vehículos registrados.\n"
+  } else {
+    vehicles.forEach((v) => {
+      context += `- Vehículo "${v.name}" [Tipo: ${v.type}]: Odómetro actual ${v.odometer} Km | Marca: ${v.brand || "—"} | Modelo: ${v.model || "—"} | Patente: ${v.plate || "—"}\n`
+      const vLogs = vehicleLogs.filter((l) => l.vehicleId === v.id)
+      if (vLogs.length === 0) {
+        context += "  - No hay registros de gastos/bitácora para este vehículo.\n"
+      } else {
+        context += "  - Historial de bitácora/gastos (últimos 15 registros):\n"
+        vLogs.slice(0, 15).forEach((l) => {
+          const typeLabel =
+            l.type === "fuel" ? "Combustible" : l.type === "service" ? "Service" : l.type === "part" ? "Repuesto" : l.type === "gear" ? "Indumentaria" : l.type === "insurance" ? "Seguro/Patente" : "Otro"
+          let details = ""
+          if (l.type === "fuel") {
+            details = ` (${l.liters || 0} L, ${l.gasStation || ""}, ${l.isFullTank ? "Tanque lleno" : "Carga parcial"})`
+          } else if (l.type === "service") {
+            details = ` (${l.serviceType || ""}, taller: ${l.provider || ""}, próximo service en ${l.nextServiceOdometer || "—"} Km)`
+          } else if (l.type === "part" || l.type === "gear") {
+            details = ` (${l.itemName || ""})`
+          }
+          context += `    * ${l.date.split("T")[0]} - [${typeLabel}] Gasto: $${l.amount} a los ${l.odometer} Km${details}${l.note ? ` Nota: "${l.note}"` : ""}\n`
+        })
+      }
+    })
+  }
+
+  // 5. Transactions Section
   context += "\nMOVIMIENTOS FINANCIEROS (ÚLTIMOS 50 REGISTROS):\n"
   if (transactions.length === 0) {
     context += "- No hay transacciones o movimientos registrados en el historial.\n"
@@ -200,7 +231,7 @@ function buildFinanceContext(
 }
 
 export function AdvisorView({ isDesktop = false }: { isDesktop?: boolean }) {
-  const { accounts, transactions, holdings, watchlist } = useFinance()
+  const { accounts, transactions, holdings, watchlist, vehicles, vehicleLogs } = useFinance()
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState("")
   const [isSending, setIsSending] = useState(false)
@@ -257,7 +288,7 @@ export function AdvisorView({ isDesktop = false }: { isDesktop?: boolean }) {
 
     try {
       // Build the financial context object based on real-time data in client
-      const financialContext = buildFinanceContext(accounts, transactions, holdings, watchlist)
+      const financialContext = buildFinanceContext(accounts, transactions, holdings, watchlist, vehicles, vehicleLogs)
 
       // Send requests to our secure endpoint
       const response = await fetch("/api/chat", {

@@ -28,12 +28,14 @@ import {
   Briefcase,
   History,
   Trash2,
-  Sparkles
+  Sparkles,
+  Bike
 } from "lucide-react"
 import { useFinance } from "./finance-provider"
 import { AccountIcon } from "./account-icon"
 import { StockTradeModal } from "./stock-trade-modal"
 import { AdvisorView } from "./advisor-view"
+import { VehiclesView } from "./vehicles-view"
 import { toast } from "sonner"
 import {
   ACCENT_BY_KIND,
@@ -47,7 +49,7 @@ import {
   type StockHolding
 } from "@/lib/finance-data"
 
-type View = "home" | "accounts" | "stocks" | "activity" | "profile" | "advisor"
+type View = "home" | "accounts" | "vehicles" | "stocks" | "activity" | "profile" | "advisor"
 
 interface DesktopViewProps {
   view: View
@@ -118,6 +120,7 @@ export function DesktopView({
             {[
               { id: "home", label: "Inicio", Icon: Home },
               { id: "accounts", label: "Cuentas", Icon: Wallet },
+              { id: "vehicles", label: "Vehículos", Icon: Bike },
               { id: "advisor", label: "PLATA AI", Icon: Sparkles },
               { id: "stocks", label: "Portafolio", Icon: LineChart },
               { id: "activity", label: "Actividad", Icon: ReceiptText },
@@ -184,6 +187,7 @@ export function DesktopView({
             <h1 className="text-xl font-bold tracking-tight text-foreground">
               {view === "home" && "Panel de Control"}
               {view === "accounts" && "Mis Cuentas"}
+              {view === "vehicles" && "Mis Vehículos"}
               {view === "advisor" && "Asistente AI"}
               {view === "stocks" && "Mi Portafolio"}
               {view === "activity" && "Historial de Actividad"}
@@ -245,6 +249,9 @@ export function DesktopView({
               onAddAccount={onAddAccount}
               onEditAccount={onEditAccount}
             />
+          )}
+          {view === "vehicles" && (
+            <VehiclesView isDesktop />
           )}
           {view === "stocks" && (
             <DesktopPortfolio mask={mask} />

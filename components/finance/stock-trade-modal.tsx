@@ -230,17 +230,35 @@ export function StockTradeModal({
         <div className="grid grid-cols-2 gap-4">
           {/* Shares Input */}
           <div>
-            <label htmlFor="shares" className="text-xs font-semibold text-muted-foreground">
-              Cantidad
-            </label>
+            <div className="flex justify-between items-center">
+              <label htmlFor="shares" className="text-xs font-semibold text-muted-foreground">
+                Cantidad
+              </label>
+              {type === "sell" && sharesOwned > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setShares(sharesOwned)}
+                  className="text-[10px] font-bold text-primary hover:underline cursor-pointer"
+                >
+                  Usar máx ({sharesOwned})
+                </button>
+              )}
+            </div>
             <input
               id="shares"
               type="number"
               min="0"
+              max={type === "sell" ? sharesOwned : undefined}
               step="any"
               placeholder="0.00"
               value={shares || ""}
-              onChange={(e) => setShares(Math.max(0, parseFloat(e.target.value) || 0))}
+              onChange={(e) => {
+                let val = Math.max(0, parseFloat(e.target.value) || 0)
+                if (type === "sell") {
+                  val = Math.min(sharesOwned, val)
+                }
+                setShares(val)
+              }}
               required
               className="mt-1 w-full rounded-xl border border-border bg-card px-3.5 py-2.5 text-sm font-medium placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
             />

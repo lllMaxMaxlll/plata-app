@@ -1,12 +1,13 @@
 "use client"
 
-import { Home, Wallet, ReceiptText, User, Plus, LineChart, Sparkles } from "lucide-react"
+import { Home, Wallet, ReceiptText, User, Plus, LineChart, Sparkles, Bike } from "lucide-react"
 
-export type View = "home" | "accounts" | "stocks" | "activity" | "profile" | "advisor"
+export type View = "home" | "accounts" | "vehicles" | "stocks" | "activity" | "profile" | "advisor"
 
 const ITEMS: { view: View; label: string; Icon: typeof Home }[] = [
   { view: "home", label: "Inicio", Icon: Home },
   { view: "accounts", label: "Cuentas", Icon: Wallet },
+  { view: "vehicles", label: "Vehículos", Icon: Bike },
   { view: "advisor", label: "PLATA AI", Icon: Sparkles },
   { view: "stocks", label: "Portafolio", Icon: LineChart },
   { view: "profile", label: "Perfil", Icon: User },
@@ -21,8 +22,8 @@ export function BottomNav({
   onChange: (v: View) => void
   onAdd: () => void
 }) {
-  const left = ITEMS.slice(0, 2)
-  const right = ITEMS.slice(2)
+  const left = ITEMS.slice(0, 3)
+  const right = ITEMS.slice(3)
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 mx-auto max-w-md">

@@ -125,3 +125,54 @@ export interface StockHolding {
   profitLossPercent: number
 }
 
+// ---------------------------------------------------------------------------
+// Vehicles and Vehicle Expenses Data Types
+// ---------------------------------------------------------------------------
+
+export type VehicleType = "motorcycle" | "car" | "truck" | "other"
+
+export interface Vehicle {
+  id: string
+  name: string
+  type: VehicleType
+  brand?: string
+  model?: string
+  year?: number
+  plate?: string
+  odometer: number // Current odometer reading in km
+  fuelCapacity?: number // Tank size in liters (optional)
+  createdAt: string
+}
+
+export type VehicleLogType = "fuel" | "service" | "part" | "gear" | "insurance" | "other"
+
+export interface VehicleLog {
+  id: string
+  vehicleId: string
+  type: VehicleLogType
+  date: string // ISO string
+  odometer: number // Km reading at the time of log
+  amount: number // Cost
+  note?: string
+
+  // Optional link to general transaction/account
+  accountId?: string
+  transactionId?: string
+
+  // Fuel specific
+  liters?: number
+  gasStation?: string
+  pricePerLiter?: number
+  isFullTank?: boolean
+
+  // Service specific
+  serviceType?: string
+  provider?: string
+  nextServiceOdometer?: number
+  nextServiceDate?: string
+
+  // Gear / Parts / Other specific
+  itemName?: string
+}
+
+

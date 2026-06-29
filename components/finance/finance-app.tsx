@@ -8,6 +8,7 @@ import { AccountsView } from "./accounts-view"
 import { ActivityView } from "./activity-view"
 import { ProfileView } from "./profile-view"
 import { StocksView } from "./stocks-view"
+import { VehiclesView } from "./vehicles-view"
 import { BottomNav, type View } from "./bottom-nav"
 import { TransactionSheet } from "./transaction-sheet"
 import { AddAccountSheet } from "./add-account-sheet"
@@ -70,6 +71,9 @@ export function FinanceApp() {
           )}
           {view === "accounts" && (
             <AccountsView onAddAccount={handleAddAccount} onEditAccount={handleEditAccount} />
+          )}
+          {view === "vehicles" && (
+            <VehiclesView />
           )}
           {view === "stocks" && (
             <StocksView />

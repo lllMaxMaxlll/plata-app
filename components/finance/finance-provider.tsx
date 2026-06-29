@@ -10,6 +10,10 @@ import {
   type WatchlistStock,
   type StockTransaction,
   type StockHolding,
+  type Vehicle,
+  type VehicleLog,
+  type VehicleType,
+  type VehicleLogType,
 } from "@/lib/finance-data"
 import { auth, db } from "@/lib/firebase"
 import {
@@ -103,6 +107,15 @@ interface FinanceContextValue {
     date: string
     accountId: string
   }) => Promise<void>
+
+  vehicles: Vehicle[]
+  vehicleLogs: VehicleLog[]
+  addVehicle: (input: Omit<Vehicle, "id" | "createdAt">) => Promise<void>
+  updateVehicle: (id: string, input: Partial<Omit<Vehicle, "id" | "createdAt">>) => Promise<void>
+  deleteVehicle: (id: string) => Promise<void>
+  addVehicleLog: (input: Omit<VehicleLog, "id" | "transactionId">) => Promise<void>
+  updateVehicleLog: (id: string, input: Omit<VehicleLog, "id">) => Promise<void>
+  deleteVehicleLog: (id: string) => Promise<void>
 }
 
 const FinanceContext = createContext<FinanceContextValue | null>(null)
@@ -117,6 +130,9 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const [watchlist, setWatchlist] = useState<WatchlistStock[]>([])
   const [stockTransactions, setStockTransactions] = useState<StockTransaction[]>([])
   const [stockPrices, setStockPrices] = useState<Record<string, { price: number; change: number; name: string }>>({})
+
+  const [vehicles, setVehicles] = useState<Vehicle[]>([])
+  const [vehicleLogs, setVehicleLogs] = useState<VehicleLog[]>([])
 
   // 1. Listen to Auth State Changes
   useEffect(() => {
@@ -137,6 +153,8 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         setWatchlist([])
         setStockTransactions([])
         setStockPrices({})
+        setVehicles([])
+        setVehicleLogs([])
       }
       setLoading(false)
     })
@@ -246,12 +264,36 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       }
     )
 
+    // Sync vehicles subcollection (ordered by createdAt descending)
+    const vehiclesRef = collection(db, "users", user.uid, "vehicles")
+    const vehiclesQuery = query(vehiclesRef, orderBy("createdAt", "desc"))
+    const unsubscribeVehicles = onSnapshot(vehiclesQuery, (snapshot) => {
+      const vList: Vehicle[] = []
+      snapshot.forEach((doc) => {
+        vList.push({ id: doc.id, ...doc.data() } as Vehicle)
+      })
+      setVehicles(vList)
+    })
+
+    // Sync vehicle logs subcollection (ordered by date descending)
+    const vehicleLogsRef = collection(db, "users", user.uid, "vehicleLogs")
+    const vehicleLogsQuery = query(vehicleLogsRef, orderBy("date", "desc"))
+    const unsubscribeVehicleLogs = onSnapshot(vehicleLogsQuery, (snapshot) => {
+      const vlList: VehicleLog[] = []
+      snapshot.forEach((doc) => {
+        vlList.push({ id: doc.id, ...doc.data() } as VehicleLog)
+      })
+      setVehicleLogs(vlList)
+    })
+
     return () => {
       unsubscribeAccounts()
       unsubscribeTransactions()
       unsubscribeCategories()
       unsubscribeWatchlist()
       unsubscribeStockTxs()
+      unsubscribeVehicles()
+      unsubscribeVehicleLogs()
     }
   }, [user])
 
@@ -939,6 +981,312 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  // --- Vehicles and Vehicle Logs Management ---
+
+  async function addVehicle(input: Omit<Vehicle, "id" | "createdAt">) {
+    if (!user) throw new Error("Usuario no autenticado.")
+    const newVehRef = doc(collection(db, "users", user.uid, "vehicles"))
+    await setDoc(newVehRef, {
+      id: newVehRef.id,
+      ...input,
+      createdAt: new Date().toISOString(),
+    })
+  }
+
+  async function updateVehicle(id: string, input: Partial<Omit<Vehicle, "id" | "createdAt">>) {
+    if (!user) throw new Error("Usuario no autenticado.")
+    const docRef = doc(db, "users", user.uid, "vehicles", id)
+    await setDoc(docRef, input, { merge: true })
+  }
+
+  async function deleteVehicle(id: string) {
+    if (!user) throw new Error("Usuario no autenticado.")
+
+    // We will delete the vehicle doc
+    const docRef = doc(db, "users", user.uid, "vehicles", id)
+    const { deleteDoc } = await import("firebase/firestore")
+    await deleteDoc(docRef)
+
+    // Delete associated logs and transactions
+    const associatedLogs = vehicleLogs.filter((vl) => vl.vehicleId === id)
+    if (associatedLogs.length > 0) {
+      const batch = writeBatch(db)
+      associatedLogs.forEach((log) => {
+        const logRef = doc(db, "users", user.uid, "vehicleLogs", log.id)
+        batch.delete(logRef)
+        if (log.transactionId) {
+          const txRef = doc(db, "users", user.uid, "transactions", log.transactionId)
+          batch.delete(txRef)
+        }
+      })
+      await batch.commit()
+    }
+  }
+
+  async function addVehicleLog(input: Omit<VehicleLog, "id" | "transactionId">) {
+    if (!user) throw new Error("Usuario no autenticado.")
+
+    const logId = `vl-${Date.now()}`
+    const logDocRef = doc(db, "users", user.uid, "vehicleLogs", logId)
+    const vehicleRef = doc(db, "users", user.uid, "vehicles", input.vehicleId)
+
+    const hasSync = !!input.accountId && input.amount > 0
+    const txId = hasSync ? `t-${Date.now()}` : null
+    const txDocRef = txId ? doc(db, "users", user.uid, "transactions", txId) : null
+    const accountRef = input.accountId ? doc(db, "users", user.uid, "accounts", input.accountId) : null
+
+    const originalAccounts = [...accounts]
+    const originalVehicles = [...vehicles]
+
+    // Optimistically update account balances
+    if (hasSync && input.accountId) {
+      setAccounts((prev) =>
+        prev.map((acc) => {
+          if (acc.id === input.accountId) {
+            return { ...acc, balance: Number(acc.balance) - input.amount }
+          }
+          return acc
+        })
+      )
+    }
+
+    // Optimistically update vehicle odometer
+    setVehicles((prev) =>
+      prev.map((v) => {
+        if (v.id === input.vehicleId && input.odometer > v.odometer) {
+          return { ...v, odometer: input.odometer }
+        }
+        return v
+      })
+    )
+
+    try {
+      await runTransaction(db, async (transaction) => {
+        // 1. READS FIRST
+        const vehSnap = await transaction.get(vehicleRef)
+        if (!vehSnap.exists()) {
+          throw new Error("El vehículo no existe.")
+        }
+        const vehData = vehSnap.data() as Vehicle
+        const currentOdometer = Number(vehData.odometer)
+
+        let newBalance = 0
+        if (accountRef) {
+          const accSnap = await transaction.get(accountRef)
+          if (!accSnap.exists()) {
+            throw new Error("La cuenta seleccionada no existe.")
+          }
+          const accData = accSnap.data() as Account
+          newBalance = Number(accData.balance) - input.amount
+        }
+
+        // 2. WRITES
+        // Save vehicle log
+        transaction.set(logDocRef, {
+          id: logId,
+          ...input,
+          transactionId: txId || null,
+        })
+
+        // Update vehicle odometer if higher
+        if (input.odometer > currentOdometer) {
+          transaction.update(vehicleRef, { odometer: input.odometer })
+        }
+
+        // Create transaction and update account balance if synced
+        if (txDocRef && accountRef) {
+          let note = `[${vehData.name}] `
+          if (input.type === "fuel") {
+            note += `Combustible ${input.gasStation || ""} (${input.liters || 0} L)`
+          } else if (input.type === "service") {
+            note += `Service: ${input.serviceType || ""}`
+          } else if (input.type === "part") {
+            note += `Repuesto: ${input.itemName || ""}`
+          } else if (input.type === "gear") {
+            note += `Indumentaria: ${input.itemName || ""}`
+          } else if (input.type === "insurance") {
+            note += `Seguro / Patente`
+          } else {
+            note += `Gasto`
+          }
+          if (input.note) {
+            note += ` - ${input.note}`
+          }
+
+          transaction.set(txDocRef, {
+            id: txId,
+            type: "expense",
+            amount: input.amount,
+            accountId: input.accountId,
+            toAccountId: null,
+            toAmount: null,
+            exchangeRate: null,
+            category: "Transporte",
+            note: note,
+            date: input.date,
+            receiptName: null,
+          })
+
+          transaction.update(accountRef, { balance: newBalance })
+        }
+      })
+    } catch (err) {
+      setAccounts(originalAccounts)
+      setVehicles(originalVehicles)
+      throw err
+    }
+  }
+
+  async function updateVehicleLog(id: string, input: Omit<VehicleLog, "id">) {
+    if (!user) throw new Error("Usuario no autenticado.")
+
+    const logDocRef = doc(db, "users", user.uid, "vehicleLogs", id)
+    const oldLog = vehicleLogs.find((vl) => vl.id === id)
+    if (!oldLog) throw new Error("El registro no existe.")
+
+    const vehicleRef = doc(db, "users", user.uid, "vehicles", input.vehicleId)
+
+    const originalAccounts = [...accounts]
+    const originalVehicles = [...vehicles]
+
+    try {
+      await runTransaction(db, async (transaction) => {
+        // 1. READS FIRST
+        const vehSnap = await transaction.get(vehicleRef)
+        if (!vehSnap.exists()) throw new Error("El vehículo no existe.")
+        const vehData = vehSnap.data() as Vehicle
+        const currentOdometer = Number(vehData.odometer)
+
+        let oldAccSnap = null
+        if (oldLog.accountId) {
+          const oldAccRef = doc(db, "users", user.uid, "accounts", oldLog.accountId)
+          oldAccSnap = await transaction.get(oldAccRef)
+        }
+
+        let newAccSnap = null
+        if (input.accountId) {
+          if (oldLog.accountId === input.accountId) {
+            newAccSnap = oldAccSnap
+          } else {
+            const newAccRef = doc(db, "users", user.uid, "accounts", input.accountId)
+            newAccSnap = await transaction.get(newAccRef)
+          }
+        }
+
+        // 2. WRITES
+        let oldAccFinalBalance = oldAccSnap && oldAccSnap.exists() ? Number(oldAccSnap.data().balance) + oldLog.amount : 0
+        let newAccFinalBalance = 0
+
+        if (input.accountId && newAccSnap && newAccSnap.exists()) {
+          if (oldLog.accountId === input.accountId) {
+            newAccFinalBalance = oldAccFinalBalance - input.amount
+            oldAccFinalBalance = newAccFinalBalance
+          } else {
+            newAccFinalBalance = Number(newAccSnap.data().balance) - input.amount
+          }
+        }
+
+        // Apply account balance updates
+        if (oldLog.accountId && oldAccSnap && oldAccSnap.exists()) {
+          const oldAccRef = doc(db, "users", user.uid, "accounts", oldLog.accountId)
+          transaction.update(oldAccRef, { balance: oldAccFinalBalance })
+        }
+        if (input.accountId && newAccSnap && newAccSnap.exists() && oldLog.accountId !== input.accountId) {
+          const newAccRef = doc(db, "users", user.uid, "accounts", input.accountId)
+          transaction.update(newAccRef, { balance: newAccFinalBalance })
+        }
+
+        // Manage transaction document (link, update, or unlink)
+        const finalTxId = oldLog.transactionId || (input.accountId ? `t-${Date.now()}` : null)
+        const finalTxDocRef = finalTxId ? doc(db, "users", user.uid, "transactions", finalTxId) : null
+
+        if (oldLog.transactionId && !input.accountId) {
+          const oldTxRef = doc(db, "users", user.uid, "transactions", oldLog.transactionId)
+          transaction.delete(oldTxRef)
+        } else if (finalTxDocRef && input.accountId) {
+          let note = `[${vehData.name}] `
+          if (input.type === "fuel") {
+            note += `Combustible ${input.gasStation || ""} (${input.liters || 0} L)`
+          } else if (input.type === "service") {
+            note += `Service: ${input.serviceType || ""}`
+          } else if (input.type === "part") {
+            note += `Repuesto: ${input.itemName || ""}`
+          } else if (input.type === "gear") {
+            note += `Indumentaria: ${input.itemName || ""}`
+          } else if (input.type === "insurance") {
+            note += `Seguro / Patente`
+          } else {
+            note += `Gasto`
+          }
+          if (input.note) {
+            note += ` - ${input.note}`
+          }
+
+          transaction.set(finalTxDocRef, {
+            id: finalTxId,
+            type: "expense",
+            amount: input.amount,
+            accountId: input.accountId,
+            toAccountId: null,
+            toAmount: null,
+            exchangeRate: null,
+            category: "Transporte",
+            note: note,
+            date: input.date,
+            receiptName: null,
+          })
+        }
+
+        // Update vehicle log doc
+        transaction.set(logDocRef, {
+          id: id,
+          ...input,
+          transactionId: finalTxId || null,
+        })
+
+        // Update odometer if higher
+        if (input.odometer > currentOdometer) {
+          transaction.update(vehicleRef, { odometer: input.odometer })
+        }
+      })
+    } catch (err) {
+      setAccounts(originalAccounts)
+      setVehicles(originalVehicles)
+      throw err
+    }
+  }
+
+  async function deleteVehicleLog(id: string) {
+    if (!user) throw new Error("Usuario no autenticado.")
+
+    const logDocRef = doc(db, "users", user.uid, "vehicleLogs", id)
+    const oldLog = vehicleLogs.find((vl) => vl.id === id)
+    if (!oldLog) throw new Error("El registro no existe.")
+
+    const originalAccounts = [...accounts]
+
+    try {
+      await runTransaction(db, async (transaction) => {
+        if (oldLog.accountId && oldLog.transactionId) {
+          const accRef = doc(db, "users", user.uid, "accounts", oldLog.accountId)
+          const accSnap = await transaction.get(accRef)
+          if (accSnap.exists()) {
+            const accData = accSnap.data() as Account
+            transaction.update(accRef, { balance: Number(accData.balance) + oldLog.amount })
+          }
+
+          const txRef = doc(db, "users", user.uid, "transactions", oldLog.transactionId)
+          transaction.delete(txRef)
+        }
+
+        transaction.delete(logDocRef)
+      })
+    } catch (err) {
+      setAccounts(originalAccounts)
+      throw err
+    }
+  }
+
   const totalsByCurrency = useMemo(() => {
     return accounts.reduce(
       (acc, a) => {
@@ -983,6 +1331,14 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     addWatchlistStock,
     removeWatchlistStock,
     executeStockTransaction,
+    vehicles,
+    vehicleLogs,
+    addVehicle,
+    updateVehicle,
+    deleteVehicle,
+    addVehicleLog,
+    updateVehicleLog,
+    deleteVehicleLog,
   }
 
   return <FinanceContext.Provider value={value}>{children}</FinanceContext.Provider>
