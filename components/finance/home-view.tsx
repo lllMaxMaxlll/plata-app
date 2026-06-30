@@ -10,10 +10,12 @@ import type { Transaction } from "@/lib/finance-data"
 export function HomeView({
   onAddAccount,
   onSeeAll,
+  onSeeAnalytics,
   onEditTransaction,
 }: {
   onAddAccount: () => void
   onSeeAll: () => void
+  onSeeAnalytics: () => void
   onEditTransaction: (tx: Transaction) => void
 }) {
   const { transactions } = useFinance()
@@ -23,7 +25,7 @@ export function HomeView({
     <div>
       <DashboardHeader />
       <WalletCards onAddAccount={onAddAccount} />
-      <ExpenseChart />
+      <ExpenseChart onSeeAnalytics={onSeeAnalytics} />
 
       <section className="mt-6 px-5">
         <div className="flex items-center justify-between">

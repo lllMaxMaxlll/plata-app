@@ -36,6 +36,7 @@ import { AccountIcon } from "./account-icon"
 import { StockTradeModal } from "./stock-trade-modal"
 import { AdvisorView } from "./advisor-view"
 import { VehiclesView } from "./vehicles-view"
+import { AnalyticsView } from "./analytics-view"
 import { toast } from "sonner"
 import {
   ACCENT_BY_KIND,
@@ -123,6 +124,7 @@ export function DesktopView({
               { id: "vehicles", label: "Vehículos", Icon: Bike },
               { id: "advisor", label: "PLATA AI", Icon: Sparkles },
               { id: "stocks", label: "Portafolio", Icon: LineChart },
+              { id: "analytics", label: "Análisis", Icon: TrendingUp },
               { id: "activity", label: "Actividad", Icon: ReceiptText },
               { id: "profile", label: "Perfil", Icon: User },
             ].map((item) => {
@@ -192,6 +194,7 @@ export function DesktopView({
               {view === "stocks" && "Mi Portafolio"}
               {view === "activity" && "Historial de Actividad"}
               {view === "profile" && "Configuración de Perfil"}
+              {view === "analytics" && "Análisis de Gastos"}
             </h1>
             <p className="text-xs text-muted-foreground mt-0.5">
               Hola, <span className="font-medium text-foreground">{user?.name}</span>. Gestioná tus finanzas.
@@ -241,6 +244,7 @@ export function DesktopView({
               onEditAccount={onEditAccount}
               onEditTransaction={onEditTransaction}
               onSeeAll={() => setView("activity")}
+              onSeeAnalytics={() => setView("analytics")}
             />
           )}
           {view === "accounts" && (
@@ -267,6 +271,9 @@ export function DesktopView({
           {view === "advisor" && (
             <AdvisorView isDesktop />
           )}
+          {view === "analytics" && (
+            <AnalyticsView isDesktop onBack={() => setView("home")} onEditTransaction={onEditTransaction} />
+          )}
         </div>
       </main>
     </div>
@@ -282,12 +289,14 @@ function DesktopHome({
   onEditAccount,
   onEditTransaction,
   onSeeAll,
+  onSeeAnalytics,
 }: {
   mask: (v: string) => string
   onAddAccount: () => void
   onEditAccount: (acc: Account) => void
   onEditTransaction: (tx: Transaction) => void
   onSeeAll: () => void
+  onSeeAnalytics: () => void
 }) {
   const { accounts, transactions, getAccount, categories } = useFinance()
 
@@ -378,11 +387,14 @@ function DesktopHome({
 
         {/* Expenses Chart */}
         <section className="rounded-3xl border border-border/40 bg-card/45 p-6 shadow-sm">
-          <div className="flex items-baseline justify-between mb-1">
+          <div className="flex items-center justify-between mb-1">
             <h2 className="text-base font-bold tracking-tight">Gastos por categoría</h2>
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              ARS · Este Mes
-            </span>
+            <button
+              onClick={onSeeAnalytics}
+              className="text-xs font-semibold text-primary hover:underline flex items-center gap-1 cursor-pointer"
+            >
+              Ver análisis <ArrowUpRight className="size-3.5" />
+            </button>
           </div>
           <p className="text-2xl font-extrabold tracking-tight tabular-nums text-foreground mb-6">
             {mask(formatCurrency(chartTotal, "ARS"))}

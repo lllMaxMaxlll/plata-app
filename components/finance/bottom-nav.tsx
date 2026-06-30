@@ -2,7 +2,7 @@
 
 import { Home, Wallet, ReceiptText, User, Plus, LineChart, Sparkles, Bike } from "lucide-react"
 
-export type View = "home" | "accounts" | "vehicles" | "stocks" | "activity" | "profile" | "advisor"
+export type View = "home" | "accounts" | "vehicles" | "stocks" | "activity" | "profile" | "advisor" | "analytics"
 
 const ITEMS: { view: View; label: string; Icon: typeof Home }[] = [
   { view: "home", label: "Inicio", Icon: Home },

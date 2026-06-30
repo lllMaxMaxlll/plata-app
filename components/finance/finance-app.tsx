@@ -17,6 +17,7 @@ import { LoadingSkeleton } from "./loading-skeleton"
 import { ManageCategoriesSheet } from "./manage-categories-sheet"
 import { SecuritySheet } from "./security-sheet"
 import { AdvisorView } from "./advisor-view"
+import { AnalyticsView } from "./analytics-view"
 import type { Account, Transaction } from "@/lib/finance-data"
 
 export function FinanceApp() {
@@ -66,6 +67,7 @@ export function FinanceApp() {
             <HomeView
               onAddAccount={handleAddAccount}
               onSeeAll={() => setView("activity")}
+              onSeeAnalytics={() => setView("analytics")}
               onEditTransaction={handleEditTransaction}
             />
           )}
@@ -89,6 +91,9 @@ export function FinanceApp() {
           )}
           {view === "advisor" && (
             <AdvisorView />
+          )}
+          {view === "analytics" && (
+            <AnalyticsView onBack={() => setView("home")} onEditTransaction={handleEditTransaction} />
           )}
         </main>
 

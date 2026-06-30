@@ -1,12 +1,13 @@
 "use client"
 
 import { useMemo } from "react"
+import { ArrowUpRight } from "lucide-react"
 import { CATEGORY_COLORS, formatShort } from "@/lib/finance-data"
 import { useFinance } from "./finance-provider"
-
-export function ExpenseChart() {
+ 
+export function ExpenseChart({ onSeeAnalytics }: { onSeeAnalytics?: () => void }) {
   const { transactions, getAccount, categories, accounts } = useFinance()
-
+ 
   const { rows, total } = useMemo(() => {
     const map = new Map<string, number>()
     for (const t of transactions) {
@@ -21,21 +22,28 @@ export function ExpenseChart() {
     const total = rows.reduce((s, r) => s + r.amount, 0)
     return { rows, total }
   }, [transactions, getAccount, accounts])
-
+ 
   const max = rows[0]?.amount ?? 1
-
+ 
   const getCategoryColor = (catName: string) => {
     return categories.find((c) => c.name === catName)?.color ?? "var(--chart-5)"
   }
-
+ 
   return (
     <section className="mt-6 px-5">
       <div className="rounded-3xl border border-border bg-card p-5">
-        <div className="flex items-baseline justify-between">
+        <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold tracking-tight">Gastos por categoría</h2>
-          <span className="text-xs text-muted-foreground">ARS · este mes</span>
+          {onSeeAnalytics && (
+            <button
+              onClick={onSeeAnalytics}
+              className="text-xs font-semibold text-primary hover:underline flex items-center gap-0.5 cursor-pointer"
+            >
+              Ver análisis <ArrowUpRight className="size-3.5" />
+            </button>
+          )}
         </div>
-        <p className="mt-1 text-xl font-semibold tracking-tight tabular-nums">
+        <p className="mt-2 text-xl font-semibold tracking-tight tabular-nums">
           {formatShort(total, "ARS")}
         </p>
 
