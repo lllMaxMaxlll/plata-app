@@ -535,7 +535,7 @@ export function VehiclesView({ isDesktop = false }: { isDesktop?: boolean }) {
                             ? `${l.liters || 0} L · ${l.gasStation || "Carga nafta"}${l.isFullTank ? " · Tanque lleno" : ""}`
                             : l.type === "service"
                             ? `${l.serviceType || "Service"} · ${l.provider || "Taller"}`
-                            : l.type === "part" || l.type === "gear"
+                            : l.type === "part" || l.type === "gear" || l.type === "insurance" || l.type === "other"
                             ? `${l.itemName || "Compra"}`
                             : l.note || "Registro general"
 
@@ -554,7 +554,7 @@ export function VehiclesView({ isDesktop = false }: { isDesktop?: boolean }) {
                                   {details}
                                 </p>
                                 <p className="text-[10px] text-muted-foreground mt-0.5">
-                                  {l.odometer} Km {l.note ? `· ${l.note}` : ""}
+                                  {l.odometer} Km {l.note && l.note !== l.itemName ? `· ${l.note}` : ""}
                                 </p>
                               </div>
                             </div>

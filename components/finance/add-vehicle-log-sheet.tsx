@@ -87,7 +87,7 @@ export function AddVehicleLogSheet({
         setNextServiceDate(log.nextServiceDate ? log.nextServiceDate.split("T")[0] : "")
 
         // Item
-        setItemName(log.itemName || "")
+        setItemName(log.itemName || log.note || "")
       } else {
         setType("fuel")
         setDate(new Date().toISOString().split("T")[0])
@@ -128,13 +128,14 @@ export function AddVehicleLogSheet({
     try {
       const selectedGasStation = gasStation === "Otro" ? customGasStation.trim() : gasStation
 
+      const logDetails = itemName.trim()
+
       const data: any = {
         vehicleId: vehicle.id,
         type,
         date: new Date(date).toISOString(),
         odometer: parsedOdometer,
         amount: parsedAmount,
-        note: note.trim() || undefined,
         accountId: accountId || undefined,
       }
 
@@ -145,13 +146,18 @@ export function AddVehicleLogSheet({
         if (data.liters && parsedAmount > 0) {
           data.pricePerLiter = Number((parsedAmount / data.liters).toFixed(2))
         }
+        data.itemName = undefined
+        data.note = undefined
       } else if (type === "service") {
         data.serviceType = serviceType.trim() || undefined
         data.provider = provider.trim() || undefined
         data.nextServiceOdometer = nextServiceOdometer ? parseInt(nextServiceOdometer) || undefined : undefined
         data.nextServiceDate = nextServiceDate ? new Date(nextServiceDate).toISOString() : undefined
-      } else if (type === "part" || type === "gear") {
-        data.itemName = itemName.trim() || undefined
+        data.itemName = undefined
+        data.note = undefined
+      } else if (type === "part" || type === "gear" || type === "insurance" || type === "other") {
+        data.itemName = logDetails || undefined
+        data.note = logDetails || undefined
       }
 
       if (log) {
@@ -361,8 +367,8 @@ export function AddVehicleLogSheet({
           </div>
         )}
 
-        {/* REPUESTOS / INDUMENTARIA */}
-        {(type === "part" || type === "gear") && (
+        {/* REPUESTOS / INDUMENTARIA / SEGURO / OTROS */}
+        {(type === "part" || type === "gear" || type === "insurance" || type === "other") && (
           <div className="flex flex-col gap-4 border-l-2 border-purple-500/35 pl-3 py-1">
             <div className="flex flex-col gap-1.5">
               <label htmlFor="item-name" className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
@@ -373,7 +379,12 @@ export function AddVehicleLogSheet({
                 type="text"
                 value={itemName}
                 onChange={(e) => setItemName(e.target.value)}
-                placeholder={type === "part" ? "Ej. Cubierta delantera, Bujía NGK" : "Ej. Casco LS2, Guantes de cuero"}
+                placeholder={
+                  type === "part" ? "Ej. Cubierta delantera, Bujía NGK" :
+                  type === "gear" ? "Ej. Casco LS2, Guantes de cuero" :
+                  type === "insurance" ? "Ej. Cuota Seguro ATM, Patente 03/26" :
+                  "Ej. Peajes, Multa, Estacionamiento"
+                }
                 className="h-11 w-full rounded-xl border border-border bg-muted/30 px-3 text-sm outline-none focus:border-primary"
               />
             </div>
@@ -452,20 +463,6 @@ export function AddVehicleLogSheet({
           </div>
         </div>
 
-        {/* Nota Adicional */}
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="log-note" className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-            Nota / Observación (Opcional)
-          </label>
-          <input
-            id="log-note"
-            type="text"
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            placeholder="Ej. Lubricado de cadena incluido"
-            className="h-11 w-full rounded-xl border border-border bg-muted/30 px-3 text-sm outline-none focus:border-primary"
-          />
-        </div>
 
         {/* Botones de acción */}
         <div className="mt-4 flex flex-col gap-2">

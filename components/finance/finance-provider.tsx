@@ -1029,8 +1029,15 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  async function addVehicleLog(input: Omit<VehicleLog, "id" | "transactionId">) {
+  async function addVehicleLog(rawInput: Omit<VehicleLog, "id" | "transactionId">) {
     if (!user) throw new Error("Usuario no autenticado.")
+
+    const input = { ...rawInput } as any
+    Object.keys(input).forEach((key) => {
+      if (input[key] === undefined) {
+        input[key] = null
+      }
+    })
 
     const logId = `vl-${Date.now()}`
     const logDocRef = doc(db, "users", user.uid, "vehicleLogs", logId)
@@ -1143,8 +1150,15 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  async function updateVehicleLog(id: string, input: Omit<VehicleLog, "id">) {
+  async function updateVehicleLog(id: string, rawInput: Omit<VehicleLog, "id">) {
     if (!user) throw new Error("Usuario no autenticado.")
+
+    const input = { ...rawInput } as any
+    Object.keys(input).forEach((key) => {
+      if (input[key] === undefined) {
+        input[key] = null
+      }
+    })
 
     const logDocRef = doc(db, "users", user.uid, "vehicleLogs", id)
     const oldLog = vehicleLogs.find((vl) => vl.id === id)

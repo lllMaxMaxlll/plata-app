@@ -11,7 +11,10 @@ import {
   ArrowLeftRight,
   Sparkles,
   Info,
-  DollarSign
+  DollarSign,
+  Bike,
+  Car,
+  Truck
 } from "lucide-react"
 import { useFinance } from "./finance-provider"
 import { formatShort, formatCurrency, type Transaction, type Currency } from "@/lib/finance-data"
@@ -23,7 +26,7 @@ interface AnalyticsViewProps {
 }
 
 export function AnalyticsView({ isDesktop = false, onBack, onEditTransaction }: AnalyticsViewProps) {
-  const { transactions, getAccount, categories, accounts } = useFinance()
+  const { transactions, getAccount, categories, accounts, vehicles, vehicleLogs } = useFinance()
   const [selectedCurrency, setSelectedCurrency] = useState<Currency>("ARS")
   
   // 1. Group transactions & extract available months (YYYY-MM)
@@ -170,6 +173,53 @@ export function AnalyticsView({ isDesktop = false, onBack, onEditTransaction }: 
       maxTotal: maxMonthTotal,
     }
   }, [availableMonths, expenseTransactions, selectedCurrency, getAccount])
+
+  // Compute vehicle expenses for the selected month and currency
+  const vehicleSpendData = useMemo(() => {
+    if (!vehicles || !vehicleLogs) return []
+
+    const vehicleMap = new Map<string, number>()
+    
+    // Initialize each vehicle with 0
+    vehicles.forEach(v => {
+      vehicleMap.set(v.id, 0)
+    })
+    
+    // Accumulate log amounts
+    vehicleLogs.forEach(l => {
+      if (!l.date) return
+      const dateObj = new Date(l.date)
+      const year = dateObj.getFullYear()
+      const month = String(dateObj.getMonth() + 1).padStart(2, "0")
+      const tMonth = `${year}-${month}`
+      if (tMonth !== selectedMonth) return
+      
+      let logCurrency: Currency = "ARS"
+      if (l.accountId) {
+        const acc = getAccount(l.accountId)
+        if (acc) {
+          logCurrency = acc.currency
+        }
+      }
+      if (logCurrency !== selectedCurrency) return
+      
+      vehicleMap.set(l.vehicleId, (vehicleMap.get(l.vehicleId) ?? 0) + l.amount)
+    })
+    
+    return [...vehicleMap.entries()]
+      .map(([vehicleId, amount]) => {
+        const vehicle = vehicles.find(v => v.id === vehicleId)
+        return {
+          id: vehicleId,
+          name: vehicle?.name || "Vehículo Desconocido",
+          plate: vehicle?.plate || "",
+          type: vehicle?.type || "car",
+          amount
+        }
+      })
+      .filter(r => r.amount > 0)
+      .sort((a, b) => b.amount - a.amount)
+  }, [vehicles, vehicleLogs, selectedMonth, selectedCurrency, getAccount])
 
   const maxRowVal = analyticsData.rows[0]?.amount ?? 1
 
@@ -515,6 +565,70 @@ export function AnalyticsView({ isDesktop = false, onBack, onEditTransaction }: 
           </div>
         )}
       </section>
+
+      {/* Gastos por Vehículo */}
+      {vehicleSpendData.length > 0 && (
+        <section className="bg-card border border-border/40 rounded-3xl p-6 shadow-sm mb-8">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="text-base font-bold tracking-tight">Gastos por Vehículo</h2>
+              <p className="text-xs text-muted-foreground mt-0.5">Control de gastos individuales de mantenimiento y combustible en {formatMonthName(selectedMonth)}</p>
+            </div>
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              {selectedCurrency}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {vehicleSpendData.map((v) => {
+              const maxVehicleSpent = Math.max(...vehicleSpendData.map(d => d.amount), 1)
+              const percent = (v.amount / maxVehicleSpent) * 100
+              
+              // Get vehicle icon helper
+              const getVehicleIcon = (typeStr: string) => {
+                switch (typeStr) {
+                  case "motorcycle":
+                    return Bike
+                  case "car":
+                    return Car
+                  case "truck":
+                    return Truck
+                  default:
+                    return Car
+                }
+              }
+              const VehicleIcon = getVehicleIcon(v.type)
+
+              return (
+                <div key={v.id} className="border border-border/30 bg-muted/5 p-4 rounded-2xl flex flex-col justify-between gap-3 shadow-inner">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20 shadow-sm">
+                        <VehicleIcon className="size-4.5" />
+                      </span>
+                      <div className="min-w-0">
+                        <h3 className="text-xs font-extrabold text-foreground truncate">{v.name}</h3>
+                        {v.plate && <p className="text-[10px] text-muted-foreground font-semibold tracking-wider uppercase mt-0.5">{v.plate}</p>}
+                      </div>
+                    </div>
+                    <span className="text-sm font-extrabold tabular-nums text-foreground/90 shrink-0">
+                      {formatCurrency(v.amount, selectedCurrency)}
+                    </span>
+                  </div>
+
+                  {/* Progress bar to visually compare vehicle expenditures */}
+                  <div className="h-2 w-full bg-muted/65 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-primary rounded-full transition-all duration-500"
+                      style={{ width: `${percent}%` }}
+                    />
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </section>
+      )}
 
       {/* Category Breakdown & MoM Comparative Table */}
       <section className="bg-card border border-border/40 rounded-3xl p-6 shadow-sm">
