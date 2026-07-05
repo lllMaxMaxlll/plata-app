@@ -25,7 +25,7 @@ export function WalletCards({ onAddAccount }: { onAddAccount: () => void }) {
         {accounts.map((acc) => (
           <article
             key={acc.id}
-            className="relative flex w-44 shrink-0 flex-col justify-between overflow-hidden rounded-2xl border border-border bg-card p-4"
+            className="relative flex w-44 shrink-0 flex-col justify-between overflow-hidden rounded-2xl border border-border bg-card p-4 isolate"
           >
             <span
               aria-hidden

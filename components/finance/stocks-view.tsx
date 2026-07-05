@@ -115,7 +115,7 @@ export function StocksView() {
 
       {/* Portfolio Balance Card */}
       <div className="mt-5 px-5">
-        <div className="relative overflow-hidden rounded-3xl border border-border/40 bg-gradient-to-br from-card to-card/70 p-5 shadow-lg">
+        <div className="relative overflow-hidden rounded-3xl border border-border/40 bg-gradient-to-br from-card to-card/70 p-5 shadow-lg isolate">
           {/* Light glow */}
           <div aria-hidden className="absolute -right-16 -top-16 size-36 rounded-full bg-primary/10 blur-3xl" />
           

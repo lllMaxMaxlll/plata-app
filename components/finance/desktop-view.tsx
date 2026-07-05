@@ -358,7 +358,7 @@ function DesktopHome({
               <article
                 key={acc.id}
                 onClick={() => onEditAccount(acc)}
-                className="relative overflow-hidden rounded-2xl border border-border/40 bg-card/40 p-5 flex flex-col justify-between h-36 cursor-pointer hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/5 hover:bg-card/65 transition-all duration-300 group"
+                className="relative overflow-hidden rounded-2xl border border-border/40 bg-card/40 p-5 flex flex-col justify-between h-36 cursor-pointer hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/5 hover:bg-card/65 transition-all duration-300 group isolate"
               >
                 {/* Glow Accent */}
                 <span
@@ -1050,7 +1050,7 @@ function DesktopPortfolio({ mask }: { mask: (v: string) => string }) {
       {/* Left 2 Columns: Holdings and Transaction History */}
       <div className="col-span-2 flex flex-col gap-8">
         {/* Portfolio Value Summary Card */}
-        <section className="relative overflow-hidden rounded-3xl border border-border/40 bg-card/45 p-6 shadow-sm flex items-center justify-between">
+        <section className="relative overflow-hidden rounded-3xl border border-border/40 bg-card/45 p-6 shadow-sm flex items-center justify-between isolate">
           <div
             aria-hidden
             className="absolute -right-24 -top-24 size-44 rounded-full bg-primary/10 blur-3xl pointer-events-none"
