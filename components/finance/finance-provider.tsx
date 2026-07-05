@@ -402,12 +402,12 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       prev.map((acc) => {
         if (acc.id === input.accountId) {
           const bal = Number(acc.balance)
-          const newBal = input.type === "income" ? bal + input.amount : bal - input.amount
+          const newBal = Math.round((input.type === "income" ? bal + input.amount : bal - input.amount) * 100) / 100
           return { ...acc, balance: newBal }
         }
         if (secondaryAccRef && acc.id === input.toAccountId) {
           const bal = Number(acc.balance)
-          const newBal = bal + (input.toAmount ?? input.amount)
+          const newBal = Math.round((bal + (input.toAmount ?? input.amount)) * 100) / 100
           return { ...acc, balance: newBal }
         }
         return acc
@@ -437,23 +437,23 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
 
         // 2. Calculate new balances
         if (input.type === "income") {
-          newPrimaryBalance += input.amount
+          newPrimaryBalance = Math.round((newPrimaryBalance + input.amount) * 100) / 100
         } else if (input.type === "expense") {
-          newPrimaryBalance -= input.amount
+          newPrimaryBalance = Math.round((newPrimaryBalance - input.amount) * 100) / 100
         } else if (input.type === "transfer" && secondaryData) {
-          newPrimaryBalance -= input.amount
-          newSecondaryBalance += (input.toAmount ?? input.amount)
+          newPrimaryBalance = Math.round((newPrimaryBalance - input.amount) * 100) / 100
+          newSecondaryBalance = Math.round((newSecondaryBalance + (input.toAmount ?? input.amount)) * 100) / 100
         }
 
         // 3. Write transaction document
         transaction.set(txDocRef, {
           id: txId,
           type: input.type,
-          amount: input.amount,
+          amount: Math.round(input.amount * 100) / 100,
           accountId: input.accountId,
           toAccountId: input.toAccountId || null,
-          toAmount: input.toAmount || null,
-          exchangeRate: input.exchangeRate || null,
+          toAmount: input.toAmount ? Math.round(input.toAmount * 100) / 100 : null,
+          exchangeRate: input.exchangeRate ? Math.round(input.exchangeRate * 100) / 100 : null,
           category: input.category,
           note: input.note || null,
           date: input.date || new Date().toISOString(),
@@ -480,34 +480,33 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     if (!oldTx) throw new Error("El movimiento no existe.")
 
     const originalAccounts = [...accounts]
-
     // Optimistically update account balances
     setAccounts((prev) => {
       // 1. Revert old transaction balances
       const reverted = prev.map((acc) => {
         if (acc.id === oldTx.accountId) {
           const bal = Number(acc.balance)
-          const revertedBal = oldTx.type === "income" ? bal - oldTx.amount : bal + oldTx.amount
+          const revertedBal = Math.round((oldTx.type === "income" ? bal - oldTx.amount : bal + oldTx.amount) * 100) / 100
           return { ...acc, balance: revertedBal }
         }
         if (oldTx.type === "transfer" && oldTx.toAccountId && acc.id === oldTx.toAccountId) {
           const bal = Number(acc.balance)
-          const revertedBal = bal - (oldTx.toAmount ?? oldTx.amount)
+          const revertedBal = Math.round((bal - (oldTx.toAmount ?? oldTx.amount)) * 100) / 100
           return { ...acc, balance: revertedBal }
         }
         return acc
       })
-
+ 
       // 2. Apply new transaction balances
       return reverted.map((acc) => {
         if (acc.id === input.accountId) {
           const bal = Number(acc.balance)
-          const newBal = input.type === "income" ? bal + input.amount : bal - input.amount
+          const newBal = Math.round((input.type === "income" ? bal + input.amount : bal - input.amount) * 100) / 100
           return { ...acc, balance: newBal }
         }
         if (input.type === "transfer" && input.toAccountId && acc.id === input.toAccountId) {
           const bal = Number(acc.balance)
-          const newBal = bal + (input.toAmount ?? input.amount)
+          const newBal = Math.round((bal + (input.toAmount ?? input.amount)) * 100) / 100
           return { ...acc, balance: newBal }
         }
         return acc
@@ -553,48 +552,55 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         // 1. Reverse old balance changes
         let oldPrimaryBalance = Number(oldPrimarySnap.data()?.balance ?? 0)
         if (currentOldTx.type === "income") {
-          oldPrimaryBalance -= currentOldTx.amount
+          oldPrimaryBalance = Math.round((oldPrimaryBalance - currentOldTx.amount) * 100) / 100
         } else if (currentOldTx.type === "expense") {
-          oldPrimaryBalance += currentOldTx.amount
+          oldPrimaryBalance = Math.round((oldPrimaryBalance + currentOldTx.amount) * 100) / 100
         } else if (currentOldTx.type === "transfer") {
-          oldPrimaryBalance += currentOldTx.amount
+          oldPrimaryBalance = Math.round((oldPrimaryBalance + currentOldTx.amount) * 100) / 100
         }
-
+ 
         let oldSecondaryBalance = 0
         if (oldSecondarySnap && oldSecondarySnap.exists()) {
-          oldSecondaryBalance = Number(oldSecondarySnap.data()?.balance ?? 0) - (currentOldTx.toAmount ?? currentOldTx.amount)
+          oldSecondaryBalance = Math.round((Number(oldSecondarySnap.data()?.balance ?? 0) - (currentOldTx.toAmount ?? currentOldTx.amount)) * 100) / 100
         }
-
+ 
         // 2. Set base reversed balances for target accounts
-        let newPrimaryBalance = input.accountId === currentOldTx.accountId ? oldPrimaryBalance : Number(newPrimarySnap.data()?.balance ?? 0)
+        let newPrimaryBalance = Number(newPrimarySnap.data()?.balance ?? 0)
+        if (input.accountId === currentOldTx.accountId) {
+          newPrimaryBalance = oldPrimaryBalance
+        } else if (currentOldTx.type === "transfer" && input.accountId === currentOldTx.toAccountId) {
+          newPrimaryBalance = oldSecondaryBalance
+        }
+ 
         let newSecondaryBalance = 0
-        if (newSecondarySnap) {
-          if (currentOldTx.type === "transfer" && input.toAccountId === currentOldTx.toAccountId) {
+        if (input.type === "transfer" && input.toAccountId && newSecondarySnap) {
+          newSecondaryBalance = Number(newSecondarySnap.data()?.balance ?? 0)
+          if (input.toAccountId === currentOldTx.accountId) {
+            newSecondaryBalance = oldPrimaryBalance
+          } else if (currentOldTx.type === "transfer" && input.toAccountId === currentOldTx.toAccountId) {
             newSecondaryBalance = oldSecondaryBalance
-          } else {
-            newSecondaryBalance = Number(newSecondarySnap.data()?.balance ?? 0)
           }
         }
-
+ 
         // 3. Apply new transaction balance changes
         if (input.type === "income") {
-          newPrimaryBalance += input.amount
+          newPrimaryBalance = Math.round((newPrimaryBalance + input.amount) * 100) / 100
         } else if (input.type === "expense") {
-          newPrimaryBalance -= input.amount
+          newPrimaryBalance = Math.round((newPrimaryBalance - input.amount) * 100) / 100
         } else if (input.type === "transfer") {
-          newPrimaryBalance -= input.amount
-          newSecondaryBalance += (input.toAmount ?? input.amount)
+          newPrimaryBalance = Math.round((newPrimaryBalance - input.amount) * 100) / 100
+          newSecondaryBalance = Math.round((newSecondaryBalance + (input.toAmount ?? input.amount)) * 100) / 100
         }
-
+ 
         // 4. Update Firestore documents
         transaction.set(txDocRef, {
           id: id,
           type: input.type,
-          amount: input.amount,
+          amount: Math.round(input.amount * 100) / 100,
           accountId: input.accountId,
           toAccountId: input.toAccountId || null,
-          toAmount: input.toAmount || null,
-          exchangeRate: input.exchangeRate || null,
+          toAmount: input.toAmount ? Math.round(input.toAmount * 100) / 100 : null,
+          exchangeRate: input.exchangeRate ? Math.round(input.exchangeRate * 100) / 100 : null,
           category: input.category,
           note: input.note || null,
           date: input.date || currentOldTx.date,
@@ -643,12 +649,12 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       prev.map((acc) => {
         if (acc.id === oldTx.accountId) {
           const bal = Number(acc.balance)
-          const revertedBal = oldTx.type === "income" ? bal - oldTx.amount : bal + oldTx.amount
+          const revertedBal = Math.round((oldTx.type === "income" ? bal - oldTx.amount : bal + oldTx.amount) * 100) / 100
           return { ...acc, balance: revertedBal }
         }
         if (oldTx.type === "transfer" && oldTx.toAccountId && acc.id === oldTx.toAccountId) {
           const bal = Number(acc.balance)
-          const revertedBal = bal - (oldTx.toAmount ?? oldTx.amount)
+          const revertedBal = Math.round((bal - (oldTx.toAmount ?? oldTx.amount)) * 100) / 100
           return { ...acc, balance: revertedBal }
         }
         return acc
@@ -672,11 +678,11 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
 
           // 2. Reverse balance changes
           if (txData.type === "income") {
-            newPrimaryBalance -= txData.amount
+            newPrimaryBalance = Math.round((newPrimaryBalance - txData.amount) * 100) / 100
           } else if (txData.type === "expense") {
-            newPrimaryBalance += txData.amount
+            newPrimaryBalance = Math.round((newPrimaryBalance + txData.amount) * 100) / 100
           } else if (txData.type === "transfer") {
-            newPrimaryBalance += txData.amount
+            newPrimaryBalance = Math.round((newPrimaryBalance + txData.amount) * 100) / 100
           }
           transaction.update(primaryAccRef, { balance: newPrimaryBalance })
         }
@@ -687,7 +693,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
           const secondarySnap = await transaction.get(secondaryAccRef)
           if (secondarySnap.exists()) {
             const secondaryData = secondarySnap.data() as Account
-            const newSecondaryBalance = Number(secondaryData.balance) - (txData.toAmount ?? txData.amount)
+            const newSecondaryBalance = Math.round((Number(secondaryData.balance) - (txData.toAmount ?? txData.amount)) * 100) / 100
             transaction.update(secondaryAccRef, { balance: newSecondaryBalance })
           }
         }
@@ -917,14 +923,14 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     const txDocRef = doc(db, "users", user.uid, "stockTransactions", txId)
     const accountRef = doc(db, "users", user.uid, "accounts", input.accountId)
 
-    const totalAmount = input.shares * input.price
+    const totalAmount = Math.round(input.shares * input.price * 100) / 100
 
     const originalAccounts = [...accounts]
     setAccounts((prev) =>
       prev.map((acc) => {
         if (acc.id === input.accountId) {
           const bal = Number(acc.balance)
-          const newBal = input.type === "buy" ? bal - totalAmount : bal + totalAmount
+          const newBal = Math.round((input.type === "buy" ? bal - totalAmount : bal + totalAmount) * 100) / 100
           return { ...acc, balance: newBal }
         }
         return acc
@@ -944,14 +950,14 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
           throw new Error("Saldo insuficiente en la cuenta seleccionada.")
         }
 
-        const newBal = input.type === "buy" ? bal - totalAmount : bal + totalAmount
+        const newBal = Math.round((input.type === "buy" ? bal - totalAmount : bal + totalAmount) * 100) / 100
 
         transaction.set(txDocRef, {
           id: txId,
           symbol,
           type: input.type,
           shares: input.shares,
-          price: input.price,
+          price: Math.round(input.price * 100) / 100,
           date: input.date,
           accountId: input.accountId,
         })
@@ -1174,15 +1180,15 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         }
 
         // 2. WRITES
-        let oldAccFinalBalance = oldAccSnap && oldAccSnap.exists() ? Number(oldAccSnap.data().balance) + oldLog.amount : 0
+        let oldAccFinalBalance = oldAccSnap && oldAccSnap.exists() ? Math.round((Number(oldAccSnap.data().balance) + oldLog.amount) * 100) / 100 : 0
         let newAccFinalBalance = 0
 
         if (input.accountId && newAccSnap && newAccSnap.exists()) {
           if (oldLog.accountId === input.accountId) {
-            newAccFinalBalance = oldAccFinalBalance - input.amount
+            newAccFinalBalance = Math.round((oldAccFinalBalance - input.amount) * 100) / 100
             oldAccFinalBalance = newAccFinalBalance
           } else {
-            newAccFinalBalance = Number(newAccSnap.data().balance) - input.amount
+            newAccFinalBalance = Math.round((Number(newAccSnap.data().balance) - input.amount) * 100) / 100
           }
         }
 
@@ -1272,7 +1278,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
           const accSnap = await transaction.get(accRef)
           if (accSnap.exists()) {
             const accData = accSnap.data() as Account
-            transaction.update(accRef, { balance: Number(accData.balance) + oldLog.amount })
+            transaction.update(accRef, { balance: Math.round((Number(accData.balance) + oldLog.amount) * 100) / 100 })
           }
 
           const txRef = doc(db, "users", user.uid, "transactions", oldLog.transactionId)

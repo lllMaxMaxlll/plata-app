@@ -99,7 +99,7 @@ export function StockTradeModal({
         symbol: targetSymbol,
         type,
         shares,
-        price,
+        price: Math.round(price * 100) / 100,
         date: new Date(date + "T12:00:00Z").toISOString(), // timezone safe
         accountId,
       })

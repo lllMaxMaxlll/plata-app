@@ -116,7 +116,7 @@ export function AddVehicleLogSheet({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    const parsedAmount = parseFloat(amount) || 0
+    const parsedAmount = Math.round((parseFloat(amount) || 0) * 100) / 100
     const parsedOdometer = parseInt(odometer) || 0
 
     if (parsedOdometer < 0) {

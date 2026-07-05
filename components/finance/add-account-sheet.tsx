@@ -57,7 +57,7 @@ export function AddAccountSheet({
 
     setSubmitting(true)
     try {
-      const parsedBalance = parseFloat(balance) || 0
+      const parsedBalance = Math.round((parseFloat(balance) || 0) * 100) / 100
       if (account) {
         // Edit mode
         await updateAccount(account.id, {

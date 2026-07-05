@@ -69,7 +69,8 @@ export function TransactionSheet({
     const amt = parseFloat(amount) || 0
     const r = parseFloat(rate) || 0
     if (!r) return null
-    return fromAccount?.currency === "USD" ? amt * r : amt / r
+    const calculated = fromAccount?.currency === "USD" ? amt * r : amt / r
+    return Math.round(calculated * 100) / 100
   }, [crossCurrency, amount, rate, fromAccount])
 
   useEffect(() => {
@@ -115,7 +116,7 @@ export function TransactionSheet({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    const amt = parseFloat(amount)
+    const amt = Math.round((parseFloat(amount) || 0) * 100) / 100
     if (!amt || amt <= 0 || !accountId) return
     if (type === "transfer" && accountId === toAccountId) return
 
@@ -141,7 +142,7 @@ export function TransactionSheet({
         ...(type === "transfer"
           ? {
               toAccountId,
-              exchangeRate: crossCurrency ? parseFloat(rate) || undefined : undefined,
+              exchangeRate: crossCurrency ? Math.round((parseFloat(rate) || 0) * 100) / 100 || undefined : undefined,
               toAmount: crossCurrency ? toAmountPreview ?? undefined : amt,
             }
           : {}),
