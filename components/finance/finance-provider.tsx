@@ -1138,6 +1138,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
             note: note,
             date: input.date,
             receiptName: null,
+            vehicleId: input.vehicleId || null,
           })
 
           transaction.update(accountRef, { balance: newBalance })
@@ -1254,6 +1255,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
             note: note,
             date: input.date,
             receiptName: null,
+            vehicleId: input.vehicleId || null,
           })
         }
 

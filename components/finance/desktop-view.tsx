@@ -298,9 +298,13 @@ function DesktopHome({
   onSeeAll: () => void
   onSeeAnalytics: () => void
 }) {
-  const { accounts, transactions, getAccount, categories } = useFinance()
+  const { accounts, transactions, getAccount, categories, vehicles } = useFinance()
 
   const getCategoryColor = (catName: string) => {
+    const isVehicle = vehicles?.some((v) => v.name === catName)
+    if (isVehicle) {
+      return categories.find((c) => c.name === "Transporte")?.color ?? "var(--chart-5)"
+    }
     return categories.find((c) => c.name === catName)?.color ?? "var(--chart-5)"
   }
 
@@ -312,14 +316,23 @@ function DesktopHome({
     for (const t of transactions) {
       if (t.type !== "expense") continue
       if (getAccount(t.accountId)?.currency !== "ARS") continue
-      map.set(t.category, (map.get(t.category) ?? 0) + t.amount)
+      
+      let groupName = t.category
+      if (t.vehicleId && vehicles) {
+        const veh = vehicles.find((v) => v.id === t.vehicleId)
+        if (veh) {
+          groupName = veh.name
+        }
+      }
+      
+      map.set(groupName, (map.get(groupName) ?? 0) + t.amount)
     }
     const chartRows = [...map.entries()]
       .map(([category, amount]) => ({ category, amount }))
       .sort((a, b) => b.amount - a.amount)
     const chartTotal = chartRows.reduce((s, r) => s + r.amount, 0)
     return { chartRows, chartTotal }
-  }, [transactions, getAccount, accounts])
+  }, [transactions, getAccount, accounts, vehicles])
 
   const maxVal = chartRows[0]?.amount ?? 1
 
@@ -475,9 +488,12 @@ function DesktopHome({
                   ? "text-destructive"
                   : "text-foreground"
 
+                const vehicle = tx.vehicleId ? vehicles?.find((v) => v.id === tx.vehicleId) : undefined
                 const subtitle =
                   tx.type === "transfer"
                     ? `${acc?.name} → ${toAcc?.name}`
+                    : vehicle
+                    ? `${tx.category} (${vehicle.name}) · ${acc?.name}`
                     : `${tx.category} · ${acc?.name}`
 
                 return (

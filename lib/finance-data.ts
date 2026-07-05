@@ -30,6 +30,7 @@ export interface Transaction {
   note?: string
   date: string // ISO string
   receiptName?: string
+  vehicleId?: string
 }
 
 export interface Category {

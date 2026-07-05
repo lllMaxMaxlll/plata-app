@@ -20,9 +20,10 @@ function TransactionRow({
   tx: Transaction
   onEditTransaction?: (tx: Transaction) => void
 }) {
-  const { getAccount } = useFinance()
+  const { getAccount, vehicles } = useFinance()
   const account = getAccount(tx.accountId)
   const toAccount = tx.toAccountId ? getAccount(tx.toAccountId) : undefined
+  const vehicle = tx.vehicleId ? vehicles?.find((v) => v.id === tx.vehicleId) : undefined
 
   const config = {
     income: {
@@ -51,6 +52,8 @@ function TransactionRow({
   const subtitle =
     tx.type === "transfer"
       ? `${account?.name} → ${toAccount?.name}`
+      : vehicle
+      ? `${tx.category} (${vehicle.name}) · ${account?.name}`
       : `${tx.category} · ${account?.name}`
 
   return (

@@ -6,26 +6,39 @@ import { CATEGORY_COLORS, formatShort } from "@/lib/finance-data"
 import { useFinance } from "./finance-provider"
  
 export function ExpenseChart({ onSeeAnalytics }: { onSeeAnalytics?: () => void }) {
-  const { transactions, getAccount, categories, accounts } = useFinance()
+  const { transactions, getAccount, categories, accounts, vehicles } = useFinance()
  
   const { rows, total } = useMemo(() => {
     const map = new Map<string, number>()
     for (const t of transactions) {
       if (t.type !== "expense") continue
-      // Only aggregate ARS expenses so the bars share a single unit
+      // Only aggregate ARS expenses so the bars share a5 single unit
       if (getAccount(t.accountId)?.currency !== "ARS") continue
-      map.set(t.category, (map.get(t.category) ?? 0) + t.amount)
+      
+      let groupName = t.category
+      if (t.vehicleId && vehicles) {
+        const veh = vehicles.find(v => v.id === t.vehicleId)
+        if (veh) {
+          groupName = veh.name
+        }
+      }
+      
+      map.set(groupName, (map.get(groupName) ?? 0) + t.amount)
     }
     const rows = [...map.entries()]
       .map(([category, amount]) => ({ category, amount }))
       .sort((a, b) => b.amount - a.amount)
     const total = rows.reduce((s, r) => s + r.amount, 0)
     return { rows, total }
-  }, [transactions, getAccount, accounts])
+  }, [transactions, getAccount, accounts, vehicles])
  
   const max = rows[0]?.amount ?? 1
  
   const getCategoryColor = (catName: string) => {
+    const isVehicle = vehicles?.some((v) => v.name === catName)
+    if (isVehicle) {
+      return categories.find((c) => c.name === "Transporte")?.color ?? "var(--chart-5)"
+    }
     return categories.find((c) => c.name === catName)?.color ?? "var(--chart-5)"
   }
  
