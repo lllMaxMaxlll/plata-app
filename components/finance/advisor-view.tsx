@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { Sparkles, Send, Trash2, Bot, User as UserIcon, RefreshCw, ChevronRight } from "lucide-react"
+import { Sparkles, Send, Trash2, Bot, User as UserIcon, RefreshCw, ChevronRight, Settings, Key, Eye, EyeOff, Copy, Check, Scale, PiggyBank, Coins, BookOpen } from "lucide-react"
 import { useFinance } from "./finance-provider"
 import { type Account, type StockHolding, type WatchlistStock, type Transaction, type Vehicle, type VehicleLog } from "@/lib/finance-data"
 
@@ -230,6 +230,15 @@ function buildFinanceContext(
   return context
 }
 
+const DEFAULT_MODELS = [
+  { id: "openrouter/free", name: "Free Models Router (Auto)", contextLength: 200000 },
+  { id: "google/gemma-4-31b-it:free", name: "Google: Gemma 4 31B", contextLength: 262144 },
+  { id: "meta-llama/llama-3.3-70b-instruct:free", name: "Meta: Llama 3.3 70B Instruct", contextLength: 131072 },
+  { id: "qwen/qwen3-coder:free", name: "Qwen: Qwen3 Coder 480B A35B", contextLength: 1048576 },
+  { id: "nousresearch/hermes-3-llama-3.1-405b:free", name: "Nous: Hermes 3 405B Instruct", contextLength: 131072 },
+  { id: "meta-llama/llama-3.2-3b-instruct:free", name: "Meta: Llama 3.2 3B Instruct", contextLength: 131072 },
+]
+
 export function AdvisorView({ isDesktop = false }: { isDesktop?: boolean }) {
   const { accounts, transactions, holdings, watchlist, vehicles, vehicleLogs } = useFinance()
   const [messages, setMessages] = useState<Message[]>([])
@@ -237,7 +246,15 @@ export function AdvisorView({ isDesktop = false }: { isDesktop?: boolean }) {
   const [isSending, setIsSending] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  // Load chat history from localStorage on mount
+  const [selectedModel, setSelectedModel] = useState("openrouter/free")
+  const [models, setModels] = useState(DEFAULT_MODELS)
+  const [personality, setPersonality] = useState("balanced")
+  const [customApiKey, setCustomApiKey] = useState("")
+  const [showSettings, setShowSettings] = useState(false)
+  const [showApiKey, setShowApiKey] = useState(false)
+  const [copiedIndex, setCopiedIndex] = useState<number | null>(null)
+
+  // Load chat history and configurations from localStorage on mount
   useEffect(() => {
     const saved = localStorage.getItem("plata_ai_chat_history")
     if (saved) {
@@ -257,6 +274,65 @@ export function AdvisorView({ isDesktop = false }: { isDesktop?: boolean }) {
         },
       ])
     }
+
+    const savedModel = localStorage.getItem("plata_ai_selected_model")
+    if (savedModel) {
+      setSelectedModel(savedModel)
+    }
+
+    const savedPersonality = localStorage.getItem("plata_ai_selected_personality")
+    if (savedPersonality) {
+      setPersonality(savedPersonality)
+    }
+
+    const savedKey = localStorage.getItem("plata_openrouter_api_key")
+    if (savedKey) {
+      setCustomApiKey(savedKey)
+    }
+  }, [])
+
+  // Fetch all free models dynamically from OpenRouter API
+  useEffect(() => {
+    const fetchModels = async () => {
+      try {
+        const res = await fetch("https://openrouter.ai/api/v1/models")
+        if (res.ok) {
+          const data = await res.json()
+          
+          // Filter out models that are free
+          const freeModels = data.data.filter((m: any) =>
+            m.id.endsWith(":free") ||
+            (m.pricing && parseFloat(m.pricing.prompt) === 0 && parseFloat(m.pricing.completion) === 0)
+          )
+
+          const mapped = freeModels.map((m: any) => ({
+            id: m.id,
+            name: m.name.replace(" (free)", ""),
+            contextLength: m.context_length,
+          }))
+
+          // Make sure 'openrouter/free' is at the top
+          const filtered = mapped.filter((m: any) => m.id !== "openrouter/free")
+          const finalList = [
+            { id: "openrouter/free", name: "Free Models Router (Auto)", contextLength: 200000 },
+            ...filtered,
+          ]
+
+          // Remove duplicates by ID
+          const seen = new Set()
+          const uniqueList = finalList.filter((item) => {
+            if (seen.has(item.id)) return false
+            seen.add(item.id)
+            return true
+          })
+
+          setModels(uniqueList)
+        }
+      } catch (e) {
+        console.error("Failed to fetch OpenRouter models dynamically:", e)
+      }
+    }
+    fetchModels()
   }, [])
 
   // Save chat history when messages change
@@ -268,6 +344,23 @@ export function AdvisorView({ isDesktop = false }: { isDesktop?: boolean }) {
     }
     scrollToBottom()
   }, [messages])
+
+  // Save configurations when they change
+  useEffect(() => {
+    localStorage.setItem("plata_ai_selected_model", selectedModel)
+  }, [selectedModel])
+
+  useEffect(() => {
+    localStorage.setItem("plata_ai_selected_personality", personality)
+  }, [personality])
+
+  useEffect(() => {
+    if (customApiKey.trim()) {
+      localStorage.setItem("plata_openrouter_api_key", customApiKey.trim())
+    } else {
+      localStorage.removeItem("plata_openrouter_api_key")
+    }
+  }, [customApiKey])
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -282,51 +375,97 @@ export function AdvisorView({ isDesktop = false }: { isDesktop?: boolean }) {
       timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
     }
 
-    setMessages((prev) => [...prev, userMessage])
+    // Save previous state for appending stream
+    const currentMessages = [...messages, userMessage]
+    setMessages(currentMessages)
     setInput("")
     setIsSending(true)
 
+    // Add empty assistant message that we will stream text into
+    setMessages((prev) => [
+      ...prev,
+      {
+        role: "assistant",
+        content: "",
+        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      },
+    ])
+
     try {
-      // Build the financial context object based on real-time data in client
+      // Build user financial profile context
       const financialContext = buildFinanceContext(accounts, transactions, holdings, watchlist, vehicles, vehicleLogs)
 
-      // Send requests to our secure endpoint
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      }
+
+      if (customApiKey && customApiKey.trim()) {
+        headers["x-user-api-key"] = customApiKey.trim()
+      }
+
       const response = await fetch("/api/chat", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers,
         body: JSON.stringify({
-          messages: [...messages, userMessage].map((m) => ({
+          messages: currentMessages.map((m) => ({
             role: m.role,
             content: m.content,
           })),
           context: financialContext,
+          model: selectedModel,
+          personality: personality,
         }),
       })
 
       if (!response.ok) {
-        throw new Error("Error en la llamada al servidor de chat.")
+        const errText = await response.text()
+        let errMessage = "Error en la llamada al servidor de chat."
+        try {
+          const parsed = JSON.parse(errText)
+          errMessage = parsed.error || errMessage
+        } catch (_) {}
+        throw new Error(errMessage)
       }
 
-      const data = await response.json()
-
-      const assistantMessage: Message = {
-        role: "assistant",
-        content: data.text || "Lo siento, no pude procesar la respuesta.",
-        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      const reader = response.body?.getReader()
+      if (!reader) {
+        throw new Error("No se pudo establecer la conexión de streaming del servidor.")
       }
 
-      setMessages((prev) => [...prev, assistantMessage])
-    } catch (error) {
+      const decoder = new TextDecoder()
+      let assistantText = ""
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        const chunk = decoder.decode(value, { stream: true })
+        assistantText += chunk
+
+        setMessages((prev) => {
+          const updated = [...prev]
+          if (updated.length > 0) {
+            updated[updated.length - 1] = {
+              ...updated[updated.length - 1],
+              content: assistantText,
+            }
+          }
+          return updated
+        })
+      }
+    } catch (error: any) {
       console.error("Chat error:", error)
-      const errorMessage: Message = {
-        role: "assistant",
-        content:
-          "⚠️ **Hubo un problema al conectarme con PLATA AI.** Por favor, verificá tu conexión a internet o intentá de nuevo más tarde.",
-        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-      }
-      setMessages((prev) => [...prev, errorMessage])
+      setMessages((prev) => {
+        const updated = [...prev]
+        if (updated.length > 0) {
+          updated[updated.length - 1] = {
+            role: "assistant",
+            content: `⚠️ **Hubo un problema al conectarme con PLATA AI.**\n\n*Detalle del error:* ${error.message || "Error de red/servidor"}\n\nPor favor, verificá tu conexión a internet o intentá de nuevo.`,
+            timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          }
+        }
+        return updated
+      })
     } finally {
       setIsSending(false)
     }
@@ -343,6 +482,13 @@ export function AdvisorView({ isDesktop = false }: { isDesktop?: boolean }) {
         },
       ])
     }
+  }
+
+  const handleCopyMessage = (text: string, index: number) => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopiedIndex(index)
+      setTimeout(() => setCopiedIndex(null), 2000)
+    })
   }
 
   const SUGGESTED_PROMPTS = [
@@ -391,14 +537,114 @@ export function AdvisorView({ isDesktop = false }: { isDesktop?: boolean }) {
             <p className="text-[11px] text-muted-foreground font-medium">Asistente financiero personal</p>
           </div>
         </div>
-        <button
-          onClick={handleClearChat}
-          className="flex size-9 items-center justify-center rounded-xl text-muted-foreground hover:bg-muted/80 hover:text-destructive transition-all active:scale-95"
-          title="Borrar chat"
-        >
-          <Trash2 className="size-4" />
-        </button>
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={() => setShowSettings(!showSettings)}
+            className={`flex size-9 items-center justify-center rounded-xl text-muted-foreground hover:bg-muted/80 hover:text-foreground transition-all active:scale-95 ${
+              showSettings ? "bg-muted text-foreground" : ""
+            }`}
+            title="Configuración de API Key"
+          >
+            <Settings className="size-4" />
+          </button>
+          <button
+            onClick={handleClearChat}
+            className="flex size-9 items-center justify-center rounded-xl text-muted-foreground hover:bg-muted/80 hover:text-destructive transition-all active:scale-95"
+            title="Borrar chat"
+          >
+            <Trash2 className="size-4" />
+          </button>
+        </div>
       </header>
+
+      {/* Settings Panel */}
+      {showSettings && (
+        <div className="shrink-0 border-b border-border/60 bg-card/15 p-4.5 animate-in slide-in-from-top-4 duration-200">
+          <div className="flex flex-col gap-3 rounded-2xl border border-border/80 bg-background/55 p-3.5 shadow-sm">
+            <div className="flex items-center gap-2 text-xs font-bold text-foreground">
+              <Key className="size-3.5 text-primary" />
+              <span>Configuración de OpenRouter</span>
+            </div>
+            <p className="text-[11px] text-muted-foreground leading-normal">
+              Opcional: Si querés usar tus propios créditos o modelos pagos de OpenRouter, ingresá tu API Key acá. Si la dejás vacía, se usará la key gratuita del servidor.
+            </p>
+            <div className="relative flex items-center mt-1">
+              <input
+                type={showApiKey ? "text" : "password"}
+                value={customApiKey}
+                onChange={(e) => setCustomApiKey(e.target.value)}
+                placeholder="sk-or-v1-..."
+                className="w-full rounded-xl border border-border bg-card/50 px-3.5 py-2.5 pr-10 text-xs font-medium placeholder:text-muted-foreground/40 focus:border-primary focus:outline-none focus:bg-card transition-all"
+              />
+              <button
+                type="button"
+                onClick={() => setShowApiKey(!showApiKey)}
+                className="absolute right-3 text-muted-foreground/80 hover:text-foreground transition-colors cursor-pointer"
+              >
+                {showApiKey ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Controls Bar: Model & Personality Selector */}
+      <div className="shrink-0 border-b border-border/40 bg-card/5 px-5 py-3.5 flex flex-col sm:flex-row gap-3.5 sm:items-center sm:justify-between">
+        {/* Model Select */}
+        <div className="flex flex-col gap-1 sm:w-1/2">
+          <label className="text-[10px] font-bold text-muted-foreground/80 uppercase tracking-wider">
+            Modelo de Inteligencia Artificial
+          </label>
+          <div className="relative">
+            <select
+              value={selectedModel}
+              onChange={(e) => setSelectedModel(e.target.value)}
+              className="w-full rounded-xl border border-border bg-card/45 px-3 py-2 text-xs font-semibold text-foreground focus:border-primary focus:bg-card focus:outline-none transition-all appearance-none cursor-pointer pr-8"
+            >
+              {models.map((m) => (
+                <option key={m.id} value={m.id} className="bg-card">
+                  {m.name} ({m.contextLength ? `${Math.round(m.contextLength / 1024)}k` : "—"} ctx)
+                </option>
+              ))}
+            </select>
+            <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-muted-foreground">
+              <ChevronRight className="size-3.5 rotate-90" />
+            </div>
+          </div>
+        </div>
+
+        {/* Personality Tabs */}
+        <div className="flex flex-col gap-1 sm:w-1/2">
+          <label className="text-[10px] font-bold text-muted-foreground/80 uppercase tracking-wider">
+            Perfil del Asesor
+          </label>
+          <div className="flex gap-1 bg-muted/40 p-0.5 rounded-xl border border-border/40 overflow-x-auto no-scrollbar">
+            {[
+              { id: "balanced", name: "Equilibrado", icon: Scale },
+              { id: "frugal", name: "Ahorrador", icon: PiggyBank },
+              { id: "investor", name: "Inversor", icon: Coins },
+              { id: "academic", name: "Académico", icon: BookOpen },
+            ].map((p) => {
+              const Icon = p.icon
+              const active = personality === p.id
+              return (
+                <button
+                  key={p.id}
+                  onClick={() => setPersonality(p.id)}
+                  className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap cursor-pointer ${
+                    active
+                      ? "bg-primary text-primary-foreground shadow-sm scale-[1.02]"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/30"
+                  }`}
+                >
+                  <Icon className="size-3.5 shrink-0" />
+                  <span>{p.name}</span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      </div>
 
       {/* Message Area */}
       <div className="flex-1 overflow-y-auto px-5 py-6 no-scrollbar flex flex-col gap-5">
@@ -421,7 +667,7 @@ export function AdvisorView({ isDesktop = false }: { isDesktop?: boolean }) {
               </div>
 
               {/* Bubble */}
-              <div className="flex flex-col gap-1">
+              <div className="flex flex-col gap-1 group/msg relative">
                 <div
                   className={`rounded-2xl px-4 py-3 text-sm shadow-sm transition-all border ${
                     isAI
@@ -430,10 +676,33 @@ export function AdvisorView({ isDesktop = false }: { isDesktop?: boolean }) {
                   }`}
                 >
                   {isAI ? (
-                    <div
-                      className="prose prose-sm prose-invert break-words flex flex-col gap-2 max-w-none text-foreground/95"
-                      dangerouslySetInnerHTML={{ __html: parseMarkdown(msg.content) }}
-                    />
+                    <>
+                      <div
+                        className="prose prose-sm prose-invert break-words flex flex-col gap-2 max-w-none text-foreground/95"
+                        dangerouslySetInnerHTML={{ __html: parseMarkdown(msg.content) }}
+                      />
+                      {msg.content && (
+                        <div className="flex justify-end mt-2 pt-1 border-t border-border/30 opacity-0 group-hover/msg:opacity-100 transition-opacity">
+                          <button
+                            onClick={() => handleCopyMessage(msg.content, index)}
+                            className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-primary transition-colors py-0.5 px-1.5 rounded bg-muted/40 hover:bg-muted/80 cursor-pointer"
+                            title="Copiar respuesta"
+                          >
+                            {copiedIndex === index ? (
+                              <>
+                                <Check className="size-3 text-green-500" />
+                                <span className="text-green-500 font-semibold">Copiado</span>
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="size-3" />
+                                <span>Copiar</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      )}
+                    </>
                   ) : (
                     <p className="whitespace-pre-wrap break-words">{msg.content}</p>
                   )}
@@ -451,14 +720,14 @@ export function AdvisorView({ isDesktop = false }: { isDesktop?: boolean }) {
         })}
 
         {/* Loading state */}
-        {isSending && (
-          <div className="flex gap-3 max-w-[85%] self-start">
+        {isSending && messages.length > 0 && messages[messages.length - 1].content === "" && (
+          <div className="flex gap-3 max-w-[85%] self-start animate-pulse">
             <div className="flex size-8 shrink-0 items-center justify-center rounded-xl border bg-primary/10 border-primary/20 text-primary">
               <Bot className="size-4 animate-spin" />
             </div>
             <div className="flex flex-col gap-1">
-              <div className="rounded-2xl rounded-tl-sm border border-border/80 bg-card/75 px-4.5 py-3.5 shadow-sm text-sm">
-                <div className="flex items-center gap-1.5">
+              <div className="rounded-2xl rounded-tl-sm border border-border/80 bg-card/75 px-4.5 py-3 shadow-sm text-sm">
+                <div className="flex items-center gap-1.5 py-1">
                   <span className="size-2 animate-bounce rounded-full bg-primary/60" style={{ animationDelay: "0ms" }} />
                   <span className="size-2 animate-bounce rounded-full bg-primary/60" style={{ animationDelay: "150ms" }} />
                   <span className="size-2 animate-bounce rounded-full bg-primary/60" style={{ animationDelay: "300ms" }} />
