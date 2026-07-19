@@ -308,20 +308,22 @@ export function TransactionSheet({
           {/* Date */}
           <Field label="Fecha">
             <Popover>
-              <PopoverTrigger>
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={submitting}
-                  className="w-full justify-start rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm font-normal text-left outline-none hover:bg-muted/10 focus:border-ring disabled:opacity-50 h-auto"
-                >
-                  <CalendarIcon className="mr-2 size-4 text-muted-foreground" />
-                  {date ? (
-                    format(date, "PPP", { locale: es })
-                  ) : (
-                    <span className="text-muted-foreground/50">Seleccionar fecha</span>
-                  )}
-                </Button>
+              <PopoverTrigger
+                render={
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={submitting}
+                    className="w-full justify-start rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm font-normal text-left outline-none hover:bg-muted/10 focus:border-ring disabled:opacity-50 h-auto"
+                  />
+                }
+              >
+                <CalendarIcon className="mr-2 size-4 text-muted-foreground" />
+                {date ? (
+                  format(date, "PPP", { locale: es })
+                ) : (
+                  <span className="text-muted-foreground/50">Seleccionar fecha</span>
+                )}
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0 border border-border bg-popover rounded-xl" align="start">
                 <Calendar

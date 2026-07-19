@@ -18,6 +18,7 @@ import { ManageCategoriesSheet } from "./manage-categories-sheet"
 import { SecuritySheet } from "./security-sheet"
 import { AdvisorView } from "./advisor-view"
 import { AnalyticsView } from "./analytics-view"
+import { CurrencyExchangeSheet } from "./currency-exchange-sheet"
 import type { Account, Transaction } from "@/lib/finance-data"
 
 export function FinanceApp() {
@@ -25,6 +26,7 @@ export function FinanceApp() {
   const [view, setView] = useState<View>("home")
   const [txOpen, setTxOpen] = useState(false)
   const [accountOpen, setAccountOpen] = useState(false)
+  const [exchangeOpen, setExchangeOpen] = useState(false)
   const [categoriesOpen, setCategoriesOpen] = useState(false)
   const [securityOpen, setSecurityOpen] = useState(false)
   const [editingAccount, setEditingAccount] = useState<Account | null>(null)
@@ -69,6 +71,7 @@ export function FinanceApp() {
               onSeeAll={() => setView("activity")}
               onSeeAnalytics={() => setView("analytics")}
               onEditTransaction={handleEditTransaction}
+              onOpenExchange={() => setExchangeOpen(true)}
             />
           )}
           {view === "accounts" && (
@@ -111,6 +114,7 @@ export function FinanceApp() {
           onEditTransaction={handleEditTransaction}
           onManageCategories={() => setCategoriesOpen(true)}
           onManageSecurity={() => setSecurityOpen(true)}
+          onOpenExchange={() => setExchangeOpen(true)}
         />
       </div>
 
@@ -138,6 +142,10 @@ export function FinanceApp() {
       <SecuritySheet
         open={securityOpen}
         onClose={() => setSecurityOpen(false)}
+      />
+      <CurrencyExchangeSheet
+        open={exchangeOpen}
+        onClose={() => setExchangeOpen(false)}
       />
     </>
   )

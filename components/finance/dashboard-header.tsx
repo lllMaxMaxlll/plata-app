@@ -1,11 +1,11 @@
 "use client"
 
 import { useState } from "react"
-import { Eye, EyeOff, LogOut } from "lucide-react"
+import { Eye, EyeOff, LogOut, ArrowLeftRight } from "lucide-react"
 import { formatShort } from "@/lib/finance-data"
 import { useFinance } from "./finance-provider"
 
-export function DashboardHeader() {
+export function DashboardHeader({ onOpenExchange }: { onOpenExchange: () => void }) {
   const { user, totalsByCurrency, logout } = useFinance()
   const [hidden, setHidden] = useState(false)
 
@@ -54,6 +54,14 @@ export function DashboardHeader() {
             </p>
           </div>
         </div>
+
+        <button
+          onClick={onOpenExchange}
+          className="mt-3.5 w-full flex items-center justify-center gap-2 rounded-2xl bg-primary/10 py-3 text-xs font-semibold text-primary hover:bg-primary/20 active:scale-[0.99] transition-all cursor-pointer"
+        >
+          <ArrowLeftRight className="size-4" />
+          Cambio de moneda
+        </button>
       </div>
     </header>
   )

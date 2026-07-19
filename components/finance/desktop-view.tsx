@@ -50,7 +50,7 @@ import {
   type StockHolding
 } from "@/lib/finance-data"
 
-type View = "home" | "accounts" | "vehicles" | "stocks" | "activity" | "profile" | "advisor"
+type View = "home" | "accounts" | "vehicles" | "stocks" | "activity" | "profile" | "advisor" | "analytics"
 
 interface DesktopViewProps {
   view: View
@@ -61,6 +61,7 @@ interface DesktopViewProps {
   onEditTransaction: (tx: Transaction) => void
   onManageCategories: () => void
   onManageSecurity: () => void
+  onOpenExchange: () => void
 }
 
 function relativeDate(iso: string) {
@@ -81,6 +82,7 @@ export function DesktopView({
   onEditTransaction,
   onManageCategories,
   onManageSecurity,
+  onOpenExchange,
 }: DesktopViewProps) {
   const { user, logout, accounts, transactions, totalsByCurrency, getAccount } = useFinance()
   const [hidden, setHidden] = useState(false)
@@ -110,10 +112,19 @@ export function DesktopView({
           {/* New Transaction Button */}
           <button
             onClick={onAddTransaction}
-            className="w-full flex items-center justify-center gap-2 rounded-2xl bg-primary py-3.5 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/10 hover:shadow-primary/20 hover:scale-[1.01] active:scale-[0.99] transition-all"
+            className="w-full flex items-center justify-center gap-2 rounded-2xl bg-primary py-3.5 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/10 hover:shadow-primary/20 hover:scale-[1.01] active:scale-[0.99] transition-all cursor-pointer"
           >
             <Plus className="size-4.5" />
             Nuevo movimiento
+          </button>
+
+          {/* Currency Exchange Button */}
+          <button
+            onClick={onOpenExchange}
+            className="w-full flex items-center justify-center gap-2 rounded-2xl border border-border bg-card py-3 text-sm font-semibold text-foreground hover:bg-muted/50 hover:scale-[1.01] active:scale-[0.99] transition-all cursor-pointer"
+          >
+            <ArrowLeftRight className="size-4" />
+            Cambio de moneda
           </button>
 
           {/* Navigation Links */}

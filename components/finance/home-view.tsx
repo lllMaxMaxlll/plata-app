@@ -12,18 +12,20 @@ export function HomeView({
   onSeeAll,
   onSeeAnalytics,
   onEditTransaction,
+  onOpenExchange,
 }: {
   onAddAccount: () => void
   onSeeAll: () => void
   onSeeAnalytics: () => void
   onEditTransaction: (tx: Transaction) => void
+  onOpenExchange: () => void
 }) {
   const { transactions } = useFinance()
   const recent = transactions.slice(0, 5)
 
   return (
     <div>
-      <DashboardHeader />
+      <DashboardHeader onOpenExchange={onOpenExchange} />
       <WalletCards onAddAccount={onAddAccount} />
       <ExpenseChart onSeeAnalytics={onSeeAnalytics} />
 
