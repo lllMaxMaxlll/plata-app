@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { ArrowLeftRight, Check, Calendar as CalendarIcon, AlertCircle, RefreshCw } from "lucide-react"
+import { ArrowLeftRight, Calendar as CalendarIcon, AlertCircle, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useFinance } from "./finance-provider"
 import { BottomSheet } from "./bottom-sheet"
@@ -12,6 +12,8 @@ import { format } from "date-fns"
 import { es } from "date-fns/locale"
 import { formatShort } from "@/lib/finance-data"
 
+type ExchangeDirection = "ARS_TO_USD" | "USD_TO_ARS"
+
 interface CurrencyExchangeSheetProps {
   open: boolean
   onClose: () => void
@@ -20,6 +22,7 @@ interface CurrencyExchangeSheetProps {
 export function CurrencyExchangeSheet({ open, onClose }: CurrencyExchangeSheetProps) {
   const { accounts, addTransaction } = useFinance()
 
+  const [direction, setDirection] = useState<ExchangeDirection>("ARS_TO_USD")
   const [fromAccountId, setFromAccountId] = useState("")
   const [toAccountId, setToAccountId] = useState("")
   const [arsAmount, setArsAmount] = useState("")
@@ -34,18 +37,18 @@ export function CurrencyExchangeSheet({ open, onClose }: CurrencyExchangeSheetPr
   const arsAccounts = useMemo(() => accounts.filter((a) => a.currency === "ARS"), [accounts])
   const usdAccounts = useMemo(() => accounts.filter((a) => a.currency === "USD"), [accounts])
 
-  const selectedArsAccount = useMemo(
+  const sourceAccounts = direction === "ARS_TO_USD" ? arsAccounts : usdAccounts
+  const targetAccounts = direction === "ARS_TO_USD" ? usdAccounts : arsAccounts
+
+  const selectedSourceAccount = useMemo(
     () => accounts.find((a) => a.id === fromAccountId),
     [accounts, fromAccountId]
-  )
-  const selectedUsdAccount = useMemo(
-    () => accounts.find((a) => a.id === toAccountId),
-    [accounts, toAccountId]
   )
 
   // Reset/Prefill form when opened
   useEffect(() => {
     if (open) {
+      setDirection("ARS_TO_USD")
       setArsAmount("")
       setUsdAmount("")
       setRate("")
@@ -66,6 +69,19 @@ export function CurrencyExchangeSheet({ open, onClose }: CurrencyExchangeSheetPr
       }
     }
   }, [open, arsAccounts, usdAccounts])
+
+  // Handle direction tab change
+  const handleDirectionChange = (nextDir: ExchangeDirection) => {
+    setDirection(nextDir)
+
+    if (nextDir === "ARS_TO_USD") {
+      setFromAccountId(arsAccounts[0]?.id ?? "")
+      setToAccountId(usdAccounts[0]?.id ?? "")
+    } else {
+      setFromAccountId(usdAccounts[0]?.id ?? "")
+      setToAccountId(arsAccounts[0]?.id ?? "")
+    }
+  }
 
   // Bidirectional calculations
   const parsedRate = parseFloat(rate) || 0
@@ -127,8 +143,9 @@ export function CurrencyExchangeSheet({ open, onClose }: CurrencyExchangeSheetPr
   // Validations
   const numArs = parseFloat(arsAmount) || 0
   const numUsd = parseFloat(usdAmount) || 0
-  const balance = selectedArsAccount ? Number(selectedArsAccount.balance) : 0
-  const isBalanceInsufficient = numArs > balance
+  const sourceBalance = selectedSourceAccount ? Number(selectedSourceAccount.balance) : 0
+  const requiredSourceAmount = direction === "ARS_TO_USD" ? numArs : numUsd
+  const isBalanceInsufficient = requiredSourceAmount > sourceBalance
 
   const canSubmit =
     fromAccountId !== "" &&
@@ -146,16 +163,18 @@ export function CurrencyExchangeSheet({ open, onClose }: CurrencyExchangeSheetPr
     setSubmitting(true)
     try {
       const isoDate = date ? date.toISOString() : new Date().toISOString()
+      const isBuy = direction === "ARS_TO_USD"
+      const defaultNote = isBuy ? "Compra de dólares (ARS → USD)" : "Venta de dólares (USD → ARS)"
 
       const payload = {
         type: "transfer" as const,
-        amount: Math.round(numArs * 100) / 100,
+        amount: isBuy ? Math.round(numArs * 100) / 100 : Math.round(numUsd * 100) / 100,
         accountId: fromAccountId,
         toAccountId: toAccountId,
-        toAmount: Math.round(numUsd * 100) / 100,
+        toAmount: isBuy ? Math.round(numUsd * 100) / 100 : Math.round(numArs * 100) / 100,
         exchangeRate: Math.round(parsedRate * 100) / 100,
         category: "Transferencia",
-        note: note.trim() || "Cambio de moneda (ARS → USD)",
+        note: note.trim() || defaultNote,
         date: isoDate,
       }
 
@@ -170,14 +189,46 @@ export function CurrencyExchangeSheet({ open, onClose }: CurrencyExchangeSheetPr
     }
   }
 
+  const isBuy = direction === "ARS_TO_USD"
+  const sourceCurrency = isBuy ? "ARS" : "USD"
+  const targetCurrency = isBuy ? "USD" : "ARS"
+
   return (
     <BottomSheet
       open={open}
       onClose={onClose}
       title="Cambio de Moneda"
-      description="Registrá una compra de dólares (ARS → USD) indicando la cotización."
+      description={
+        isBuy
+          ? "Registrá una compra de dólares (ARS → USD) indicando la cotización."
+          : "Registrá una venta de dólares (USD → ARS) indicando la cotización."
+      }
     >
-      <form onSubmit={handleSubmit} className="mt-4 flex flex-col gap-4">
+      {/* Direction selector tabs */}
+      <div className="flex rounded-full bg-muted p-1 mb-4">
+        <button
+          type="button"
+          disabled={submitting}
+          onClick={() => handleDirectionChange("ARS_TO_USD")}
+          className={`flex-1 rounded-full py-2 text-xs font-semibold transition-colors ${
+            direction === "ARS_TO_USD" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+          } disabled:opacity-50 cursor-pointer`}
+        >
+          Comprar USD (ARS → USD)
+        </button>
+        <button
+          type="button"
+          disabled={submitting}
+          onClick={() => handleDirectionChange("USD_TO_ARS")}
+          className={`flex-1 rounded-full py-2 text-xs font-semibold transition-colors ${
+            direction === "USD_TO_ARS" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+          } disabled:opacity-50 cursor-pointer`}
+        >
+          Vender USD (USD → ARS)
+        </button>
+      </div>
+
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         {arsAccounts.length === 0 || usdAccounts.length === 0 ? (
           <div className="rounded-2xl border border-destructive/20 bg-destructive/10 p-4 text-sm text-destructive flex items-start gap-2">
             <AlertCircle className="size-5 shrink-0 mt-0.5" />
@@ -194,7 +245,7 @@ export function CurrencyExchangeSheet({ open, onClose }: CurrencyExchangeSheetPr
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
                 <label className="text-xs font-semibold text-muted-foreground">
-                  Entregar desde (ARS)
+                  Entregar desde ({sourceCurrency})
                 </label>
                 <select
                   value={fromAccountId}
@@ -202,9 +253,9 @@ export function CurrencyExchangeSheet({ open, onClose }: CurrencyExchangeSheetPr
                   onChange={(e) => setFromAccountId(e.target.value)}
                   className="mt-1.5 w-full appearance-none rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm outline-none focus:border-ring disabled:opacity-50"
                 >
-                  {arsAccounts.map((a) => (
+                  {sourceAccounts.map((a) => (
                     <option key={a.id} value={a.id}>
-                      {a.name} (Saldo: {formatShort(a.balance, "ARS")})
+                      {a.name} (Saldo: {formatShort(a.balance, sourceCurrency)})
                     </option>
                   ))}
                 </select>
@@ -212,7 +263,7 @@ export function CurrencyExchangeSheet({ open, onClose }: CurrencyExchangeSheetPr
 
               <div>
                 <label className="text-xs font-semibold text-muted-foreground">
-                  Recibir en (USD)
+                  Recibir en ({targetCurrency})
                 </label>
                 <select
                   value={toAccountId}
@@ -220,9 +271,9 @@ export function CurrencyExchangeSheet({ open, onClose }: CurrencyExchangeSheetPr
                   onChange={(e) => setToAccountId(e.target.value)}
                   className="mt-1.5 w-full appearance-none rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm outline-none focus:border-ring disabled:opacity-50"
                 >
-                  {usdAccounts.map((a) => (
+                  {targetAccounts.map((a) => (
                     <option key={a.id} value={a.id}>
-                      {a.name} (Saldo: {formatShort(a.balance, "USD")})
+                      {a.name} (Saldo: {formatShort(a.balance, targetCurrency)})
                     </option>
                   ))}
                 </select>
@@ -249,63 +300,114 @@ export function CurrencyExchangeSheet({ open, onClose }: CurrencyExchangeSheetPr
               </div>
             </div>
 
-            {/* ARS & USD Amounts with beautiful arrows */}
+            {/* ARS & USD Amounts */}
             <div className="relative flex flex-col gap-3 rounded-2xl bg-muted/30 p-4 border border-border/40">
               <div className="flex items-center justify-between gap-4">
-                <div className="flex-1">
-                  <label className="text-xs font-semibold text-muted-foreground">
-                    Entregás (ARS)
-                  </label>
-                  <div className="relative mt-1 flex items-center">
-                    <span className="absolute left-3 text-sm text-muted-foreground font-medium">$</span>
-                    <input
-                      type="text"
-                      inputMode="decimal"
-                      disabled={submitting}
-                      value={arsAmount}
-                      onChange={(e) => handleArsChange(e.target.value)}
-                      placeholder="0"
-                      className="w-full rounded-xl border border-border bg-background pl-6 pr-3.5 py-2 text-sm outline-none focus:border-ring disabled:opacity-50 font-semibold tabular-nums"
-                    />
-                  </div>
-                </div>
+                {isBuy ? (
+                  <>
+                    <div className="flex-1">
+                      <label className="text-xs font-semibold text-muted-foreground">
+                        Entregás (ARS)
+                      </label>
+                      <div className="relative mt-1 flex items-center">
+                        <span className="absolute left-3 text-sm text-muted-foreground font-medium">$</span>
+                        <input
+                          type="text"
+                          inputMode="decimal"
+                          disabled={submitting}
+                          value={arsAmount}
+                          onChange={(e) => handleArsChange(e.target.value)}
+                          placeholder="0"
+                          className="w-full rounded-xl border border-border bg-background pl-6 pr-3.5 py-2 text-sm outline-none focus:border-ring disabled:opacity-50 font-semibold tabular-nums"
+                        />
+                      </div>
+                    </div>
 
-                <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary self-end mb-1">
-                  <ArrowLeftRight className="size-4" />
-                </div>
+                    <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary self-end mb-1">
+                      <ArrowLeftRight className="size-4" />
+                    </div>
 
-                <div className="flex-1">
-                  <label className="text-xs font-semibold text-muted-foreground">
-                    Recibís (USD)
-                  </label>
-                  <div className="relative mt-1 flex items-center">
-                    <span className="absolute left-3 text-sm text-muted-foreground font-medium">US$</span>
-                    <input
-                      type="text"
-                      inputMode="decimal"
-                      disabled={submitting}
-                      value={usdAmount}
-                      onChange={(e) => handleUsdChange(e.target.value)}
-                      placeholder="0.00"
-                      className="w-full rounded-xl border border-border bg-background pl-9 pr-3.5 py-2 text-sm outline-none focus:border-ring disabled:opacity-50 font-semibold tabular-nums"
-                    />
-                  </div>
-                </div>
+                    <div className="flex-1">
+                      <label className="text-xs font-semibold text-muted-foreground">
+                        Recibís (USD)
+                      </label>
+                      <div className="relative mt-1 flex items-center">
+                        <span className="absolute left-3 text-sm text-muted-foreground font-medium">US$</span>
+                        <input
+                          type="text"
+                          inputMode="decimal"
+                          disabled={submitting}
+                          value={usdAmount}
+                          onChange={(e) => handleUsdChange(e.target.value)}
+                          placeholder="0.00"
+                          className="w-full rounded-xl border border-border bg-background pl-9 pr-3.5 py-2 text-sm outline-none focus:border-ring disabled:opacity-50 font-semibold tabular-nums"
+                        />
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex-1">
+                      <label className="text-xs font-semibold text-muted-foreground">
+                        Entregás (USD)
+                      </label>
+                      <div className="relative mt-1 flex items-center">
+                        <span className="absolute left-3 text-sm text-muted-foreground font-medium">US$</span>
+                        <input
+                          type="text"
+                          inputMode="decimal"
+                          disabled={submitting}
+                          value={usdAmount}
+                          onChange={(e) => handleUsdChange(e.target.value)}
+                          placeholder="0.00"
+                          className="w-full rounded-xl border border-border bg-background pl-9 pr-3.5 py-2 text-sm outline-none focus:border-ring disabled:opacity-50 font-semibold tabular-nums"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary self-end mb-1">
+                      <ArrowLeftRight className="size-4" />
+                    </div>
+
+                    <div className="flex-1">
+                      <label className="text-xs font-semibold text-muted-foreground">
+                        Recibís (ARS)
+                      </label>
+                      <div className="relative mt-1 flex items-center">
+                        <span className="absolute left-3 text-sm text-muted-foreground font-medium">$</span>
+                        <input
+                          type="text"
+                          inputMode="decimal"
+                          disabled={submitting}
+                          value={arsAmount}
+                          onChange={(e) => handleArsChange(e.target.value)}
+                          placeholder="0"
+                          className="w-full rounded-xl border border-border bg-background pl-6 pr-3.5 py-2 text-sm outline-none focus:border-ring disabled:opacity-50 font-semibold tabular-nums"
+                        />
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* Warnings and Calculations summary */}
-              {numArs > 0 && parsedRate > 0 && (
+              {numArs > 0 && numUsd > 0 && parsedRate > 0 && (
                 <div className="mt-2 border-t border-border/40 pt-2 flex flex-col gap-1.5 text-xs text-muted-foreground">
                   <div className="flex justify-between items-center">
                     <span>Detalle de la operación:</span>
                     <span className="font-semibold text-foreground">
-                      {formatShort(numArs, "ARS")} → {formatShort(numUsd, "USD")}
+                      {isBuy
+                        ? `${formatShort(numArs, "ARS")} → ${formatShort(numUsd, "USD")}`
+                        : `${formatShort(numUsd, "USD")} → ${formatShort(numArs, "ARS")}`}
                     </span>
                   </div>
                   {isBalanceInsufficient && (
                     <div className="flex items-center gap-1 text-destructive font-semibold mt-1">
                       <AlertCircle className="size-3.5 shrink-0" />
-                      <span>Saldo insuficiente en la cuenta ARS (Falta {formatShort(numArs - balance, "ARS")}).</span>
+                      <span>
+                        Saldo insuficiente en la cuenta {sourceCurrency} (Falta{" "}
+                        {formatShort(requiredSourceAmount - sourceBalance, sourceCurrency)}).
+                      </span>
                     </div>
                   )}
                 </div>
@@ -322,7 +424,7 @@ export function CurrencyExchangeSheet({ open, onClose }: CurrencyExchangeSheetPr
                 disabled={submitting}
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
-                placeholder="Ej. Compra de dólar MEP"
+                placeholder={isBuy ? "Ej. Compra de dólar MEP" : "Ej. Venta de dólares por gastos"}
                 className="mt-1.5 w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm outline-none focus:border-ring disabled:opacity-50"
               />
             </div>
@@ -372,8 +474,10 @@ export function CurrencyExchangeSheet({ open, onClose }: CurrencyExchangeSheetPr
                   <RefreshCw className="size-4 animate-spin" />
                   Registrando cambio...
                 </span>
+              ) : isBuy ? (
+                "Confirmar Compra (ARS → USD)"
               ) : (
-                "Confirmar Cambio"
+                "Confirmar Venta (USD → ARS)"
               )}
             </button>
           </>
