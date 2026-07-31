@@ -1,6 +1,6 @@
 "use client"
 
-import { LogOut, CreditCard, Bell, ShieldCheck, CircleHelp, ChevronRight, Tag } from "lucide-react"
+import { LogOut, CreditCard, Bell, ShieldCheck, CircleHelp, ChevronRight, Tag, ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { formatShort } from "@/lib/finance-data"
 import { useFinance } from "./finance-provider"
@@ -8,9 +8,11 @@ import { useFinance } from "./finance-provider"
 export function ProfileView({
   onManageCategories,
   onManageSecurity,
+  onBack,
 }: {
   onManageCategories: () => void
   onManageSecurity: () => void
+  onBack?: () => void
 }) {
   const { user, logout, accounts, transactions, totalsByCurrency } = useFinance()
 
@@ -24,7 +26,17 @@ export function ProfileView({
 
   return (
     <section className="px-5 pt-[calc(env(safe-area-inset-top)+1.25rem)]">
-      <h1 className="text-xl font-semibold tracking-tight">Perfil</h1>
+      <div className="flex items-center gap-3">
+        {onBack && (
+          <button
+            onClick={onBack}
+            className="flex size-9 items-center justify-center rounded-xl bg-card border border-border/50 text-muted-foreground transition-colors hover:text-foreground active:scale-95 cursor-pointer shrink-0"
+          >
+            <ArrowLeft className="size-4" />
+          </button>
+        )}
+        <h1 className="text-xl font-semibold tracking-tight">Perfil</h1>
+      </div>
 
       <div className="mt-5 flex items-center gap-3.5 rounded-3xl border border-border bg-card p-4">
         <span className="flex size-14 items-center justify-center rounded-full bg-primary text-lg font-semibold text-primary-foreground">

@@ -29,7 +29,8 @@ import {
   History,
   Trash2,
   Sparkles,
-  Bike
+  Bike,
+  Download
 } from "lucide-react"
 import { useFinance } from "./finance-provider"
 import { AccountIcon } from "./account-icon"
@@ -62,6 +63,7 @@ interface DesktopViewProps {
   onManageCategories: () => void
   onManageSecurity: () => void
   onOpenExchange: () => void
+  onOpenExport?: () => void
 }
 
 function relativeDate(iso: string) {
@@ -83,6 +85,7 @@ export function DesktopView({
   onManageCategories,
   onManageSecurity,
   onOpenExchange,
+  onOpenExport,
 }: DesktopViewProps) {
   const { user, logout, accounts, transactions, totalsByCurrency, getAccount } = useFinance()
   const [hidden, setHidden] = useState(false)
@@ -274,6 +277,7 @@ export function DesktopView({
           {view === "activity" && (
             <DesktopActivity
               onEditTransaction={onEditTransaction}
+              onOpenExport={onOpenExport}
             />
           )}
           {view === "profile" && (
@@ -675,8 +679,10 @@ type DateFilter = "all" | "today" | "week" | "month"
 
 function DesktopActivity({
   onEditTransaction,
+  onOpenExport,
 }: {
   onEditTransaction: (tx: Transaction) => void
+  onOpenExport?: () => void
 }) {
   const { transactions, accounts, getAccount } = useFinance()
 
@@ -781,6 +787,17 @@ function DesktopActivity({
             </select>
             <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 size-4 pointer-events-none text-muted-foreground" />
           </div>
+
+          {/* Export Button */}
+          {onOpenExport && (
+            <button
+              onClick={onOpenExport}
+              className="flex items-center gap-2 rounded-2xl border border-border/40 bg-card/45 px-4 py-3.5 text-xs font-semibold text-foreground hover:bg-muted/60 transition-all cursor-pointer shadow-sm"
+            >
+              <Download className="size-4 text-primary" />
+              Exportar
+            </button>
+          )}
 
           {/* Clear Button */}
           {(filterType !== "all" || filterAccount !== "all" || filterDate !== "all" || search !== "") && (

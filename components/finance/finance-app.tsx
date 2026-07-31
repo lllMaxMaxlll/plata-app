@@ -10,6 +10,7 @@ import { ProfileView } from "./profile-view"
 import { StocksView } from "./stocks-view"
 import { VehiclesView } from "./vehicles-view"
 import { BottomNav, type View } from "./bottom-nav"
+import { MoreView } from "./more-view"
 import { TransactionSheet } from "./transaction-sheet"
 import { AddAccountSheet } from "./add-account-sheet"
 import { DesktopView } from "./desktop-view"
@@ -19,6 +20,7 @@ import { SecuritySheet } from "./security-sheet"
 import { AdvisorView } from "./advisor-view"
 import { AnalyticsView } from "./analytics-view"
 import { CurrencyExchangeSheet } from "./currency-exchange-sheet"
+import { ExportSheet } from "./export-sheet"
 import type { Account, Transaction } from "@/lib/finance-data"
 
 export function FinanceApp() {
@@ -27,6 +29,7 @@ export function FinanceApp() {
   const [txOpen, setTxOpen] = useState(false)
   const [accountOpen, setAccountOpen] = useState(false)
   const [exchangeOpen, setExchangeOpen] = useState(false)
+  const [exportOpen, setExportOpen] = useState(false)
   const [categoriesOpen, setCategoriesOpen] = useState(false)
   const [securityOpen, setSecurityOpen] = useState(false)
   const [editingAccount, setEditingAccount] = useState<Account | null>(null)
@@ -78,19 +81,27 @@ export function FinanceApp() {
             <AccountsView onAddAccount={handleAddAccount} onEditAccount={handleEditAccount} />
           )}
           {view === "vehicles" && (
-            <VehiclesView />
+            <VehiclesView onBack={() => setView("more")} />
           )}
           {view === "stocks" && (
-            <StocksView />
+            <StocksView onBack={() => setView("more")} />
           )}
           {view === "activity" && (
-            <ActivityView onEditTransaction={handleEditTransaction} />
+            <ActivityView
+              onEditTransaction={handleEditTransaction}
+              onOpenExport={() => setExportOpen(true)}
+              onBack={() => setView("more")}
+            />
           )}
           {view === "profile" && (
             <ProfileView
               onManageCategories={() => setCategoriesOpen(true)}
               onManageSecurity={() => setSecurityOpen(true)}
+              onBack={() => setView("more")}
             />
+          )}
+          {view === "more" && (
+            <MoreView onNavigate={setView} />
           )}
           {view === "advisor" && (
             <AdvisorView />
@@ -115,6 +126,7 @@ export function FinanceApp() {
           onManageCategories={() => setCategoriesOpen(true)}
           onManageSecurity={() => setSecurityOpen(true)}
           onOpenExchange={() => setExchangeOpen(true)}
+          onOpenExport={() => setExportOpen(true)}
         />
       </div>
 
@@ -146,6 +158,10 @@ export function FinanceApp() {
       <CurrencyExchangeSheet
         open={exchangeOpen}
         onClose={() => setExchangeOpen(false)}
+      />
+      <ExportSheet
+        open={exportOpen}
+        onClose={() => setExportOpen(false)}
       />
     </>
   )

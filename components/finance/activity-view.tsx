@@ -1,6 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
+import { Download, ArrowLeft } from "lucide-react"
 import type { TransactionType, Transaction } from "@/lib/finance-data"
 import { useFinance } from "./finance-provider"
 import { TransactionList } from "./transaction-list"
@@ -10,8 +11,12 @@ type DateFilter = "all" | "today" | "week" | "month"
 
 export function ActivityView({
   onEditTransaction,
+  onOpenExport,
+  onBack,
 }: {
   onEditTransaction: (tx: Transaction) => void
+  onOpenExport?: () => void
+  onBack?: () => void
 }) {
   const { transactions, accounts } = useFinance()
   const [accountId, setAccountId] = useState<string>("all")
@@ -36,7 +41,28 @@ export function ActivityView({
 
   return (
     <section className="px-5 pt-[calc(env(safe-area-inset-top)+1.25rem)]">
-      <h1 className="text-xl font-semibold tracking-tight">Movimientos</h1>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          {onBack && (
+            <button
+              onClick={onBack}
+              className="flex size-9 items-center justify-center rounded-xl bg-card border border-border/50 text-muted-foreground transition-colors hover:text-foreground active:scale-95 cursor-pointer shrink-0"
+            >
+              <ArrowLeft className="size-4" />
+            </button>
+          )}
+          <h1 className="text-xl font-semibold tracking-tight">Movimientos</h1>
+        </div>
+        {onOpenExport && (
+          <button
+            onClick={onOpenExport}
+            className="flex items-center gap-1.5 rounded-xl border border-border/50 bg-card px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted/60 transition-colors cursor-pointer shadow-sm"
+          >
+            <Download className="size-3.5 text-primary" />
+            Exportar
+          </button>
+        )}
+      </div>
 
       <div className="mt-4 flex flex-col gap-3">
         <FilterRow label="Tipo">

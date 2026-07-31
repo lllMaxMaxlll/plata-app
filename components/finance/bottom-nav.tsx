@@ -1,16 +1,23 @@
 "use client"
 
-import { Home, Wallet, ReceiptText, User, Plus, LineChart, Sparkles, Bike } from "lucide-react"
+import { Home, Wallet, Plus, Sparkles, LayoutGrid } from "lucide-react"
 
-export type View = "home" | "accounts" | "vehicles" | "stocks" | "activity" | "profile" | "advisor" | "analytics"
+export type View =
+  | "home"
+  | "accounts"
+  | "vehicles"
+  | "stocks"
+  | "activity"
+  | "profile"
+  | "advisor"
+  | "more"
+  | "analytics"
 
 const ITEMS: { view: View; label: string; Icon: typeof Home }[] = [
   { view: "home", label: "Inicio", Icon: Home },
   { view: "accounts", label: "Cuentas", Icon: Wallet },
-  { view: "vehicles", label: "Vehículos", Icon: Bike },
   { view: "advisor", label: "PLATA AI", Icon: Sparkles },
-  { view: "stocks", label: "Portafolio", Icon: LineChart },
-  { view: "profile", label: "Perfil", Icon: User },
+  { view: "more", label: "Más", Icon: LayoutGrid },
 ]
 
 export function BottomNav({
@@ -22,8 +29,11 @@ export function BottomNav({
   onChange: (v: View) => void
   onAdd: () => void
 }) {
-  const left = ITEMS.slice(0, 3)
-  const right = ITEMS.slice(3)
+  const left = ITEMS.slice(0, 2)
+  const right = ITEMS.slice(2)
+
+  // Contextual FAB: Only show when creating a general transaction is relevant
+  const showFab = ["home", "accounts", "activity"].includes(active)
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 mx-auto max-w-md">
@@ -44,17 +54,27 @@ export function BottomNav({
           </div>
         </div>
 
-        {/* Center FAB */}
+        {/* Center FAB with scale & opacity animations */}
         <button
           onClick={onAdd}
           aria-label="Agregar movimiento"
-          className="absolute -top-5 left-1/2 flex size-14 -translate-x-1/2 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/30 transition-transform active:scale-95"
+          className={`absolute -top-5 left-1/2 flex size-14 -translate-x-1/2 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/30 transition-all duration-300 ease-out active:scale-95 ${
+            showFab ? "scale-100 opacity-100 pointer-events-auto" : "scale-0 opacity-0 pointer-events-none"
+          }`}
         >
           <Plus className="size-6" />
         </button>
       </div>
     </nav>
   )
+}
+
+function isTabActive(tabView: View, currentView: View): boolean {
+  if (tabView === currentView) return true
+  if (tabView === "more") {
+    return ["more", "vehicles", "stocks", "activity", "profile"].includes(currentView)
+  }
+  return false
 }
 
 function NavButton({
@@ -66,12 +86,12 @@ function NavButton({
   active: View
   onChange: (v: View) => void
 }) {
-  const isActive = active === item.view
+  const isActive = isTabActive(item.view, active)
   return (
     <button
       onClick={() => onChange(item.view)}
-      className={`flex flex-col items-center gap-0.5 px-2 py-1 text-[11px] font-medium transition-colors ${
-        isActive ? "text-primary" : "text-muted-foreground"
+      className={`flex flex-col items-center gap-0.5 px-2 py-1 text-[11px] font-medium transition-colors cursor-pointer ${
+        isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
       }`}
     >
       <item.Icon className="size-5" />

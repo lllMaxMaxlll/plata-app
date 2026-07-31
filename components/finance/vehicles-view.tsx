@@ -8,6 +8,7 @@ import { formatCurrency, formatShort, type Vehicle, type VehicleLog, type Vehicl
 import {
   Bike,
   Car,
+  ArrowLeft,
   Truck,
   Milestone,
   Plus,
@@ -38,7 +39,7 @@ const LOG_METADATA: Record<VehicleLogType, { label: string; Icon: any; color: st
   other: { label: "Otro", Icon: Sparkles, color: "text-slate-500 bg-slate-500/10 border-slate-500/20" },
 }
 
-export function VehiclesView({ isDesktop = false }: { isDesktop?: boolean }) {
+export function VehiclesView({ isDesktop = false, onBack }: { isDesktop?: boolean; onBack?: () => void }) {
   const { vehicles, vehicleLogs, accounts } = useFinance()
   const [activeVehId, setActiveVehId] = useState<string>("")
   const [vehicleSheetOpen, setVehicleSheetOpen] = useState(false)
@@ -273,15 +274,27 @@ export function VehiclesView({ isDesktop = false }: { isDesktop?: boolean }) {
   return (
     <div className={`flex flex-col gap-6 ${isDesktop ? "px-8 py-5" : "px-4 pt-[calc(env(safe-area-inset-top)+1.25rem)] pb-24"}`}>
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex items-center gap-3">
+        {onBack && !isDesktop && (
+          <button
+            onClick={onBack}
+            className="flex size-9 items-center justify-center rounded-xl bg-card border border-border/50 text-muted-foreground transition-colors hover:text-foreground active:scale-95 cursor-pointer shrink-0"
+          >
+            <ArrowLeft className="size-4" />
+          </button>
+        )}
+        <div className="min-w-0 flex-1">
           <h1 className="text-xl font-bold tracking-tight text-foreground">
             {isDesktop ? "Mis Vehículos" : "Vehículos"}
           </h1>
-          <p className="text-xs text-muted-foreground mt-0.5">
+          <p className="text-xs text-muted-foreground mt-0.5 truncate">
             Llevá el control de tus gastos de nafta, mantenimientos y services.
           </p>
         </div>
+      </div>
+
+      <div className="flex items-center justify-between">
+        <div aria-hidden />
 
         <button
           onClick={handleAddVehicle}

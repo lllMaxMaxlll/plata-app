@@ -6,6 +6,7 @@ import { formatShort } from "@/lib/finance-data"
 import {
   TrendingUp,
   TrendingDown,
+  ArrowLeft,
   Plus,
   Search,
   Trash2,
@@ -17,7 +18,7 @@ import {
 import { StockTradeModal } from "./stock-trade-modal"
 import { toast } from "sonner"
 
-export function StocksView() {
+export function StocksView({ onBack }: { onBack?: () => void }) {
   const {
     watchlist,
     stockTransactions,
@@ -102,7 +103,17 @@ export function StocksView() {
     <div className="pt-[calc(env(safe-area-inset-top)+1.25rem)]">
       {/* Title */}
       <div className="flex items-center justify-between px-5">
-        <h1 className="text-xl font-semibold tracking-tight">Portafolio</h1>
+        <div className="flex items-center gap-3">
+          {onBack && (
+            <button
+              onClick={onBack}
+              className="flex size-9 items-center justify-center rounded-xl bg-card border border-border/50 text-muted-foreground transition-colors hover:text-foreground active:scale-95 cursor-pointer shrink-0"
+            >
+              <ArrowLeft className="size-4" />
+            </button>
+          )}
+          <h1 className="text-xl font-semibold tracking-tight">Portafolio</h1>
+        </div>
         <button
           onClick={() => handleOpenTrade("", "buy")}
           disabled={!hasUSDAccount}
