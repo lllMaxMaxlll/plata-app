@@ -231,12 +231,13 @@ function buildFinanceContext(
 }
 
 const DEFAULT_MODELS = [
-  { id: "openrouter/free", name: "Free Models Router (Auto)", contextLength: 200000 },
-  { id: "google/gemma-4-31b-it:free", name: "Google: Gemma 4 31B", contextLength: 262144 },
-  { id: "meta-llama/llama-3.3-70b-instruct:free", name: "Meta: Llama 3.3 70B Instruct", contextLength: 131072 },
-  { id: "qwen/qwen3-coder:free", name: "Qwen: Qwen3 Coder 480B A35B", contextLength: 1048576 },
-  { id: "nousresearch/hermes-3-llama-3.1-405b:free", name: "Nous: Hermes 3 405B Instruct", contextLength: 131072 },
-  { id: "meta-llama/llama-3.2-3b-instruct:free", name: "Meta: Llama 3.2 3B Instruct", contextLength: 131072 },
+  { id: "openrouter/free", name: "🎁 Free Models Router (Auto)", contextLength: 200000 },
+  { id: "google/gemma-4-31b-it:free", name: "🎁 Google: Gemma 4 31B", contextLength: 262144 },
+  { id: "meta-llama/llama-3.3-70b-instruct:free", name: "🎁 Meta: Llama 3.3 70B Instruct", contextLength: 131072 },
+  { id: "qwen/qwen3-coder:free", name: "🎁 Qwen: Qwen3 Coder 480B A35B", contextLength: 1048576 },
+  { id: "anthropic/claude-3.5-sonnet", name: "💰 Anthropic: Claude 3.5 Sonnet", contextLength: 200000 },
+  { id: "openai/gpt-4o", name: "💰 OpenAI: GPT-4o", contextLength: 128000 },
+  { id: "google/gemini-flash-1.5", name: "💰 Google: Gemini 1.5 Flash", contextLength: 1000000 },
 ]
 
 export function AdvisorView({ isDesktop = false }: { isDesktop?: boolean }) {
@@ -291,7 +292,7 @@ export function AdvisorView({ isDesktop = false }: { isDesktop?: boolean }) {
     }
   }, [])
 
-  // Fetch all free models dynamically from OpenRouter API
+  // Fetch all models dynamically from OpenRouter API (both free and paid)
   useEffect(() => {
     const fetchModels = async () => {
       try {
@@ -299,28 +300,37 @@ export function AdvisorView({ isDesktop = false }: { isDesktop?: boolean }) {
         if (res.ok) {
           const data = await res.json()
           
-          // Filter out models that are free
-          const freeModels = data.data.filter((m: any) =>
-            m.id.endsWith(":free") ||
-            (m.pricing && parseFloat(m.pricing.prompt) === 0 && parseFloat(m.pricing.completion) === 0)
-          )
+          const mapped = data.data.map((m: any) => {
+            const isFree = m.id.endsWith(":free") || 
+              (m.pricing && parseFloat(m.pricing.prompt) === 0 && parseFloat(m.pricing.completion) === 0);
+            return {
+              id: m.id,
+              name: `${isFree ? "🎁" : "💰"} ${m.name.replace(" (free)", "")}`,
+              contextLength: m.context_length,
+              isFree,
+            }
+          })
 
-          const mapped = freeModels.map((m: any) => ({
-            id: m.id,
-            name: m.name.replace(" (free)", ""),
-            contextLength: m.context_length,
-          }))
+          // Sort so openrouter/free is first, then free models, then paid models alphabetically
+          const sorted = mapped.sort((a: any, b: any) => {
+            if (a.id === "openrouter/free") return -1
+            if (b.id === "openrouter/free") return 1
+            if (a.isFree && !b.isFree) return -1
+            if (!a.isFree && b.isFree) return 1
+            return a.name.localeCompare(b.name)
+          })
 
-          // Make sure 'openrouter/free' is at the top
-          const filtered = mapped.filter((m: any) => m.id !== "openrouter/free")
-          const finalList = [
-            { id: "openrouter/free", name: "Free Models Router (Auto)", contextLength: 200000 },
-            ...filtered,
-          ]
+          // Add default router at the top if not present
+          const finalList = sorted.find((m: any) => m.id === "openrouter/free")
+            ? sorted
+            : [
+                { id: "openrouter/free", name: "🎁 Free Models Router (Auto)", contextLength: 200000, isFree: true },
+                ...sorted,
+              ]
 
           // Remove duplicates by ID
           const seen = new Set()
-          const uniqueList = finalList.filter((item) => {
+          const uniqueList = finalList.filter((item: any) => {
             if (seen.has(item.id)) return false
             seen.add(item.id)
             return true

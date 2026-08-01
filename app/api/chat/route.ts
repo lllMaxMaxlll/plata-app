@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server"
+import { createOpenRouter } from "@openrouter/ai-sdk-provider"
+import { streamText } from "ai"
 
 export async function POST(request: Request) {
   try {
@@ -69,100 +71,27 @@ ${context || "No hay datos financieros disponibles actualmente."}`
 
     const openRouterModel = model || "openrouter/free"
 
-    // Construct request to OpenRouter API
-    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
+    // Initialize OpenRouter provider using Vercel AI SDK
+    const openrouter = createOpenRouter({
+      apiKey: apiKey,
       headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`,
         "HTTP-Referer": "https://github.com/lllMaxMaxlll/plata-app",
         "X-Title": "Plata App",
-      },
-      body: JSON.stringify({
-        model: openRouterModel,
-        messages: [
-          { role: "system", content: systemInstructionText },
-          ...messages.map((msg: any) => ({
-            role: msg.role === "assistant" ? "assistant" : "user",
-            content: msg.content || "",
-          })),
-        ],
-        temperature: 0.4,
-        stream: true,
-      }),
+      }
     })
 
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error("OpenRouter API Error Response:", errorText)
-      return NextResponse.json(
-        { error: `OpenRouter API error: ${response.statusText}`, details: errorText },
-        { status: response.status }
-      )
-    }
-
-    // Set up standard ReadableStream to parse the event-stream and output plain text tokens to the client
-    const encoder = new TextEncoder()
-    const decoder = new TextDecoder()
-
-    const stream = new ReadableStream({
-      async start(controller) {
-        if (!response.body) {
-          controller.close()
-          return
-        }
-
-        const reader = response.body.getReader()
-        let buffer = ""
-
-        try {
-          while (true) {
-            const { done, value } = await reader.read()
-            if (done) break
-
-            buffer += decoder.decode(value, { stream: true })
-            const lines = buffer.split("\n")
-            buffer = lines.pop() || ""
-
-            for (const line of lines) {
-              const trimmed = line.trim()
-              if (!trimmed) continue
-
-              // OpenRouter sends data prefixed with "data: "
-              if (trimmed.startsWith("data: ")) {
-                const dataStr = trimmed.slice(6)
-                if (dataStr === "[DONE]") {
-                  continue
-                }
-
-                try {
-                  const parsed = JSON.parse(dataStr)
-                  const text = parsed.choices?.[0]?.delta?.content || ""
-                  if (text) {
-                    controller.enqueue(encoder.encode(text))
-                  }
-                } catch (e) {
-                  // Ignore JSON parse errors for incomplete chunk lines
-                }
-              }
-            }
-          }
-        } catch (err) {
-          controller.error(err)
-        } finally {
-          controller.close()
-        }
-      },
+    // Call streamText using Vercel AI SDK
+    const result = streamText({
+      model: openrouter.chat(openRouterModel),
+      system: systemInstructionText,
+      messages: messages.map((msg: any) => ({
+        role: msg.role === "assistant" ? "assistant" : "user",
+        content: msg.content || "",
+      })),
+      temperature: 0.4,
     })
 
-    return new Response(stream, {
-      headers: {
-        "Content-Type": "text/plain; charset=utf-8",
-        "Transfer-Encoding": "chunked",
-        "Cache-Control": "no-cache, no-transform",
-        "Connection": "keep-alive",
-      },
-    })
+    return result.toTextStreamResponse()
   } catch (error: any) {
     console.error("Error in AI Chat API route:", error)
     return NextResponse.json({ error: error.message || "Internal server error" }, { status: 500 })

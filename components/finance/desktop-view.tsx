@@ -298,7 +298,7 @@ export function DesktopView({
 /* ============================================================================
    SUB-MODULE: DesktopHome
    ============================================================================ */
-function DesktopHome({
+export function DesktopHome({
   mask,
   onAddAccount,
   onEditAccount,
@@ -559,7 +559,7 @@ function DesktopHome({
 /* ============================================================================
    SUB-MODULE: DesktopAccounts
    ============================================================================ */
-function DesktopAccounts({
+export function DesktopAccounts({
   mask,
   onAddAccount,
   onEditAccount,
@@ -677,7 +677,7 @@ function DesktopAccounts({
 type TypeFilter = "all" | "income" | "expense" | "transfer"
 type DateFilter = "all" | "today" | "week" | "month"
 
-function DesktopActivity({
+export function DesktopActivity({
   onEditTransaction,
   onOpenExport,
 }: {
@@ -898,7 +898,7 @@ function DesktopActivity({
 /* ============================================================================
    SUB-MODULE: DesktopProfile
    ============================================================================ */
-function DesktopProfile({
+export function DesktopProfile({
   onManageCategories,
   onManageSecurity,
 }: {
@@ -995,7 +995,7 @@ function DesktopProfile({
 /* ============================================================================
    SUB-MODULE: DesktopPortfolio
    ============================================================================ */
-function DesktopPortfolio({ mask }: { mask: (v: string) => string }) {
+export function DesktopPortfolio({ mask }: { mask: (v: string) => string }) {
   const {
     watchlist,
     stockTransactions,

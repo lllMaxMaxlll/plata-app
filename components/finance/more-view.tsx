@@ -1,6 +1,7 @@
 "use client"
 
 import { useMemo } from "react"
+import Link from "next/link"
 import {
   Bike,
   LineChart,
@@ -14,17 +15,12 @@ import {
 import { useFinance } from "./finance-provider"
 import { formatShort } from "@/lib/finance-data"
 
-export function MoreView({
-  onNavigate,
-}: {
-  onNavigate: (view: "vehicles" | "stocks" | "activity" | "profile") => void
-}) {
+export function MoreView() {
   const {
     user,
     vehicles,
     vehicleLogs,
     portfolioTotalValue,
-    portfolioTotalProfitLoss,
     portfolioTotalProfitLossPercent,
     transactions
   } = useFinance()
@@ -66,8 +62,8 @@ export function MoreView({
       </p>
 
       {/* Mini Profile Card Header */}
-      <button
-        onClick={() => onNavigate("profile")}
+      <Link
+        href="/profile"
         className="w-full mt-5 flex items-center justify-between gap-3.5 rounded-3xl border border-border bg-card/40 p-4.5 hover:bg-card/70 transition-all duration-200 cursor-pointer isolate relative overflow-hidden group"
       >
         <span
@@ -84,13 +80,13 @@ export function MoreView({
           </div>
         </div>
         <ChevronRight className="size-5 text-muted-foreground group-hover:text-foreground transition-colors" />
-      </button>
+      </Link>
 
       {/* Hub Options Grid */}
       <div className="mt-5 grid grid-cols-1 gap-3.5">
         {/* Vehicles Card */}
-        <button
-          onClick={() => onNavigate("vehicles")}
+        <Link
+          href="/vehicles"
           className="w-full flex items-center justify-between rounded-2xl border border-border/50 bg-card/30 p-4 hover:bg-card/60 transition-all duration-200 text-left cursor-pointer isolate relative overflow-hidden group"
         >
           <div className="flex items-center gap-4 min-w-0">
@@ -116,11 +112,11 @@ export function MoreView({
             )}
             <ChevronRight className="size-4.5 text-muted-foreground group-hover:text-foreground transition-colors" />
           </div>
-        </button>
+        </Link>
 
         {/* Portfolio Card */}
-        <button
-          onClick={() => onNavigate("stocks")}
+        <Link
+          href="/stocks"
           className="w-full flex items-center justify-between rounded-2xl border border-border/50 bg-card/30 p-4 hover:bg-card/60 transition-all duration-200 text-left cursor-pointer isolate relative overflow-hidden group"
         >
           <div className="flex items-center gap-4 min-w-0">
@@ -157,11 +153,11 @@ export function MoreView({
             )}
             <ChevronRight className="size-4.5 text-muted-foreground group-hover:text-foreground transition-colors" />
           </div>
-        </button>
+        </Link>
 
         {/* Activity Card */}
-        <button
-          onClick={() => onNavigate("activity")}
+        <Link
+          href="/activity"
           className="w-full flex items-center justify-between rounded-2xl border border-border/50 bg-card/30 p-4 hover:bg-card/60 transition-all duration-200 text-left cursor-pointer isolate relative overflow-hidden group"
         >
           <div className="flex items-center gap-4 min-w-0">
@@ -178,11 +174,11 @@ export function MoreView({
             </div>
           </div>
           <ChevronRight className="size-4.5 text-muted-foreground group-hover:text-foreground transition-colors" />
-        </button>
+        </Link>
 
         {/* Profile Details & Settings Card */}
-        <button
-          onClick={() => onNavigate("profile")}
+        <Link
+          href="/profile"
           className="w-full flex items-center justify-between rounded-2xl border border-border/50 bg-card/30 p-4 hover:bg-card/60 transition-all duration-200 text-left cursor-pointer isolate relative overflow-hidden group"
         >
           <div className="flex items-center gap-4 min-w-0">
@@ -197,7 +193,7 @@ export function MoreView({
             </div>
           </div>
           <ChevronRight className="size-4.5 text-muted-foreground group-hover:text-foreground transition-colors" />
-        </button>
+        </Link>
       </div>
 
       <p className="mt-8 text-center text-[10px] text-muted-foreground tracking-wide font-medium uppercase">

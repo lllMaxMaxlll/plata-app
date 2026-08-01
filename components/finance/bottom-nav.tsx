@@ -1,5 +1,7 @@
 "use client"
 
+import Link from "next/link"
+import { usePathname } from "next/navigation"
 import { Home, Wallet, Plus, Sparkles, LayoutGrid } from "lucide-react"
 
 export type View =
@@ -13,27 +15,20 @@ export type View =
   | "more"
   | "analytics"
 
-const ITEMS: { view: View; label: string; Icon: typeof Home }[] = [
-  { view: "home", label: "Inicio", Icon: Home },
-  { view: "accounts", label: "Cuentas", Icon: Wallet },
-  { view: "advisor", label: "PLATA AI", Icon: Sparkles },
-  { view: "more", label: "Más", Icon: LayoutGrid },
+const ITEMS: { href: string; label: string; Icon: typeof Home }[] = [
+  { href: "/", label: "Inicio", Icon: Home },
+  { href: "/accounts", label: "Cuentas", Icon: Wallet },
+  { href: "/advisor", label: "PLATA AI", Icon: Sparkles },
+  { href: "/more", label: "Más", Icon: LayoutGrid },
 ]
 
-export function BottomNav({
-  active,
-  onChange,
-  onAdd,
-}: {
-  active: View
-  onChange: (v: View) => void
-  onAdd: () => void
-}) {
+export function BottomNav({ onAdd }: { onAdd: () => void }) {
+  const pathname = usePathname()
   const left = ITEMS.slice(0, 2)
   const right = ITEMS.slice(2)
 
   // Contextual FAB: Only show when creating a general transaction is relevant
-  const showFab = ["home", "accounts", "activity"].includes(active)
+  const showFab = ["/", "/accounts", "/activity"].includes(pathname)
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 mx-auto max-w-md">
@@ -41,7 +36,7 @@ export function BottomNav({
         <div className="flex items-center justify-between">
           <div className="flex flex-1 justify-around">
             {left.map((item) => (
-              <NavButton key={item.view} item={item} active={active} onChange={onChange} />
+              <NavButton key={item.href} item={item} currentPath={pathname} />
             ))}
           </div>
 
@@ -49,7 +44,7 @@ export function BottomNav({
 
           <div className="flex flex-1 justify-around">
             {right.map((item) => (
-              <NavButton key={item.view} item={item} active={active} onChange={onChange} />
+              <NavButton key={item.href} item={item} currentPath={pathname} />
             ))}
           </div>
         </div>
@@ -69,33 +64,31 @@ export function BottomNav({
   )
 }
 
-function isTabActive(tabView: View, currentView: View): boolean {
-  if (tabView === currentView) return true
-  if (tabView === "more") {
-    return ["more", "vehicles", "stocks", "activity", "profile"].includes(currentView)
+function isTabActive(href: string, currentPath: string): boolean {
+  if (href === currentPath) return true
+  if (href === "/more") {
+    return ["/more", "/vehicles", "/stocks", "/activity", "/profile", "/analytics"].includes(currentPath)
   }
   return false
 }
 
 function NavButton({
   item,
-  active,
-  onChange,
+  currentPath,
 }: {
-  item: { view: View; label: string; Icon: typeof Home }
-  active: View
-  onChange: (v: View) => void
+  item: { href: string; label: string; Icon: typeof Home }
+  currentPath: string
 }) {
-  const isActive = isTabActive(item.view, active)
+  const isActive = isTabActive(item.href, currentPath)
   return (
-    <button
-      onClick={() => onChange(item.view)}
+    <Link
+      href={item.href}
       className={`flex flex-col items-center gap-0.5 px-2 py-1 text-[11px] font-medium transition-colors cursor-pointer ${
         isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
       }`}
     >
       <item.Icon className="size-5" />
       {item.label}
-    </button>
+    </Link>
   )
 }
