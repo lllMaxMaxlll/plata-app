@@ -162,15 +162,6 @@ export function DesktopView({
                 </button>
               )
             })}
-
-            {/* Category manager trigger */}
-            <button
-              onClick={onManageCategories}
-              className="flex items-center gap-3.5 rounded-2xl px-4 py-3.5 text-sm font-medium text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-all duration-200 group text-left cursor-pointer"
-            >
-              <Tag className="size-5 text-muted-foreground group-hover:text-foreground group-hover:scale-105 transition-transform" />
-              Categorías
-            </button>
           </nav>
         </div>
 
