@@ -202,7 +202,7 @@ export function TransactionSheet({
   return (
     <>
       <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-        <DialogContent className="max-w-lg w-full rounded-3xl bg-card border border-border p-6 shadow-2xl overflow-y-auto max-h-[90vh]">
+        <DialogContent className="max-w-lg w-full rounded-xl bg-card border border-border p-6 shadow-2xl overflow-y-auto max-h-[90vh]">
           <DialogHeader className="text-left pb-1">
             <DialogTitle className="text-lg font-semibold tracking-tight text-foreground">
               {transaction ? "Editar movimiento" : "Nuevo movimiento"}
@@ -222,181 +222,181 @@ export function TransactionSheet({
             </TabsList>
           </Tabs>
 
-        <form onSubmit={handleSubmit} className="mt-5 flex flex-col gap-4">
-          {/* Amount */}
-          <div className="flex flex-col items-center gap-1 py-2">
-            <span className="text-xs font-medium text-muted-foreground">
-              Monto ({fromAccount?.currency ?? "ARS"})
-            </span>
-            <div className="flex items-center gap-1.5">
-              <span className="text-2xl font-medium text-muted-foreground">$</span>
-              <Input
-                autoFocus
-                inputMode="decimal"
-                disabled={submitting}
-                value={amount}
-                onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, ""))}
-                placeholder="0"
-                className="h-14 w-44 bg-transparent text-center text-4xl font-semibold tracking-tight tabular-nums border-none shadow-none focus-visible:ring-0 placeholder:text-muted-foreground/40"
-              />
+          <form onSubmit={handleSubmit} className="mt-5 flex flex-col gap-4">
+            {/* Amount */}
+            <div className="flex flex-col items-center gap-1 py-2">
+              <span className="text-xs font-medium text-muted-foreground">
+                Monto ({fromAccount?.currency ?? "ARS"})
+              </span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-2xl font-medium text-muted-foreground">$</span>
+                <Input
+                  autoFocus
+                  inputMode="decimal"
+                  disabled={submitting}
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, ""))}
+                  placeholder="0"
+                  className="h-14 w-44 bg-transparent text-center text-4xl font-semibold tracking-tight tabular-nums border-none shadow-none focus-visible:ring-0 placeholder:text-muted-foreground/40"
+                />
+              </div>
             </div>
-          </div>
 
-          {/* Account selectors */}
-          <Field label={type === "transfer" ? "Desde" : type === "income" ? "Acreditar en" : "Pagar desde"}>
-            <AccountSelect value={accountId} onChange={setAccountId} accounts={accounts} disabled={submitting} />
-          </Field>
-
-          {type === "transfer" && (
-            <Field label="Hacia">
-              <AccountSelect
-                value={toAccountId}
-                onChange={setToAccountId}
-                accounts={accounts.filter((a) => a.id !== accountId)}
-                disabled={submitting}
-              />
+            {/* Account selectors */}
+            <Field label={type === "transfer" ? "Desde" : type === "income" ? "Acreditar en" : "Pagar desde"}>
+              <AccountSelect value={accountId} onChange={setAccountId} accounts={accounts} disabled={submitting} />
             </Field>
-          )}
 
-          {/* Exchange rate for cross-currency transfers */}
-          {crossCurrency && (
-            <Field label={`Cotización (1 ${fromAccount?.currency === "USD" ? "USD → ARS" : "USD = ARS"})`}>
+            {type === "transfer" && (
+              <Field label="Hacia">
+                <AccountSelect
+                  value={toAccountId}
+                  onChange={setToAccountId}
+                  accounts={accounts.filter((a) => a.id !== accountId)}
+                  disabled={submitting}
+                />
+              </Field>
+            )}
+
+            {/* Exchange rate for cross-currency transfers */}
+            {crossCurrency && (
+              <Field label={`Cotización (1 ${fromAccount?.currency === "USD" ? "USD → ARS" : "USD = ARS"})`}>
+                <Input
+                  inputMode="decimal"
+                  disabled={submitting}
+                  value={rate}
+                  onChange={(e) => setRate(e.target.value.replace(/[^0-9.]/g, ""))}
+                  placeholder="Ej. 1050"
+                  className="h-10 text-sm"
+                />
+                {toAmountPreview != null && (
+                  <p className="mt-1.5 text-xs text-muted-foreground">
+                    Recibís ≈{" "}
+                    <span className="font-medium text-foreground tabular-nums">
+                      {toAccount?.currency} ${toAmountPreview.toLocaleString("es-AR", { maximumFractionDigits: 2 })}
+                    </span>
+                  </p>
+                )}
+              </Field>
+            )}
+
+            {/* Categories (not for transfer) */}
+            {type !== "transfer" && (
+              <Field label="Categoría">
+                <div className="flex flex-wrap gap-2">
+                  {categoriesList.map((c) => (
+                    <Badge
+                      key={c.id}
+                      variant={category === c.name ? "default" : "outline"}
+                      className="cursor-pointer px-3 py-1 text-xs font-medium"
+                      onClick={() => !submitting && setCategory(c.name)}
+                    >
+                      {c.name}
+                    </Badge>
+                  ))}
+                </div>
+              </Field>
+            )}
+
+            {/* Note */}
+            <Field label="Nota (opcional)">
               <Input
-                inputMode="decimal"
+                value={note}
                 disabled={submitting}
-                value={rate}
-                onChange={(e) => setRate(e.target.value.replace(/[^0-9.]/g, ""))}
-                placeholder="Ej. 1050"
+                onChange={(e) => setNote(e.target.value)}
+                placeholder="Ej. Compra del super"
                 className="h-10 text-sm"
               />
-              {toAmountPreview != null && (
-                <p className="mt-1.5 text-xs text-muted-foreground">
-                  Recibís ≈{" "}
-                  <span className="font-medium text-foreground tabular-nums">
-                    {toAccount?.currency} ${toAmountPreview.toLocaleString("es-AR", { maximumFractionDigits: 2 })}
-                  </span>
-                </p>
-              )}
             </Field>
-          )}
 
-          {/* Categories (not for transfer) */}
-          {type !== "transfer" && (
-            <Field label="Categoría">
-              <div className="flex flex-wrap gap-2">
-                {categoriesList.map((c) => (
-                  <Badge
-                    key={c.id}
-                    variant={category === c.name ? "default" : "outline"}
-                    className="cursor-pointer px-3 py-1 text-xs font-medium"
-                    onClick={() => !submitting && setCategory(c.name)}
-                  >
-                    {c.name}
-                  </Badge>
-                ))}
-              </div>
-            </Field>
-          )}
-
-          {/* Note */}
-          <Field label="Nota (opcional)">
-            <Input
-              value={note}
-              disabled={submitting}
-              onChange={(e) => setNote(e.target.value)}
-              placeholder="Ej. Compra del super"
-              className="h-10 text-sm"
-            />
-          </Field>
-
-          {/* Date */}
-          <Field label="Fecha">
-            <Popover>
-              <PopoverTrigger
-                render={
-                  <Button
-                    type="button"
-                    variant="outline"
-                    disabled={submitting}
-                    className="w-full justify-start rounded-xl border border-input bg-transparent px-3.5 py-2 text-sm font-normal text-left outline-none hover:bg-muted/10 h-10"
+            {/* Date */}
+            <Field label="Fecha">
+              <Popover>
+                <PopoverTrigger
+                  render={
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={submitting}
+                      className="w-full justify-start rounded-xl border border-input bg-transparent px-3.5 py-2 text-sm font-normal text-left outline-none hover:bg-muted/10 h-10"
+                    />
+                  }
+                >
+                  <CalendarIcon className="mr-2 size-4 text-muted-foreground" />
+                  {date ? (
+                    format(date, "PPP", { locale: es })
+                  ) : (
+                    <span className="text-muted-foreground/50">Seleccionar fecha</span>
+                  )}
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0 border border-border bg-popover rounded-xl" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={date}
+                    onSelect={setDate}
+                    locale={es}
                   />
-                }
-              >
-                <CalendarIcon className="mr-2 size-4 text-muted-foreground" />
-                {date ? (
-                  format(date, "PPP", { locale: es })
-                ) : (
-                  <span className="text-muted-foreground/50">Seleccionar fecha</span>
-                )}
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0 border border-border bg-popover rounded-xl" align="start">
-                <Calendar
-                  mode="single"
-                  selected={date}
-                  onSelect={setDate}
-                  locale={es}
-                />
-              </PopoverContent>
-            </Popover>
-          </Field>
+                </PopoverContent>
+              </Popover>
+            </Field>
 
-          {/* Receipt upload */}
-          <Field label="Comprobante (opcional)">
-            <Button
-              type="button"
-              variant="outline"
-              disabled={submitting}
-              onClick={() => fileRef.current?.click()}
-              className="flex h-11 w-full items-center justify-start gap-3 rounded-xl border-dashed px-3.5 text-left text-sm font-normal"
-            >
-              {receipt ? <Check className="size-4 text-primary" /> : <Upload className="size-4" />}
-              <span className="truncate">{receipt ?? "Subir foto o PDF del comprobante"}</span>
-            </Button>
-            <input
-              ref={fileRef}
-              type="file"
-              accept="image/*,application/pdf"
-              className="hidden"
-              onChange={(e) => setReceipt(e.target.files?.[0]?.name ?? null)}
-            />
-          </Field>
-
-          <div className="mt-2 flex flex-col gap-2">
-            <Button
-              type="submit"
-              size="lg"
-              disabled={submitting}
-              variant={type === "expense" ? "destructive" : "default"}
-              className="h-11 w-full rounded-xl text-sm font-semibold"
-            >
-              {submitting ? (
-                <span className="size-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-              ) : transaction ? (
-                "Guardar cambios"
-              ) : (
-                "Guardar movimiento"
-              )}
-            </Button>
-
-            {transaction && (
+            {/* Receipt upload */}
+            <Field label="Comprobante (opcional)">
               <Button
                 type="button"
                 variant="outline"
                 disabled={submitting}
-                onClick={() => setDeleteConfirmOpen(true)}
-                className="h-11 w-full rounded-xl text-sm text-destructive hover:bg-destructive/10"
+                onClick={() => fileRef.current?.click()}
+                className="flex h-11 w-full items-center justify-start gap-3 rounded-xl border-dashed px-3.5 text-left text-sm font-normal"
+              >
+                {receipt ? <Check className="size-4 text-primary" /> : <Upload className="size-4" />}
+                <span className="truncate">{receipt ?? "Subir foto o PDF del comprobante"}</span>
+              </Button>
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/*,application/pdf"
+                className="hidden"
+                onChange={(e) => setReceipt(e.target.files?.[0]?.name ?? null)}
+              />
+            </Field>
+
+            <div className="mt-2 flex flex-col gap-2">
+              <Button
+                type="submit"
+                size="lg"
+                disabled={submitting}
+                variant={type === "expense" ? "destructive" : "default"}
+                className="h-11 w-full rounded-xl text-sm font-semibold"
               >
                 {submitting ? (
-                  <span className="size-4 animate-spin rounded-full border-2 border-destructive border-t-transparent" />
+                  <span className="size-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                ) : transaction ? (
+                  "Guardar cambios"
                 ) : (
-                  "Eliminar movimiento"
+                  "Guardar movimiento"
                 )}
               </Button>
-            )}
-          </div>
-        </form>
-      </DialogContent>
-    </Dialog>
+
+              {transaction && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={submitting}
+                  onClick={() => setDeleteConfirmOpen(true)}
+                  className="h-11 w-full rounded-xl text-sm text-destructive hover:bg-destructive/10"
+                >
+                  {submitting ? (
+                    <span className="size-4 animate-spin rounded-full border-2 border-destructive border-t-transparent" />
+                  ) : (
+                    "Eliminar movimiento"
+                  )}
+                </Button>
+              )}
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
         <AlertDialogContent>

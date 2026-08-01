@@ -153,16 +153,14 @@ export function DesktopView({
                 <button
                   key={item.id}
                   onClick={() => setView(item.id as View)}
-                  className={`flex items-center gap-3.5 rounded-2xl px-4 py-3.5 text-sm font-medium transition-all duration-200 group text-left ${
-                    active
+                  className={`flex items-center gap-3.5 rounded-2xl px-4 py-3.5 text-sm font-medium transition-all duration-200 group text-left ${active
                       ? "bg-primary/10 text-primary"
                       : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
-                  }`}
+                    }`}
                 >
                   <item.Icon
-                    className={`size-5 transition-transform group-hover:scale-105 ${
-                      active ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
-                    }`}
+                    className={`size-5 transition-transform group-hover:scale-105 ${active ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
+                      }`}
                   />
                   {item.label}
                 </button>
@@ -328,7 +326,7 @@ export function DesktopHome({
     for (const t of transactions) {
       if (t.type !== "expense") continue
       if (getAccount(t.accountId)?.currency !== "ARS") continue
-      
+
       let groupName = t.category
       if (t.vehicleId && vehicles) {
         const veh = vehicles.find((v) => v.id === t.vehicleId)
@@ -336,7 +334,7 @@ export function DesktopHome({
           groupName = veh.name
         }
       }
-      
+
       map.set(groupName, (map.get(groupName) ?? 0) + t.amount)
     }
     const chartRows = [...map.entries()]
@@ -411,7 +409,7 @@ export function DesktopHome({
         </section>
 
         {/* Expenses Chart */}
-        <section className="rounded-3xl border border-border/40 bg-card/45 p-6 shadow-sm">
+        <section className="rounded-xl border border-border/40 bg-card/45 p-6 shadow-sm">
           <div className="flex items-center justify-between mb-1">
             <h2 className="text-base font-bold tracking-tight">Gastos por categoría</h2>
             <button
@@ -465,7 +463,7 @@ export function DesktopHome({
       </div>
 
       {/* Right Column: Recent Transactions */}
-      <section className="rounded-3xl border border-border/40 bg-card/40 p-6 flex flex-col justify-between self-stretch">
+      <section className="rounded-xl border border-border/40 bg-card/40 p-6 flex flex-col justify-between self-stretch">
         <div>
           <div className="flex items-center justify-between mb-4 border-b border-border/20 pb-3">
             <h2 className="text-base font-bold tracking-tight">Actividad Reciente</h2>
@@ -491,22 +489,22 @@ export function DesktopHome({
                 const color = isIncome
                   ? "text-primary bg-primary/10"
                   : isExpense
-                  ? "text-destructive bg-destructive/10"
-                  : "text-muted-foreground bg-muted"
+                    ? "text-destructive bg-destructive/10"
+                    : "text-muted-foreground bg-muted"
 
                 const signColor = isIncome
                   ? "text-primary"
                   : isExpense
-                  ? "text-destructive"
-                  : "text-foreground"
+                    ? "text-destructive"
+                    : "text-foreground"
 
                 const vehicle = tx.vehicleId ? vehicles?.find((v) => v.id === tx.vehicleId) : undefined
                 const subtitle =
                   tx.type === "transfer"
                     ? `${acc?.name} → ${toAcc?.name}`
                     : vehicle
-                    ? `${tx.category} (${vehicle.name}) · ${acc?.name}`
-                    : `${tx.category} · ${acc?.name}`
+                      ? `${tx.category} (${vehicle.name}) · ${acc?.name}`
+                      : `${tx.category} · ${acc?.name}`
 
                 return (
                   <li
@@ -574,7 +572,7 @@ export function DesktopAccounts({
 
   if (accounts.length === 0) {
     return (
-      <div className="max-w-md mx-auto mt-16 text-center border border-border/40 rounded-3xl bg-card/30 p-8 flex flex-col items-center">
+      <div className="max-w-md mx-auto mt-16 text-center border border-border/40 rounded-xl bg-card/30 p-8 flex flex-col items-center">
         <div className="mb-4 flex size-14 items-center justify-center rounded-2xl bg-muted text-muted-foreground shadow-inner">
           <AccountIcon kind="bank" className="size-7" />
         </div>
@@ -599,7 +597,7 @@ export function DesktopAccounts({
         return (
           <div
             key={curr.currency}
-            className="flex flex-col gap-5 border border-border/40 bg-card/25 rounded-3xl p-6"
+            className="flex flex-col gap-5 border border-border/40 bg-card/25 rounded-xl p-6"
           >
             {/* Header Column */}
             <div className="flex items-center justify-between border-b border-border/20 pb-4">
@@ -814,7 +812,7 @@ export function DesktopActivity({
       </div>
 
       {/* Ledger Container */}
-      <div className="border border-border/40 bg-card/25 rounded-3xl p-5 shadow-sm min-h-[500px] w-full">
+      <div className="border border-border/40 bg-card/25 rounded-xl p-5 shadow-sm min-h-[500px] w-full">
         {filteredTransactions.length === 0 ? (
           <div className="flex flex-col items-center justify-center text-center py-24">
             <p className="text-sm font-semibold text-muted-foreground">
@@ -837,14 +835,14 @@ export function DesktopActivity({
               const color = isIncome
                 ? "text-primary bg-primary/10"
                 : isExpense
-                ? "text-destructive bg-destructive/10"
-                : "text-muted-foreground bg-muted"
+                  ? "text-destructive bg-destructive/10"
+                  : "text-muted-foreground bg-muted"
 
               const signColor = isIncome
                 ? "text-primary"
                 : isExpense
-                ? "text-destructive"
-                : "text-foreground"
+                  ? "text-destructive"
+                  : "text-foreground"
 
               const subtitle =
                 tx.type === "transfer"
@@ -916,8 +914,8 @@ export function DesktopProfile({
     <div className="grid grid-cols-3 gap-8 items-start">
       {/* Left Column: User details card */}
       <div className="col-span-1 flex flex-col gap-6">
-        <section className="border border-border/40 bg-card/25 rounded-3xl p-6 text-center flex flex-col items-center">
-          <span className="flex size-20 items-center justify-center rounded-3xl bg-gradient-to-tr from-primary to-primary/60 text-primary-foreground text-3xl font-extrabold shadow-lg shadow-primary/20 mb-4">
+        <section className="border border-border/40 bg-card/25 rounded-xl p-6 text-center flex flex-col items-center">
+          <span className="flex size-20 items-center justify-center rounded-xl bg-gradient-to-tr from-primary to-primary/60 text-primary-foreground text-3xl font-extrabold shadow-lg shadow-primary/20 mb-4">
             {user?.name?.charAt(0) ?? "U"}
           </span>
           <h3 className="text-lg font-bold tracking-tight text-foreground">{user?.name}</h3>
@@ -932,7 +930,7 @@ export function DesktopProfile({
         </section>
 
         {/* Database Quick Stats */}
-        <section className="border border-border/40 bg-card/25 rounded-3xl p-5 flex flex-col gap-4">
+        <section className="border border-border/40 bg-card/25 rounded-xl p-5 flex flex-col gap-4">
           <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest border-b border-border/20 pb-2">
             Métricas de cuenta
           </h4>
@@ -956,7 +954,7 @@ export function DesktopProfile({
       </div>
 
       {/* Right 2 Columns: Settings options list */}
-      <section className="col-span-2 border border-border/40 bg-card/25 rounded-3xl p-6">
+      <section className="col-span-2 border border-border/40 bg-card/25 rounded-xl p-6">
         <h3 className="text-base font-bold tracking-tight mb-5">Preferencias</h3>
         <ul className="flex flex-col border border-border/30 bg-card/45 rounded-2xl overflow-hidden divide-y divide-border/25">
           {menuItems.map((item) => (
@@ -1075,7 +1073,7 @@ export function DesktopPortfolio({ mask }: { mask: (v: string) => string }) {
       {/* Left 2 Columns: Holdings and Transaction History */}
       <div className="col-span-2 flex flex-col gap-8">
         {/* Portfolio Value Summary Card */}
-        <section className="relative overflow-hidden rounded-3xl border border-border/40 bg-card/45 p-6 shadow-sm flex items-center justify-between isolate">
+        <section className="relative overflow-hidden rounded-xl border border-border/40 bg-card/45 p-6 shadow-sm flex items-center justify-between isolate">
           <div
             aria-hidden
             className="absolute -right-24 -top-24 size-44 rounded-full bg-primary/10 blur-3xl pointer-events-none"
@@ -1090,11 +1088,10 @@ export function DesktopPortfolio({ mask }: { mask: (v: string) => string }) {
             </h2>
             <div className="mt-2.5 flex items-center gap-2">
               <span
-                className={`flex items-center gap-1 rounded-lg px-2 py-0.5 text-xs font-bold leading-none ${
-                  portfolioTotalProfitLoss >= 0
+                className={`flex items-center gap-1 rounded-lg px-2 py-0.5 text-xs font-bold leading-none ${portfolioTotalProfitLoss >= 0
                     ? "bg-emerald-500/10 text-emerald-500"
                     : "bg-rose-500/10 text-rose-500"
-                }`}
+                  }`}
               >
                 {portfolioTotalProfitLoss >= 0 ? "+" : ""}
                 {mask(formatShort(portfolioTotalProfitLoss, "USD"))} ({portfolioTotalProfitLossPercent}%)
@@ -1125,7 +1122,7 @@ export function DesktopPortfolio({ mask }: { mask: (v: string) => string }) {
         )}
 
         {/* Holdings Card */}
-        <section className="rounded-3xl border border-border/40 bg-card/45 p-6 shadow-sm">
+        <section className="rounded-xl border border-border/40 bg-card/45 p-6 shadow-sm">
           <h3 className="text-base font-bold tracking-tight mb-4">Mis Tenencias</h3>
 
           {holdings.length === 0 ? (
@@ -1164,9 +1161,8 @@ export function DesktopPortfolio({ mask }: { mask: (v: string) => string }) {
                         {mask(formatShort(h.currentValue, "USD"))}
                       </td>
                       <td
-                        className={`py-4 text-right font-bold tabular-nums ${
-                          h.profitLoss >= 0 ? "text-emerald-500" : "text-rose-500"
-                        }`}
+                        className={`py-4 text-right font-bold tabular-nums ${h.profitLoss >= 0 ? "text-emerald-500" : "text-rose-500"
+                          }`}
                       >
                         {h.profitLoss >= 0 ? "+" : ""}
                         {h.profitLossPercent}%
@@ -1197,7 +1193,7 @@ export function DesktopPortfolio({ mask }: { mask: (v: string) => string }) {
         </section>
 
         {/* Transaction History Card */}
-        <section className="rounded-3xl border border-border/40 bg-card/45 p-6 shadow-sm">
+        <section className="rounded-xl border border-border/40 bg-card/45 p-6 shadow-sm">
           <h3 className="text-base font-bold tracking-tight mb-4">Historial de Operaciones</h3>
 
           {stockTransactions.length === 0 ? (
@@ -1213,9 +1209,8 @@ export function DesktopPortfolio({ mask }: { mask: (v: string) => string }) {
                 >
                   <div className="flex items-center gap-4">
                     <span
-                      className={`flex size-9 items-center justify-center rounded-xl text-xs font-bold ${
-                        tx.type === "buy" ? "bg-emerald-500/10 text-emerald-500" : "bg-rose-500/10 text-rose-500"
-                      }`}
+                      className={`flex size-9 items-center justify-center rounded-xl text-xs font-bold ${tx.type === "buy" ? "bg-emerald-500/10 text-emerald-500" : "bg-rose-500/10 text-rose-500"
+                        }`}
                     >
                       {tx.type === "buy" ? "B" : "S"}
                     </span>
@@ -1253,7 +1248,7 @@ export function DesktopPortfolio({ mask }: { mask: (v: string) => string }) {
 
       {/* Right Column: Watchlist */}
       <div className="flex flex-col gap-8">
-        <section className="rounded-3xl border border-border/40 bg-card/45 p-6 shadow-sm">
+        <section className="rounded-xl border border-border/40 bg-card/45 p-6 shadow-sm">
           <h3 className="text-base font-bold tracking-tight mb-4">Lista de Seguimiento</h3>
 
           {/* Add Ticker Form */}

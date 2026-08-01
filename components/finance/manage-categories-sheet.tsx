@@ -94,7 +94,7 @@ export function ManageCategoriesSheet({
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-      <DialogContent className="w-full sm:max-w-xl max-w-[calc(100vw-2rem)] h-auto max-h-[90vh] rounded-3xl bg-card border border-border p-6 shadow-2xl overflow-y-auto overflow-x-hidden transition-all duration-200">
+      <DialogContent className="w-full sm:max-w-xl max-w-[calc(100vw-2rem)] h-auto max-h-[90vh] rounded-xl bg-card border border-border p-6 shadow-2xl overflow-y-auto overflow-x-hidden transition-all duration-200">
         <DialogHeader className="text-left pb-1">
           <div className="flex items-center gap-2.5">
             <span className="flex size-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
@@ -234,11 +234,10 @@ export function ManageCategoriesSheet({
                         type="button"
                         disabled={submitting}
                         onClick={() => setSelectedColor(c)}
-                        className={`size-6 rounded-full border border-black/20 relative transition-all active:scale-90 cursor-pointer ${
-                          active
+                        className={`size-6 rounded-full border border-black/20 relative transition-all active:scale-90 cursor-pointer ${active
                             ? "ring-2 ring-primary ring-offset-2 ring-offset-background scale-110 shadow-md"
                             : "hover:scale-105 opacity-80 hover:opacity-100"
-                        }`}
+                          }`}
                         style={{ background: c }}
                       />
                     )

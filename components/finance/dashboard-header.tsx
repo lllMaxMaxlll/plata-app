@@ -42,7 +42,7 @@ export function DashboardHeader({ onOpenExchange }: { onOpenExchange: () => void
         </div>
       </div>
 
-      <Card className="mt-5 rounded-3xl p-5 shadow-sm">
+      <Card className="mt-5 rounded-xl p-5 shadow-sm">
         <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
           Saldo consolidado
         </p>

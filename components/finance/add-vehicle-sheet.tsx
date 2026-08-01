@@ -129,7 +129,7 @@ export function AddVehicleSheet({
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-      <DialogContent className="w-full sm:max-w-xl max-w-[calc(100%-2rem)] h-auto rounded-3xl bg-card border border-border p-6 shadow-2xl overflow-y-auto max-h-[90vh] transition-all duration-200">
+      <DialogContent className="w-full sm:max-w-xl max-w-[calc(100%-2rem)] h-auto rounded-xl bg-card border border-border p-6 shadow-2xl overflow-y-auto max-h-[90vh] transition-all duration-200">
         <DialogHeader className="text-left pb-1">
           <DialogTitle className="text-lg font-semibold tracking-tight text-foreground">
             {vehicle ? "Editar Vehículo" : "Nuevo Vehículo"}

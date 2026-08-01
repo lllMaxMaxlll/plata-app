@@ -207,7 +207,7 @@ export function CurrencyExchangeSheet({ open, onClose }: CurrencyExchangeSheetPr
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-      <DialogContent className="w-full sm:max-w-xl max-w-[calc(100vw-2rem)] h-auto max-h-[90vh] rounded-3xl bg-card border border-border p-6 shadow-2xl overflow-y-auto overflow-x-hidden transition-all duration-200">
+      <DialogContent className="w-full sm:max-w-xl max-w-[calc(100vw-2rem)] h-auto max-h-[90vh] rounded-xl bg-card border border-border p-6 shadow-2xl overflow-y-auto overflow-x-hidden transition-all duration-200">
         <DialogHeader className="text-left pb-1">
           <DialogTitle className="text-lg font-semibold tracking-tight text-foreground">
             Cambio de Moneda

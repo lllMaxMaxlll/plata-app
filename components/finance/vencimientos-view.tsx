@@ -48,7 +48,7 @@ export function VencimientosView({ isDesktop = false }: { isDesktop?: boolean })
   // Sheet & Modal state
   const [sheetOpen, setSheetOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<DueItem | null>(null)
-  
+
   const [payModalOpen, setPayModalOpen] = useState(false)
   const [payingItem, setPayingItem] = useState<DueItem | null>(null)
 
@@ -332,7 +332,7 @@ export function VencimientosView({ isDesktop = false }: { isDesktop?: boolean })
       {/* KPI Cards Overview */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Card 1: Total a pagar este mes */}
-        <div className="relative overflow-hidden rounded-3xl border border-border/60 bg-card/40 backdrop-blur-xl p-5 shadow-sm group hover:border-border transition-colors">
+        <div className="relative overflow-hidden rounded-xl border border-border/60 bg-card/40 backdrop-blur-xl p-5 shadow-sm group hover:border-border transition-colors">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
               Total Este Mes
@@ -358,7 +358,7 @@ export function VencimientosView({ isDesktop = false }: { isDesktop?: boolean })
         </div>
 
         {/* Card 2: Próximos 3 más urgentes */}
-        <div className="relative overflow-hidden rounded-3xl border border-border/60 bg-card/40 backdrop-blur-xl p-5 shadow-sm">
+        <div className="relative overflow-hidden rounded-xl border border-border/60 bg-card/40 backdrop-blur-xl p-5 shadow-sm">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
               Próximos Vencimientos
@@ -380,8 +380,8 @@ export function VencimientosView({ isDesktop = false }: { isDesktop?: boolean })
                       {item.daysUntilDue === 0
                         ? "Vence HOY"
                         : item.daysUntilDue < 0
-                        ? `Venció hace ${Math.abs(item.daysUntilDue)}d`
-                        : `En ${item.daysUntilDue} días`}
+                          ? `Venció hace ${Math.abs(item.daysUntilDue)}d`
+                          : `En ${item.daysUntilDue} días`}
                     </p>
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0">
@@ -404,22 +404,20 @@ export function VencimientosView({ isDesktop = false }: { isDesktop?: boolean })
 
         {/* Card 3: Alerta de Mora / Vencidas */}
         <div
-          className={`relative overflow-hidden rounded-3xl border p-5 shadow-sm backdrop-blur-xl transition-colors ${
-            overdueItems.length > 0
+          className={`relative overflow-hidden rounded-xl border p-5 shadow-sm backdrop-blur-xl transition-colors ${overdueItems.length > 0
               ? "border-rose-500/30 bg-rose-500/5 shadow-rose-500/5"
               : "border-border/60 bg-card/40"
-          }`}
+            }`}
         >
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
               Facturas Vencidas
             </span>
             <span
-              className={`flex size-9 items-center justify-center rounded-xl border ${
-                overdueItems.length > 0
+              className={`flex size-9 items-center justify-center rounded-xl border ${overdueItems.length > 0
                   ? "bg-rose-500/15 text-rose-500 border-rose-500/30 animate-pulse"
                   : "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
-              }`}
+                }`}
             >
               {overdueItems.length > 0 ? (
                 <AlertTriangle className="size-4.5" />
@@ -496,22 +494,20 @@ export function VencimientosView({ isDesktop = false }: { isDesktop?: boolean })
         <div className="flex items-center rounded-2xl bg-muted/40 p-1 border border-border/50 self-start sm:self-auto">
           <button
             onClick={() => setActiveTab("list")}
-            className={`flex items-center gap-2 rounded-xl px-3.5 py-1.5 text-xs font-semibold transition-all cursor-pointer ${
-              activeTab === "list"
+            className={`flex items-center gap-2 rounded-xl px-3.5 py-1.5 text-xs font-semibold transition-all cursor-pointer ${activeTab === "list"
                 ? "bg-card text-foreground shadow-sm"
                 : "text-muted-foreground hover:text-foreground"
-            }`}
+              }`}
           >
             <ListFilter className="size-4" />
             Vista Lista / Tablero
           </button>
           <button
             onClick={() => setActiveTab("calendar")}
-            className={`flex items-center gap-2 rounded-xl px-3.5 py-1.5 text-xs font-semibold transition-all cursor-pointer ${
-              activeTab === "calendar"
+            className={`flex items-center gap-2 rounded-xl px-3.5 py-1.5 text-xs font-semibold transition-all cursor-pointer ${activeTab === "calendar"
                 ? "bg-card text-foreground shadow-sm"
                 : "text-muted-foreground hover:text-foreground"
-            }`}
+              }`}
           >
             <CalendarIcon className="size-4" />
             Vista Calendario
@@ -542,11 +538,10 @@ export function VencimientosView({ isDesktop = false }: { isDesktop?: boolean })
                 <button
                   key={f.key}
                   onClick={() => setStatusFilter(f.key)}
-                  className={`rounded-lg px-2.5 py-1 text-[11px] font-semibold whitespace-nowrap transition-colors cursor-pointer ${
-                    statusFilter === f.key
+                  className={`rounded-lg px-2.5 py-1 text-[11px] font-semibold whitespace-nowrap transition-colors cursor-pointer ${statusFilter === f.key
                       ? "bg-primary text-primary-foreground"
                       : "bg-muted/40 text-muted-foreground hover:bg-muted"
-                  }`}
+                    }`}
                 >
                   {f.label}
                 </button>
@@ -561,7 +556,7 @@ export function VencimientosView({ isDesktop = false }: { isDesktop?: boolean })
       {activeTab === "list" ? (
         /* VISTA LISTA / TABLERO */
         filteredListItems.length === 0 ? (
-          <div className="text-center py-16 rounded-3xl border border-dashed border-border/60 bg-card/20 p-8">
+          <div className="text-center py-16 rounded-xl border border-dashed border-border/60 bg-card/20 p-8">
             <Receipt className="size-12 mx-auto text-muted-foreground/40 mb-3" />
             <h3 className="text-base font-bold text-foreground">No se encontraron vencimientos</h3>
             <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
@@ -588,15 +583,14 @@ export function VencimientosView({ isDesktop = false }: { isDesktop?: boolean })
               return (
                 <div
                   key={item.id}
-                  className={`group relative rounded-3xl border p-4.5 transition-all duration-200 backdrop-blur-xl flex flex-col justify-between ${
-                    isPaid
+                  className={`group relative rounded-xl border p-4.5 transition-all duration-200 backdrop-blur-xl flex flex-col justify-between ${isPaid
                       ? "border-border/40 bg-card/20 opacity-75"
                       : isOverdue
-                      ? "border-rose-500/40 bg-rose-500/5 shadow-lg shadow-rose-500/5"
-                      : isDueSoon
-                      ? "border-amber-500/40 bg-amber-500/5 shadow-lg shadow-amber-500/5"
-                      : "border-border/60 bg-card/40 hover:border-border hover:bg-card/60"
-                  }`}
+                        ? "border-rose-500/40 bg-rose-500/5 shadow-lg shadow-rose-500/5"
+                        : isDueSoon
+                          ? "border-amber-500/40 bg-amber-500/5 shadow-lg shadow-amber-500/5"
+                          : "border-border/60 bg-card/40 hover:border-border hover:bg-card/60"
+                    }`}
                 >
                   <div>
                     {/* Top Row: Category & Status Badge */}
@@ -730,7 +724,7 @@ export function VencimientosView({ isDesktop = false }: { isDesktop?: boolean })
           </div>
 
           {/* Monthly Days Grid */}
-          <div className="rounded-3xl border border-border/60 bg-card/30 p-3 overflow-hidden backdrop-blur-xl">
+          <div className="rounded-xl border border-border/60 bg-card/30 p-3 overflow-hidden backdrop-blur-xl">
             {/* Weekday Labels */}
             <div className="grid grid-cols-7 gap-1 text-center text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2">
               <div>Lun</div>
@@ -758,23 +752,21 @@ export function VencimientosView({ isDesktop = false }: { isDesktop?: boolean })
                         setSelectedCalendarDateIso(day.dateIso)
                       }
                     }}
-                    className={`min-h-[72px] sm:min-h-[90px] rounded-2xl p-1.5 flex flex-col justify-between border transition-all cursor-pointer relative overflow-hidden ${
-                      !day.isCurrentMonth
+                    className={`min-h-[72px] sm:min-h-[90px] rounded-2xl p-1.5 flex flex-col justify-between border transition-all cursor-pointer relative overflow-hidden ${!day.isCurrentMonth
                         ? "opacity-25 bg-muted/10 border-transparent cursor-default"
                         : isSelected
-                        ? "border-primary bg-primary/10 shadow-md shadow-primary/10"
-                        : isTodayCell
-                        ? "border-primary/50 bg-primary/5"
-                        : "border-border/30 bg-card/40 hover:bg-card/70"
-                    }`}
+                          ? "border-primary bg-primary/10 shadow-md shadow-primary/10"
+                          : isTodayCell
+                            ? "border-primary/50 bg-primary/5"
+                            : "border-border/30 bg-card/40 hover:bg-card/70"
+                      }`}
                   >
                     <div className="flex items-center justify-between">
                       <span
-                        className={`text-xs font-bold ${
-                          isTodayCell
+                        className={`text-xs font-bold ${isTodayCell
                             ? "flex size-5 items-center justify-center rounded-full bg-primary text-primary-foreground text-[10px]"
                             : "text-foreground"
-                        }`}
+                          }`}
                       >
                         {day.dayNumber}
                       </span>
@@ -790,15 +782,14 @@ export function VencimientosView({ isDesktop = false }: { isDesktop?: boolean })
                       {day.items.slice(0, 2).map((item) => (
                         <div
                           key={item.id}
-                          className={`truncate text-[10px] font-semibold px-1.5 py-0.5 rounded-lg border ${
-                            item.status === "paid"
+                          className={`truncate text-[10px] font-semibold px-1.5 py-0.5 rounded-lg border ${item.status === "paid"
                               ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
                               : item.computedStatusTag === "overdue"
-                              ? "bg-rose-500/15 text-rose-400 border-rose-500/30"
-                              : item.computedStatusTag === "due_soon"
-                              ? "bg-amber-500/15 text-amber-400 border-amber-500/30"
-                              : "bg-primary/10 text-primary border-primary/20"
-                          }`}
+                                ? "bg-rose-500/15 text-rose-400 border-rose-500/30"
+                                : item.computedStatusTag === "due_soon"
+                                  ? "bg-amber-500/15 text-amber-400 border-amber-500/30"
+                                  : "bg-primary/10 text-primary border-primary/20"
+                            }`}
                         >
                           {item.title}
                         </div>
@@ -817,7 +808,7 @@ export function VencimientosView({ isDesktop = false }: { isDesktop?: boolean })
 
           {/* Selected Day Details Box */}
           {selectedCalendarDateIso && (
-            <div className="rounded-3xl border border-primary/30 bg-card/60 p-5 backdrop-blur-xl animate-in fade-in duration-200">
+            <div className="rounded-xl border border-primary/30 bg-card/60 p-5 backdrop-blur-xl animate-in fade-in duration-200">
               <div className="flex items-center justify-between border-b border-border/40 pb-3 mb-3">
                 <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
                   <CalendarIcon className="size-4 text-primary" />

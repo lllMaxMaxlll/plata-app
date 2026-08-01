@@ -19,10 +19,10 @@ export function ProfileView({
 
   const items = [
     { Icon: Tag, label: "Categorías", onClick: onManageCategories },
-    { Icon: CreditCard, label: "Cuentas y tarjetas", onClick: () => {} },
-    { Icon: Bell, label: "Notificaciones", onClick: () => {} },
+    { Icon: CreditCard, label: "Cuentas y tarjetas", onClick: () => { } },
+    { Icon: Bell, label: "Notificaciones", onClick: () => { } },
     { Icon: ShieldCheck, label: "Seguridad", onClick: onManageSecurity },
-    { Icon: CircleHelp, label: "Ayuda", onClick: () => {} },
+    { Icon: CircleHelp, label: "Ayuda", onClick: () => { } },
   ]
 
   return (
@@ -41,7 +41,7 @@ export function ProfileView({
         <h1 className="text-xl font-semibold tracking-tight">Perfil</h1>
       </div>
 
-      <Card className="mt-5 flex items-center gap-3.5 rounded-3xl p-4 shadow-sm">
+      <Card className="mt-5 flex items-center gap-3.5 rounded-xl p-4 shadow-sm">
         <span className="flex size-14 items-center justify-center rounded-full bg-primary text-lg font-semibold text-primary-foreground">
           {user?.name?.charAt(0) ?? "U"}
         </span>
@@ -62,9 +62,8 @@ export function ProfileView({
           <li key={item.label}>
             <button
               onClick={item.onClick}
-              className={`flex w-full items-center gap-3 px-4 py-3.5 text-left text-sm transition-colors hover:bg-accent/40 cursor-pointer ${
-                i !== 0 ? "border-t border-border" : ""
-              }`}
+              className={`flex w-full items-center gap-3 px-4 py-3.5 text-left text-sm transition-colors hover:bg-accent/40 cursor-pointer ${i !== 0 ? "border-t border-border" : ""
+                }`}
             >
               <item.Icon className="size-4.5 text-muted-foreground" />
               <span className="flex-1 font-medium">{item.label}</span>

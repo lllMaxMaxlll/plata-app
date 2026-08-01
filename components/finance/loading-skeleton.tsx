@@ -72,7 +72,7 @@ export function LoadingSkeleton() {
               </div>
 
               {/* Chart */}
-              <div className="rounded-3xl border border-border bg-card/45 p-6 h-64 flex flex-col justify-between">
+              <div className="rounded-xl border border-border bg-card/45 p-6 h-64 flex flex-col justify-between">
                 <div>
                   <Skeleton className="h-4 w-36" />
                   <Skeleton className="h-3 w-20 mt-2" />
@@ -88,7 +88,7 @@ export function LoadingSkeleton() {
             </div>
 
             {/* Recent Activity */}
-            <div className="rounded-3xl border border-border bg-card/45 p-6 h-full flex flex-col gap-4">
+            <div className="rounded-xl border border-border bg-card/45 p-6 h-full flex flex-col gap-4">
               <Skeleton className="h-4 w-32 border-b border-border pb-4" />
               <div className="flex flex-col gap-4 mt-2">
                 {[...Array(5)].map((_, i) => (
@@ -122,7 +122,7 @@ export function LoadingSkeleton() {
         </div>
 
         {/* Consolidated Balance Card */}
-        <Skeleton className="h-32 rounded-3xl" />
+        <Skeleton className="h-32 rounded-xl" />
 
         {/* Accounts Title */}
         <div className="flex justify-between items-center mt-2">
@@ -138,7 +138,7 @@ export function LoadingSkeleton() {
         </div>
 
         {/* Category Chart Card */}
-        <Skeleton className="h-44 rounded-3xl mt-2" />
+        <Skeleton className="h-44 rounded-xl mt-2" />
 
         {/* Recent Transactions */}
         <div className="flex flex-col gap-3.5 mt-2">

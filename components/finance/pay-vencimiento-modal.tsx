@@ -38,7 +38,7 @@ export function PayVencimientoModal({ open, onClose, item }: PayVencimientoModal
       setRegisterExpense(true)
       setPayAmount(String(item.amount))
       setNote(`Pago de servicio: ${item.title}`)
-      
+
       // Auto select preferred account or first account matching currency
       if (item.accountId && accounts.some((a) => a.id === item.accountId)) {
         setSelectedAccountId(item.accountId)
@@ -92,7 +92,7 @@ export function PayVencimientoModal({ open, onClose, item }: PayVencimientoModal
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-      <DialogContent className="max-w-lg w-full rounded-3xl bg-card border border-border p-6 shadow-2xl overflow-y-auto max-h-[90vh]">
+      <DialogContent className="max-w-lg w-full rounded-xl bg-card border border-border p-6 shadow-2xl overflow-y-auto max-h-[90vh]">
         <DialogHeader className="text-left pb-1">
           <DialogTitle className="text-lg font-semibold tracking-tight text-foreground">
             Marcar como Pagado

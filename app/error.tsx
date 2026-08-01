@@ -19,7 +19,7 @@ export default function Error({
 
   return (
     <div className="flex min-h-[70vh] flex-col items-center justify-center p-6 text-center">
-      <div className="flex size-16 items-center justify-center rounded-3xl bg-rose-500/10 text-rose-500 border border-rose-500/20 shadow-lg mb-4">
+      <div className="flex size-16 items-center justify-center rounded-xl bg-rose-500/10 text-rose-500 border border-rose-500/20 shadow-lg mb-4">
         <AlertTriangle className="size-8" />
       </div>
 

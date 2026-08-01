@@ -198,7 +198,7 @@ export function AddVehicleLogSheet({
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-      <DialogContent className="max-w-lg w-full rounded-3xl bg-card border border-border p-6 shadow-2xl overflow-y-auto max-h-[90vh]">
+      <DialogContent className="max-w-lg w-full rounded-xl bg-card border border-border p-6 shadow-2xl overflow-y-auto max-h-[90vh]">
         <DialogHeader className="text-left pb-1">
           <DialogTitle className="text-lg font-semibold tracking-tight text-foreground">
             {log ? "Editar Registro" : "Nuevo Registro"}
@@ -402,10 +402,10 @@ export function AddVehicleLogSheet({
                   type === "part"
                     ? "Ej. Pastillas de freno, Transmisión"
                     : type === "gear"
-                    ? "Ej. Casco, Guantes, Campera"
-                    : type === "insurance"
-                    ? "Ej. Cuota Seguro / Patente ARBA"
-                    : "Detalle del gasto"
+                      ? "Ej. Casco, Guantes, Campera"
+                      : type === "insurance"
+                        ? "Ej. Cuota Seguro / Patente ARBA"
+                        : "Detalle del gasto"
                 }
                 className="h-10 text-sm rounded-xl border-border bg-card/60"
               />

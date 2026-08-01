@@ -165,7 +165,7 @@ export function VencimientoSheet({ open, onClose, item }: VencimientoSheetProps)
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-      <DialogContent className="w-full sm:max-w-xl max-w-[calc(100%-2rem)] h-auto rounded-3xl bg-card border border-border p-6 shadow-2xl overflow-y-auto max-h-[90vh] transition-all duration-200">
+      <DialogContent className="w-full sm:max-w-xl max-w-[calc(100%-2rem)] h-auto rounded-xl bg-card border border-border p-6 shadow-2xl overflow-y-auto max-h-[90vh] transition-all duration-200">
         <DialogHeader className="text-left pb-2">
           <DialogTitle className="text-lg font-semibold tracking-tight text-foreground">
             {item ? "Editar Vencimiento" : "Nuevo Vencimiento o Servicio"}
@@ -339,8 +339,8 @@ export function VencimientoSheet({ open, onClose, item }: VencimientoSheetProps)
                   {accountId === "none" || !accountId
                     ? "Sin cuenta preferida"
                     : accounts.find((a) => a.id === accountId)
-                    ? `${accounts.find((a) => a.id === accountId)?.name} (${accounts.find((a) => a.id === accountId)?.currency})`
-                    : "Seleccionar cuenta"}
+                      ? `${accounts.find((a) => a.id === accountId)?.name} (${accounts.find((a) => a.id === accountId)?.currency})`
+                      : "Seleccionar cuenta"}
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>

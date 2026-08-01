@@ -22,7 +22,7 @@ export function BottomSheet({ open, onClose, title, description, children }: Bot
     <Sheet open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
       <SheetContent
         side="bottom"
-        className="mx-auto w-full max-w-lg rounded-t-3xl border-t border-border bg-card p-0 shadow-2xl sm:rounded-3xl sm:border"
+        className="mx-auto w-full max-w-lg rounded-t-3xl border-t border-border bg-card p-0 shadow-2xl sm:rounded-xl sm:border"
       >
         <SheetHeader className="px-5 pt-5 pb-2 text-left">
           <SheetTitle className="text-lg font-semibold tracking-tight text-foreground">

@@ -295,7 +295,7 @@ export function VehiclesView({ isDesktop = false, onBack }: { isDesktop?: boolea
       </div>
 
       {vehicles.length === 0 ? (
-        <div className="max-w-md mx-auto mt-12 text-center border border-border rounded-3xl bg-card p-8 flex flex-col items-center shadow-sm">
+        <div className="max-w-md mx-auto mt-12 text-center border border-border rounded-xl bg-card p-8 flex flex-col items-center shadow-sm">
           <div className="mb-4 flex size-14 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
             <Bike className="size-7" />
           </div>
@@ -416,11 +416,10 @@ export function VehiclesView({ isDesktop = false, onBack }: { isDesktop?: boolea
                       {alerts.map((al) => (
                         <li
                           key={al.id}
-                          className={`flex items-start gap-2.5 p-3 rounded-xl border text-xs ${
-                            al.type === "critical"
+                          className={`flex items-start gap-2.5 p-3 rounded-xl border text-xs ${al.type === "critical"
                               ? "bg-red-500/10 text-red-500 border-red-500/20 font-medium"
                               : "bg-amber-500/10 text-amber-500 border-amber-500/20"
-                          }`}
+                            }`}
                         >
                           <span className="font-semibold">{al.title}</span>
                           <span className="opacity-80">— {al.description}</span>
@@ -528,10 +527,10 @@ export function VehiclesView({ isDesktop = false, onBack }: { isDesktop?: boolea
                           l.type === "fuel"
                             ? `${l.liters || 0} L · ${l.gasStation || "Carga nafta"}${l.isFullTank ? " · Tanque lleno" : ""}`
                             : l.type === "service"
-                            ? `${l.serviceType || "Service"} · ${l.provider || "Taller"}`
-                            : l.type === "part" || l.type === "gear" || l.type === "insurance" || l.type === "other"
-                            ? `${l.itemName || "Compra"}`
-                            : l.note || "Registro general"
+                              ? `${l.serviceType || "Service"} · ${l.provider || "Taller"}`
+                              : l.type === "part" || l.type === "gear" || l.type === "insurance" || l.type === "other"
+                                ? `${l.itemName || "Compra"}`
+                                : l.note || "Registro general"
 
                         return (
                           <li

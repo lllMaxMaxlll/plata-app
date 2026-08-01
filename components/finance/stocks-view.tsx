@@ -131,9 +131,9 @@ export function StocksView({ onBack }: { onBack?: () => void }) {
 
       {/* Portfolio Balance Card */}
       <div className="mt-5 px-5">
-        <Card className="relative overflow-hidden rounded-3xl p-5 shadow-lg isolate border-border">
+        <Card className="relative overflow-hidden rounded-xl p-5 shadow-lg isolate border-border">
           <div aria-hidden className="absolute -right-16 -top-16 size-36 rounded-full bg-primary/10 blur-3xl" />
-          
+
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
             Valor del Portafolio
           </p>
@@ -242,9 +242,8 @@ export function StocksView({ onBack }: { onBack?: () => void }) {
                         <div className="flex items-center gap-2">
                           <span className="text-xs text-muted-foreground">Rendimiento:</span>
                           <span
-                            className={`flex items-center gap-0.5 text-xs font-bold ${
-                              h.profitLoss >= 0 ? "text-emerald-500" : "text-rose-500"
-                            }`}
+                            className={`flex items-center gap-0.5 text-xs font-bold ${h.profitLoss >= 0 ? "text-emerald-500" : "text-rose-500"
+                              }`}
                           >
                             {h.profitLoss >= 0 ? "+" : ""}
                             {formatShort(h.profitLoss, "USD")} ({h.profitLossPercent}%)
@@ -373,9 +372,8 @@ export function StocksView({ onBack }: { onBack?: () => void }) {
                           </p>
                           {currentPrice > 0 && (
                             <p
-                              className={`text-[10px] font-bold mt-0.5 ${
-                                isPositive ? "text-emerald-500" : "text-rose-500"
-                              }`}
+                              className={`text-[10px] font-bold mt-0.5 ${isPositive ? "text-emerald-500" : "text-rose-500"
+                                }`}
                             >
                               {isPositive ? "+" : ""}
                               {dailyChange.toFixed(2)}%

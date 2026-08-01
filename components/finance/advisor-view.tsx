@@ -284,9 +284,9 @@ export function AdvisorView({ isDesktop = false }: { isDesktop?: boolean }) {
         const res = await fetch("https://openrouter.ai/api/v1/models")
         if (res.ok) {
           const data = await res.json()
-          
+
           const mapped = data.data.map((m: any) => {
-            const isFree = m.id.endsWith(":free") || 
+            const isFree = m.id.endsWith(":free") ||
               (m.pricing && parseFloat(m.pricing.prompt) === 0 && parseFloat(m.pricing.completion) === 0);
             return {
               id: m.id,
@@ -307,9 +307,9 @@ export function AdvisorView({ isDesktop = false }: { isDesktop?: boolean }) {
           const finalList = sorted.find((m: any) => m.id === "openrouter/free")
             ? sorted
             : [
-                { id: "openrouter/free", name: "🎁 Free Models Router (Auto)", contextLength: 200000, isFree: true },
-                ...sorted,
-              ]
+              { id: "openrouter/free", name: "🎁 Free Models Router (Auto)", contextLength: 200000, isFree: true },
+              ...sorted,
+            ]
 
           const seen = new Set()
           const uniqueList = finalList.filter((item: any) => {
@@ -410,7 +410,7 @@ export function AdvisorView({ isDesktop = false }: { isDesktop?: boolean }) {
         try {
           const parsed = JSON.parse(errText)
           errMessage = parsed.error || errMessage
-        } catch (_) {}
+        } catch (_) { }
         throw new Error(errMessage)
       }
 
@@ -502,7 +502,7 @@ export function AdvisorView({ isDesktop = false }: { isDesktop?: boolean }) {
   ]
 
   const containerClasses = isDesktop
-    ? "h-[calc(100vh-13rem)] w-full max-w-4xl mx-auto flex flex-col bg-card border border-border rounded-3xl shadow-xl overflow-hidden animate-in fade-in duration-200"
+    ? "h-[calc(100vh-13rem)] w-full max-w-4xl mx-auto flex flex-col bg-card border border-border rounded-xl shadow-xl overflow-hidden animate-in fade-in duration-200"
     : "fixed inset-x-0 bottom-0 top-0 max-w-md mx-auto z-30 flex flex-col bg-background pt-[calc(env(safe-area-inset-top)+1.25rem)] pb-[calc(env(safe-area-inset-bottom)+4.5rem)]"
 
   return (
@@ -642,22 +642,20 @@ export function AdvisorView({ isDesktop = false }: { isDesktop?: boolean }) {
               className={`flex gap-3 max-w-[85%] ${isAI ? "self-start" : "self-end flex-row-reverse"}`}
             >
               <div
-                className={`flex size-8 shrink-0 select-none items-center justify-center rounded-xl border text-[10px] ${
-                  isAI
+                className={`flex size-8 shrink-0 select-none items-center justify-center rounded-xl border text-[10px] ${isAI
                     ? "bg-primary/10 border-primary/20 text-primary"
                     : "bg-muted border-border text-muted-foreground"
-                }`}
+                  }`}
               >
                 {isAI ? <Bot className="size-4" /> : <UserIcon className="size-4" />}
               </div>
 
               <div className="flex flex-col gap-1 group/msg relative">
                 <Card
-                  className={`px-4 py-3 text-sm shadow-sm transition-all border ${
-                    isAI
+                  className={`px-4 py-3 text-sm shadow-sm transition-all border ${isAI
                       ? "bg-card border-border text-foreground rounded-tl-sm leading-relaxed"
                       : "bg-primary text-primary-foreground border-primary/10 rounded-tr-sm font-medium leading-relaxed"
-                  }`}
+                    }`}
                 >
                   {isAI ? (
                     <>
@@ -694,9 +692,8 @@ export function AdvisorView({ isDesktop = false }: { isDesktop?: boolean }) {
                   )}
                 </Card>
                 <span
-                  className={`text-[9px] font-semibold tracking-wide text-muted-foreground ${
-                    isAI ? "self-start" : "self-end"
-                  }`}
+                  className={`text-[9px] font-semibold tracking-wide text-muted-foreground ${isAI ? "self-start" : "self-end"
+                    }`}
                 >
                   {msg.timestamp}
                 </span>

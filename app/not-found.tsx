@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 export default function NotFound() {
   return (
     <div className="flex min-h-[70vh] flex-col items-center justify-center p-6 text-center">
-      <div className="flex size-16 items-center justify-center rounded-3xl bg-primary/10 text-primary border border-primary/20 shadow-lg mb-4">
+      <div className="flex size-16 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20 shadow-lg mb-4">
         <FileQuestion className="size-8" />
       </div>
 
