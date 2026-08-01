@@ -93,9 +93,9 @@ export function DesktopView({
   const mask = (value: string) => (hidden ? "••••••" : value)
 
   return (
-    <div className="flex min-h-screen w-full bg-background text-foreground">
+    <div className="flex h-screen w-full overflow-hidden bg-background text-foreground">
       {/* 1. Sidebar Navigation */}
-      <aside className="w-72 shrink-0 border-r border-border/40 bg-card/25 backdrop-blur-xl flex flex-col justify-between p-6">
+      <aside className="w-72 shrink-0 h-full border-r border-border/40 bg-card/25 backdrop-blur-xl flex flex-col justify-between p-6 overflow-y-auto">
         <div className="flex flex-col gap-8">
           {/* Logo */}
           <div className="flex items-center gap-3 px-2">
