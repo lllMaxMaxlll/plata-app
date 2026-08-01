@@ -12,6 +12,7 @@ import {
   TrendingUp,
   TrendingDown,
   CalendarClock,
+  Target,
 } from "lucide-react"
 import { useFinance } from "./finance-provider"
 import { formatShort } from "@/lib/finance-data"
@@ -84,6 +85,29 @@ export function MoreView() {
 
       {/* Hub Options Grid */}
       <div className="mt-5 grid grid-cols-1 gap-3.5">
+        {/* Proyecciones Card */}
+        <Link href="/dashboard/proyecciones" className="block">
+          <Card className="w-full flex items-center justify-between p-4 hover:bg-accent/40 transition-all text-left cursor-pointer group shadow-sm border-primary/30">
+            <div className="flex items-center gap-4 min-w-0">
+              <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 group-hover:scale-105 transition-transform">
+                <Target className="size-5.5" />
+              </span>
+              <div className="min-w-0">
+                <h2 className="text-sm font-bold text-foreground">Proyección Financiera</h2>
+                <p className="text-[11px] text-muted-foreground mt-0.5 truncate">
+                  Simulador de patrimonio a 1-5 años con inflación y metas
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              <Badge variant="outline" className="border-cyan-500/30 text-cyan-400 text-[10px] font-bold">
+                Nuevo
+              </Badge>
+              <ChevronRight className="size-4.5 text-muted-foreground group-hover:text-foreground transition-colors" />
+            </div>
+          </Card>
+        </Link>
         {/* Vencimientos Card */}
         <Link href="/dashboard/vencimientos" className="block">
           <Card className="w-full flex items-center justify-between p-4 hover:bg-accent/40 transition-all text-left cursor-pointer group shadow-sm">

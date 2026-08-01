@@ -28,13 +28,15 @@ import {
   TrendingUp,
   Sparkles,
   Bike,
-  CalendarClock
+  CalendarClock,
+  Target,
 } from "lucide-react"
 import { formatShort } from "@/lib/finance-data"
 
 const NAV_ITEMS = [
   { href: "/", label: "Inicio", Icon: Home },
   { href: "/accounts", label: "Cuentas", Icon: Wallet },
+  { href: "/dashboard/proyecciones", label: "Proyecciones", Icon: Target },
   { href: "/dashboard/vencimientos", label: "Vencimientos", Icon: CalendarClock },
   { href: "/vehicles", label: "Vehículos", Icon: Bike },
   { href: "/advisor", label: "PLATA AI", Icon: Sparkles },
@@ -66,6 +68,9 @@ export function AppShell({ children }: { children: ReactNode }) {
         return "Panel de Control"
       case "/accounts":
         return "Mis Cuentas"
+      case "/dashboard/proyecciones":
+      case "/proyecciones":
+        return "Proyección Financiera & Escenarios"
       case "/dashboard/vencimientos":
       case "/vencimientos":
         return "Calendario de Vencimientos"
