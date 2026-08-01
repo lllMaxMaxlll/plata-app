@@ -5,6 +5,10 @@ import { Wallet, Mail, Lock, ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useFinance } from "./finance-provider"
 
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Card } from "@/components/ui/card"
+
 export function AuthView() {
   const { login, loginWithGoogle, sendPasswordResetLink } = useFinance()
   const [mode, setMode] = useState<"login" | "signup" | "forgot">("login")
@@ -34,7 +38,6 @@ export function AuthView() {
         if (err.code === "auth/invalid-email") {
           message = "El formato del email no es válido."
         } else if (err.code === "auth/user-not-found" || err.code === "auth/invalid-credential") {
-          // Firebase might return invalid-credential in new versions for security when email is not found
           message = "No existe una cuenta registrada con este email."
         }
         setError(message)
@@ -53,7 +56,6 @@ export function AuthView() {
       await login(email, password, mode === "signup")
     } catch (err: any) {
       console.error(err)
-      // Map common Firebase auth errors to friendly user messages
       let message = "Ocurrió un error al autenticar."
       if (err.code === "auth/invalid-credential") {
         message = "Email o contraseña incorrectos."
@@ -87,13 +89,13 @@ export function AuthView() {
 
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col justify-center px-6 py-12 md:max-w-lg md:px-0">
-      <div className="md:border md:border-border/40 md:bg-card/45 md:backdrop-blur-xl md:p-10 md:rounded-[32px] md:shadow-2xl">
-        <div className="mb-10 flex flex-col items-center text-center">
-          <div className="mb-5 flex size-14 items-center justify-center rounded-2xl bg-primary text-primary-foreground">
+      <Card className="p-8 md:p-10 shadow-2xl rounded-[32px]">
+        <div className="mb-8 flex flex-col items-center text-center">
+          <div className="mb-4 flex size-14 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-md">
             <Wallet className="size-7" />
           </div>
-          <h1 className="text-2xl font-semibold tracking-tight">PLATA</h1>
-          <p className="mt-1 text-sm text-muted-foreground text-balance">
+          <h1 className="text-2xl font-bold tracking-tight">PLATA</h1>
+          <p className="mt-1 text-xs text-muted-foreground text-balance">
             Tus finanzas en pesos y dólares, en un solo lugar.
           </p>
         </div>
@@ -119,37 +121,49 @@ export function AuthView() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           {mode === "forgot" && (
             <p className="text-xs text-muted-foreground mb-2 text-balance text-center">
               Ingresá tu correo electrónico y te enviaremos un enlace para restablecer tu contraseña.
             </p>
           )}
 
-          <label className="flex items-center gap-3 rounded-xl border border-border bg-card px-3.5 py-3 focus-within:border-ring">
-            <Mail className="size-4 text-muted-foreground" />
-            <input
-              type="email"
-              value={email}
-              disabled={submitting}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Email"
-              className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
-            />
-          </label>
+          <div className="space-y-1.5">
+            <Label htmlFor="auth-email" className="text-xs font-semibold text-muted-foreground">
+              Correo Electrónico
+            </Label>
+            <div className="relative flex items-center">
+              <Mail className="absolute left-3.5 size-4 text-muted-foreground" />
+              <Input
+                id="auth-email"
+                type="email"
+                value={email}
+                disabled={submitting}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="tu@email.com"
+                className="h-11 pl-10 text-sm font-medium"
+              />
+            </div>
+          </div>
 
           {mode !== "forgot" && (
-            <label className="flex items-center gap-3 rounded-xl border border-border bg-card px-3.5 py-3 focus-within:border-ring">
-              <Lock className="size-4 text-muted-foreground" />
-              <input
-                type="password"
-                value={password}
-                disabled={submitting}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Contraseña"
-                className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
-              />
-            </label>
+            <div className="space-y-1.5">
+              <Label htmlFor="auth-password" className="text-xs font-semibold text-muted-foreground">
+                Contraseña
+              </Label>
+              <div className="relative flex items-center">
+                <Lock className="absolute left-3.5 size-4 text-muted-foreground" />
+                <Input
+                  id="auth-password"
+                  type="password"
+                  value={password}
+                  disabled={submitting}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="h-11 pl-10 text-sm font-medium"
+                />
+              </div>
+            </div>
           )}
 
           {mode === "login" && (
@@ -236,7 +250,7 @@ export function AuthView() {
             </p>
           </>
         )}
-      </div>
+      </Card>
     </main>
   )
 }

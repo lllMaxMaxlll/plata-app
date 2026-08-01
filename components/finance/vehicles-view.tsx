@@ -4,7 +4,7 @@ import { useState, useMemo } from "react"
 import { useFinance } from "./finance-provider"
 import { AddVehicleSheet } from "./add-vehicle-sheet"
 import { AddVehicleLogSheet } from "./add-vehicle-log-sheet"
-import { formatCurrency, formatShort, type Vehicle, type VehicleLog, type VehicleLogType } from "@/lib/finance-data"
+import { formatShort, type Vehicle, type VehicleLog, type VehicleLogType } from "@/lib/finance-data"
 import {
   Bike,
   Car,
@@ -13,12 +13,9 @@ import {
   Milestone,
   Plus,
   Edit2,
-  Calendar,
   Gauge,
   Fuel,
   Wrench,
-  WrenchIcon,
-  ChevronRight,
   TrendingUp,
   Search,
   Filter,
@@ -29,6 +26,11 @@ import {
   ShieldAlert,
   Sparkles
 } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Card } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Progress } from "@/components/ui/progress"
 
 const LOG_METADATA: Record<VehicleLogType, { label: string; Icon: any; color: string }> = {
   fuel: { label: "Combustible", Icon: Fuel, color: "text-orange-500 bg-orange-500/10 border-orange-500/20" },
@@ -40,18 +42,16 @@ const LOG_METADATA: Record<VehicleLogType, { label: string; Icon: any; color: st
 }
 
 export function VehiclesView({ isDesktop = false, onBack }: { isDesktop?: boolean; onBack?: () => void }) {
-  const { vehicles, vehicleLogs, accounts } = useFinance()
+  const { vehicles, vehicleLogs } = useFinance()
   const [activeVehId, setActiveVehId] = useState<string>("")
   const [vehicleSheetOpen, setVehicleSheetOpen] = useState(false)
   const [logSheetOpen, setLogSheetOpen] = useState(false)
   const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null)
   const [editingLog, setEditingLog] = useState<VehicleLog | null>(null)
 
-  // Filter logs states
   const [searchQuery, setSearchQuery] = useState("")
   const [typeFilter, setTypeFilter] = useState<"all" | VehicleLogType>("all")
 
-  // Selected vehicle
   const activeVehicle = useMemo(() => {
     if (activeVehId) {
       return vehicles.find((v) => v.id === activeVehId) || vehicles[0]
@@ -59,20 +59,17 @@ export function VehiclesView({ isDesktop = false, onBack }: { isDesktop?: boolea
     return vehicles[0]
   }, [vehicles, activeVehId])
 
-  // Set active vehicle ID on first load
   useMemo(() => {
     if (vehicles.length > 0 && !activeVehId) {
       setActiveVehId(vehicles[0].id)
     }
   }, [vehicles, activeVehId])
 
-  // Filter logs for selected vehicle
   const activeLogs = useMemo(() => {
     if (!activeVehicle) return []
     return vehicleLogs.filter((l) => l.vehicleId === activeVehicle.id)
   }, [vehicleLogs, activeVehicle])
 
-  // Filtered ledger list
   const filteredLogs = useMemo(() => {
     return activeLogs.filter((l) => {
       const matchesType = typeFilter === "all" || l.type === typeFilter
@@ -90,7 +87,6 @@ export function VehiclesView({ isDesktop = false, onBack }: { isDesktop?: boolea
     })
   }, [activeLogs, typeFilter, searchQuery])
 
-  // Calculate statistics
   const stats = useMemo(() => {
     if (!activeVehicle || activeLogs.length === 0) {
       return {
@@ -111,7 +107,6 @@ export function VehiclesView({ isDesktop = false, onBack }: { isDesktop?: boolea
       costByLogType[l.type] = (costByLogType[l.type] || 0) + l.amount
     })
 
-    // Fuel consumption metrics
     const fuelLogs = [...activeLogs]
       .filter((l) => l.type === "fuel" && typeof l.liters === "number" && typeof l.odometer === "number")
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
@@ -142,17 +137,14 @@ export function VehiclesView({ isDesktop = false, onBack }: { isDesktop?: boolea
 
     const averageKmPerLiter = totalDistance > 0 && totalLiters > 0 ? totalDistance / totalLiters : 0
 
-    // Cost per kilometer
     let costPerKm = 0
     if (activeLogs.length > 0) {
       const odometers = activeLogs.map((l) => l.odometer).filter((o) => o > 0)
       const minOdometer = odometers.length > 0 ? Math.min(...odometers, activeVehicle.odometer) : activeVehicle.odometer
       const odometerSpan = activeVehicle.odometer - minOdometer
 
-      // If they logged expenses but haven't updated odometer span, divide by current odometer
       const span = odometerSpan > 0 ? odometerSpan : activeVehicle.odometer
       if (span > 0) {
-        // Exclude gear (helmet, jacket) since it is personal equipment, not directly vehicle cost
         const directVehicleCost = totalSpent - costByLogType.gear
         costPerKm = directVehicleCost / span
       }
@@ -167,12 +159,10 @@ export function VehiclesView({ isDesktop = false, onBack }: { isDesktop?: boolea
     }
   }, [activeVehicle, activeLogs])
 
-  // Alerts & Reminders logic
   const alerts = useMemo(() => {
     if (!activeVehicle) return []
     const list: { id: string; title: string; type: "critical" | "warning" | "info"; description: string }[] = []
 
-    // 1. Check services based on odometer
     activeLogs
       .filter((l) => l.type === "service" && typeof l.nextServiceOdometer === "number")
       .forEach((l) => {
@@ -197,7 +187,6 @@ export function VehiclesView({ isDesktop = false, onBack }: { isDesktop?: boolea
         }
       })
 
-    // 2. Check services based on date
     const nowTime = Date.now()
     activeLogs
       .filter((l) => l.type === "service" && l.nextServiceDate)
@@ -223,7 +212,6 @@ export function VehiclesView({ isDesktop = false, onBack }: { isDesktop?: boolea
         }
       })
 
-    // Sort: critical first, then warning
     return list.sort((a, b) => {
       const map = { critical: 2, warning: 1, info: 0 }
       return map[b.type] - map[a.type]
@@ -269,19 +257,19 @@ export function VehiclesView({ isDesktop = false, onBack }: { isDesktop?: boolea
     return d.toLocaleDateString("es-AR", { day: "2-digit", month: "short" })
   }
 
-  const maxLogSpent = Math.max(...Object.values(stats.costByLogType), 1)
-
   return (
     <div className={`flex flex-col gap-6 ${isDesktop ? "px-8 py-5" : "px-4 pt-[calc(env(safe-area-inset-top)+1.25rem)] pb-24"}`}>
       {/* Header */}
       <div className="flex items-center gap-3">
         {onBack && !isDesktop && (
-          <button
+          <Button
+            variant="outline"
+            size="icon-sm"
             onClick={onBack}
-            className="flex size-9 items-center justify-center rounded-xl bg-card border border-border/50 text-muted-foreground transition-colors hover:text-foreground active:scale-95 cursor-pointer shrink-0"
+            className="rounded-xl shrink-0"
           >
             <ArrowLeft className="size-4" />
-          </button>
+          </Button>
         )}
         <div className="min-w-0 flex-1">
           <h1 className="text-xl font-bold tracking-tight text-foreground">
@@ -296,30 +284,32 @@ export function VehiclesView({ isDesktop = false, onBack }: { isDesktop?: boolea
       <div className="flex items-center justify-between">
         <div aria-hidden />
 
-        <button
+        <Button
           onClick={handleAddVehicle}
-          className="flex items-center gap-1 text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/95 px-3 py-2 rounded-xl transition-all cursor-pointer shadow-sm shadow-primary/10"
+          size="sm"
+          className="flex items-center gap-1 text-xs font-semibold rounded-xl"
         >
           <Plus className="size-4" />
           Añadir vehículo
-        </button>
+        </Button>
       </div>
 
       {vehicles.length === 0 ? (
-        <div className="max-w-md mx-auto mt-12 text-center border border-border/40 rounded-3xl bg-card/30 p-8 flex flex-col items-center">
-          <div className="mb-4 flex size-14 items-center justify-center rounded-2xl bg-muted text-muted-foreground shadow-inner">
+        <div className="max-w-md mx-auto mt-12 text-center border border-border rounded-3xl bg-card p-8 flex flex-col items-center shadow-sm">
+          <div className="mb-4 flex size-14 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
             <Bike className="size-7" />
           </div>
           <h3 className="text-lg font-bold">No tenés vehículos agregados</h3>
           <p className="mt-2 text-sm text-muted-foreground text-pretty">
             Registrá tu primer vehículo para poder llevar un control detallado de su combustible, services, seguro y gastos.
           </p>
-          <button
+          <Button
             onClick={handleAddVehicle}
-            className="mt-6 rounded-2xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/15 hover:scale-[1.01] transition-transform cursor-pointer"
+            size="lg"
+            className="mt-6 font-semibold"
           >
             Agregar mi primer vehículo
-          </button>
+          </Button>
         </div>
       ) : (
         <>
@@ -328,27 +318,24 @@ export function VehiclesView({ isDesktop = false, onBack }: { isDesktop?: boolea
             {vehicles.map((v) => {
               const active = v.id === activeVehicle?.id
               return (
-                <button
+                <Button
                   key={v.id}
+                  variant={active ? "default" : "outline"}
                   onClick={() => setActiveVehId(v.id)}
-                  className={`flex items-center gap-2 shrink-0 rounded-2xl border px-4 py-2.5 text-sm font-medium transition-all cursor-pointer ${
-                    active
-                      ? "border-primary bg-primary/10 text-primary"
-                      : "border-border bg-card/40 text-muted-foreground hover:bg-card/70 hover:text-foreground"
-                  }`}
+                  className="flex items-center gap-2 shrink-0 rounded-2xl h-10 px-4 text-sm font-medium"
                 >
                   {getVehicleIcon(v.type)}
                   <span>{v.name}</span>
-                  <span className="text-[10px] bg-muted px-1.5 py-0.5 rounded border border-border/50 text-muted-foreground">
+                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0.5">
                     {v.odometer} Km
-                  </span>
+                  </Badge>
                   <span
                     onClick={(e) => handleEditVehicle(v, e)}
-                    className="ml-1 p-0.5 rounded-full hover:bg-muted/80 text-muted-foreground hover:text-foreground transition-colors"
+                    className="ml-1 p-0.5 rounded-full hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
                   >
                     <Edit2 className="size-3" />
                   </span>
-                </button>
+                </Button>
               );
             })}
           </div>
@@ -360,7 +347,7 @@ export function VehiclesView({ isDesktop = false, onBack }: { isDesktop?: boolea
                 {/* Stats Dashboard Grid */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   {/* Kilometraje */}
-                  <article className="rounded-2xl border border-border/40 bg-card/45 p-4 shadow-sm flex flex-col justify-between min-h-24">
+                  <Card className="p-4 shadow-sm flex flex-col justify-between min-h-24">
                     <div className="flex items-center justify-between text-muted-foreground">
                       <p className="text-[10px] font-bold uppercase tracking-wider">Kilometraje</p>
                       <Gauge className="size-4 text-blue-500" />
@@ -371,10 +358,10 @@ export function VehiclesView({ isDesktop = false, onBack }: { isDesktop?: boolea
                       </p>
                       <p className="text-[10px] text-muted-foreground mt-0.5">Kilómetros totales</p>
                     </div>
-                  </article>
+                  </Card>
 
                   {/* Consumo Medio */}
-                  <article className="rounded-2xl border border-border/40 bg-card/45 p-4 shadow-sm flex flex-col justify-between min-h-24">
+                  <Card className="p-4 shadow-sm flex flex-col justify-between min-h-24">
                     <div className="flex items-center justify-between text-muted-foreground">
                       <p className="text-[10px] font-bold uppercase tracking-wider">Consumo Medio</p>
                       <Fuel className="size-4 text-orange-500" />
@@ -387,10 +374,10 @@ export function VehiclesView({ isDesktop = false, onBack }: { isDesktop?: boolea
                         {stats.lastKmPerLiter > 0 ? `Última: ${stats.lastKmPerLiter.toFixed(1)} Km/L` : "Requiere 2 tanques llenos"}
                       </p>
                     </div>
-                  </article>
+                  </Card>
 
                   {/* Costo por Kilómetro */}
-                  <article className="rounded-2xl border border-border/40 bg-card/45 p-4 shadow-sm flex flex-col justify-between min-h-24">
+                  <Card className="p-4 shadow-sm flex flex-col justify-between min-h-24">
                     <div className="flex items-center justify-between text-muted-foreground">
                       <p className="text-[10px] font-bold uppercase tracking-wider">Costo por Km</p>
                       <TrendingUp className="size-4 text-emerald-500" />
@@ -401,10 +388,10 @@ export function VehiclesView({ isDesktop = false, onBack }: { isDesktop?: boolea
                       </p>
                       <p className="text-[10px] text-muted-foreground mt-0.5">Gastos / kms recorridos</p>
                     </div>
-                  </article>
+                  </Card>
 
                   {/* Gasto Total */}
-                  <article className="rounded-2xl border border-border/40 bg-card/45 p-4 shadow-sm flex flex-col justify-between min-h-24">
+                  <Card className="p-4 shadow-sm flex flex-col justify-between min-h-24">
                     <div className="flex items-center justify-between text-muted-foreground">
                       <p className="text-[10px] font-bold uppercase tracking-wider">Total Gastado</p>
                       <DollarSign className="size-4 text-purple-500" />
@@ -415,7 +402,7 @@ export function VehiclesView({ isDesktop = false, onBack }: { isDesktop?: boolea
                       </p>
                       <p className="text-[10px] text-muted-foreground mt-0.5">Suma de bitácora</p>
                     </div>
-                  </article>
+                  </Card>
                 </div>
 
                 {/* Alerts and Reminders section */}
@@ -444,7 +431,7 @@ export function VehiclesView({ isDesktop = false, onBack }: { isDesktop?: boolea
                 )}
 
                 {/* Expense Chart Bar Graphic */}
-                <section className="rounded-2xl border border-border/40 bg-card/45 p-5 shadow-sm">
+                <Card className="p-5 shadow-sm">
                   <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-4">
                     Distribución de Gastos
                   </h3>
@@ -469,44 +456,38 @@ export function VehiclesView({ isDesktop = false, onBack }: { isDesktop?: boolea
                                 {formatShort(amount, "ARS")} ({percent.toFixed(0)}%)
                               </span>
                             </div>
-                            <div className="h-1.5 overflow-hidden rounded-full bg-muted/60">
-                              <div
-                                className="h-full rounded-full transition-all duration-500"
-                                style={{
-                                  width: `${percent}%`,
-                                  backgroundColor: "currentColor",
-                                }}
-                              />
-                            </div>
+                            <Progress value={percent} className="h-1.5" />
                           </li>
                         )
                       })}
                     </ul>
                   )}
-                </section>
+                </Card>
 
                 {/* Register Event Button & Ledger Header */}
-                <div className="flex items-center justify-between border-b border-border/20 pb-3 mt-2">
+                <div className="flex items-center justify-between border-b border-border pb-3 mt-2">
                   <h3 className="text-sm font-bold">Historial de Bitácora</h3>
-                  <button
+                  <Button
                     onClick={handleAddLog}
-                    className="flex items-center gap-1.5 text-xs font-bold bg-primary/10 text-primary hover:bg-primary/20 px-3 py-2 rounded-xl transition-all cursor-pointer"
+                    variant="secondary"
+                    size="sm"
+                    className="flex items-center gap-1.5 text-xs font-bold"
                   >
                     <Plus className="size-4" />
                     Registrar gasto / evento
-                  </button>
+                  </Button>
                 </div>
 
                 {/* Search & Filter bar */}
                 <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
-                  <div className="flex-1 flex items-center gap-2 bg-card/45 border border-border/40 rounded-xl px-3 py-2.5 shadow-sm">
+                  <div className="flex-1 flex items-center gap-2 bg-card border border-border rounded-xl px-3 py-1 shadow-sm">
                     <Search className="size-4 text-muted-foreground shrink-0" />
-                    <input
+                    <Input
                       type="text"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       placeholder="Buscar en historial (YPF, aceite, casco...)"
-                      className="flex-1 bg-transparent text-xs outline-none placeholder:text-muted-foreground/60"
+                      className="border-none shadow-none focus-visible:ring-0 text-xs h-8"
                     />
                   </div>
 
@@ -515,7 +496,7 @@ export function VehiclesView({ isDesktop = false, onBack }: { isDesktop?: boolea
                     <select
                       value={typeFilter}
                       onChange={(e) => setTypeFilter(e.target.value as any)}
-                      className="appearance-none rounded-xl border border-border/40 bg-card/45 px-3 py-2 text-xs font-semibold outline-none focus:border-ring cursor-pointer hover:bg-muted/50 transition-colors"
+                      className="h-10 rounded-xl border border-input bg-transparent px-3 py-2 text-xs font-semibold outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer"
                     >
                       <option value="all">Todos los registros</option>
                       <option value="fuel">Sólo Combustible</option>
@@ -529,7 +510,7 @@ export function VehiclesView({ isDesktop = false, onBack }: { isDesktop?: boolea
                 </div>
 
                 {/* Ledger Log List */}
-                <div className="border border-border/40 bg-card/25 rounded-2xl p-4 shadow-sm min-h-[300px]">
+                <Card className="p-4 shadow-sm min-h-[300px]">
                   {filteredLogs.length === 0 ? (
                     <div className="flex flex-col items-center justify-center text-center py-16">
                       <p className="text-xs font-semibold text-muted-foreground">
@@ -540,7 +521,7 @@ export function VehiclesView({ isDesktop = false, onBack }: { isDesktop?: boolea
                       </p>
                     </div>
                   ) : (
-                    <ul className="flex flex-col divide-y divide-border/20">
+                    <ul className="flex flex-col divide-y divide-border">
                       {filteredLogs.map((l) => {
                         const meta = LOG_METADATA[l.type]
                         const details =
@@ -556,10 +537,10 @@ export function VehiclesView({ isDesktop = false, onBack }: { isDesktop?: boolea
                           <li
                             key={l.id}
                             onClick={() => handleEditLog(l)}
-                            className="flex cursor-pointer items-center justify-between gap-4 py-3.5 px-1 hover:bg-muted/15 rounded-xl transition-all group"
+                            className="flex cursor-pointer items-center justify-between gap-4 py-3.5 px-1 hover:bg-accent/40 rounded-xl transition-all group"
                           >
                             <div className="flex items-center gap-3 min-w-0">
-                              <span className={`flex size-9 shrink-0 items-center justify-center rounded-xl shadow-inner border ${meta.color}`}>
+                              <span className={`flex size-9 shrink-0 items-center justify-center rounded-xl border ${meta.color}`}>
                                 <meta.Icon className="size-4.5" />
                               </span>
                               <div className="min-w-0">
@@ -585,12 +566,12 @@ export function VehiclesView({ isDesktop = false, onBack }: { isDesktop?: boolea
                       })}
                     </ul>
                   )}
-                </div>
+                </Card>
               </div>
 
               {/* Right Column (Desktop): Mini Profile Info / Details */}
               <div className="hidden lg:flex flex-col gap-6">
-                <article className="rounded-2xl border border-border/40 bg-card/40 p-5 flex flex-col gap-4">
+                <Card className="p-5 flex flex-col gap-4 shadow-sm">
                   <div className="flex items-center gap-3">
                     <span className="flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
                       {getVehicleIcon(activeVehicle.type)}
@@ -601,11 +582,11 @@ export function VehiclesView({ isDesktop = false, onBack }: { isDesktop?: boolea
                     </div>
                   </div>
 
-                  <div className="border-t border-border/20 pt-4 flex flex-col gap-2.5 text-xs">
+                  <div className="border-t border-border pt-4 flex flex-col gap-2.5 text-xs">
                     {activeVehicle.plate && (
                       <div className="flex items-center justify-between">
                         <span className="text-muted-foreground">Patente</span>
-                        <span className="font-bold font-mono bg-muted px-2 py-0.5 rounded border border-border/40">{activeVehicle.plate}</span>
+                        <span className="font-bold font-mono bg-muted px-2 py-0.5 rounded border border-border">{activeVehicle.plate}</span>
                       </div>
                     )}
                     {activeVehicle.year && (
@@ -626,22 +607,22 @@ export function VehiclesView({ isDesktop = false, onBack }: { isDesktop?: boolea
                     </div>
                   </div>
 
-                  <button
+                  <Button
+                    variant="outline"
                     onClick={(e) => handleEditVehicle(activeVehicle, e)}
-                    className="w-full mt-2 flex items-center justify-center gap-1.5 py-2.5 rounded-xl border border-border hover:bg-muted/40 text-xs font-bold text-foreground transition-all cursor-pointer"
+                    className="w-full mt-2 text-xs font-bold h-10"
                   >
                     <Edit2 className="size-3.5" />
                     Editar Ficha del Vehículo
-                  </button>
-                </article>
+                  </Button>
+                </Card>
 
-                {/* Additional tip for fuel saving */}
-                <article className="rounded-2xl border border-primary/10 bg-primary/5 p-4 flex flex-col gap-2">
+                <Card className="border-primary/20 bg-primary/5 p-4 flex flex-col gap-2 shadow-sm">
                   <h4 className="text-xs font-bold text-primary uppercase tracking-wide">💡 Plata Tips: Ahorro en Nafta</h4>
                   <p className="text-xs text-foreground/80 leading-relaxed">
                     Mantener la presión correcta en los neumáticos de tu moto reduce la fricción en el asfalto y puede mejorar el rendimiento de combustible hasta en un 3%. ¡Revisala cada 15 días!
                   </p>
-                </article>
+                </Card>
               </div>
             </div>
           )}

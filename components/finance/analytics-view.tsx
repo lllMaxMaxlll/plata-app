@@ -8,9 +8,6 @@ import {
   TrendingDown,
   ChevronDown,
   ChevronUp,
-  ArrowLeftRight,
-  Sparkles,
-  Info,
   DollarSign,
   Bike,
   Car,
@@ -18,6 +15,10 @@ import {
 } from "lucide-react"
 import { useFinance } from "./finance-provider"
 import { formatShort, formatCurrency, type Transaction, type Currency } from "@/lib/finance-data"
+import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Progress } from "@/components/ui/progress"
 
 interface AnalyticsViewProps {
   isDesktop?: boolean
@@ -26,10 +27,9 @@ interface AnalyticsViewProps {
 }
 
 export function AnalyticsView({ isDesktop = false, onBack, onEditTransaction }: AnalyticsViewProps) {
-  const { transactions, getAccount, categories, accounts, vehicles, vehicleLogs } = useFinance()
+  const { transactions, getAccount, categories, vehicles, vehicleLogs } = useFinance()
   const [selectedCurrency, setSelectedCurrency] = useState<Currency>("ARS")
   
-  // 1. Group transactions & extract available months (YYYY-MM)
   const expenseTransactions = useMemo(() => {
     return transactions.filter(t => t.type === "expense")
   }, [transactions])
@@ -45,10 +45,8 @@ export function AnalyticsView({ isDesktop = false, onBack, onEditTransaction }: 
       monthsSet.add(`${year}-${month}`)
     }
     
-    // Sort chronological descending
     const sorted = [...monthsSet].sort((a, b) => b.localeCompare(a))
     
-    // If empty, default to current month
     if (sorted.length === 0) {
       const now = new Date()
       const year = now.getFullYear()
@@ -58,14 +56,12 @@ export function AnalyticsView({ isDesktop = false, onBack, onEditTransaction }: 
     return sorted
   }, [expenseTransactions])
 
-  // Current selected month & comparison month states
   const [selectedMonth, setSelectedMonth] = useState<string>(availableMonths[0])
   const [comparisonMonth, setComparisonMonth] = useState<string>(
     availableMonths[1] || "none"
   )
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null)
 
-  // Format YYYY-MM to readable Spanish month name (e.g. "Junio 2026")
   const formatMonthName = (monthStr: string) => {
     if (!monthStr || monthStr === "none") return "Ninguno"
     const [year, month] = monthStr.split("-")
@@ -74,16 +70,13 @@ export function AnalyticsView({ isDesktop = false, onBack, onEditTransaction }: 
     return `${monthName.charAt(0).toUpperCase() + monthName.slice(1)} ${year}`
   }
 
-  // Get color for category
   const getCategoryColor = (catName: string) => {
     return categories.find((c) => c.name === catName)?.color ?? "oklch(0.66 0.18 350)"
   }
 
-  // 2. Compute category statistics for the selected month and comparison month
   const analyticsData = useMemo(() => {
     const selectedMap = new Map<string, number>()
     const selectedTxs: Transaction[] = []
-    
     const comparisonMap = new Map<string, number>()
 
     for (const t of expenseTransactions) {
@@ -135,9 +128,7 @@ export function AnalyticsView({ isDesktop = false, onBack, onEditTransaction }: 
     }
   }, [expenseTransactions, selectedMonth, comparisonMonth, selectedCurrency, getAccount])
 
-  // 3. Compute last 6 months trend data (chronological ascending)
   const trendData = useMemo(() => {
-    // Take up to 6 months
     const lastMonths = [...availableMonths].slice(0, 6).reverse()
     
     const monthlyCategoryMap = lastMonths.map((m) => {
@@ -174,18 +165,15 @@ export function AnalyticsView({ isDesktop = false, onBack, onEditTransaction }: 
     }
   }, [availableMonths, expenseTransactions, selectedCurrency, getAccount])
 
-  // Compute vehicle expenses for the selected month and currency
   const vehicleSpendData = useMemo(() => {
     if (!vehicles || !vehicleLogs) return []
 
     const vehicleMap = new Map<string, number>()
     
-    // Initialize each vehicle with 0
     vehicles.forEach(v => {
       vehicleMap.set(v.id, 0)
     })
     
-    // Accumulate log amounts
     vehicleLogs.forEach(l => {
       if (!l.date) return
       const dateObj = new Date(l.date)
@@ -228,12 +216,14 @@ export function AnalyticsView({ isDesktop = false, onBack, onEditTransaction }: 
       {/* Header */}
       {!isDesktop && (
         <div className="flex items-center gap-3 mb-6">
-          <button
+          <Button
+            variant="outline"
+            size="icon-sm"
             onClick={onBack}
-            className="flex size-10 items-center justify-center rounded-full bg-card border border-border/30 text-muted-foreground hover:text-foreground active:scale-95 transition-all"
+            className="rounded-full shrink-0"
           >
-            <ArrowLeft className="size-5" />
-          </button>
+            <ArrowLeft className="size-4" />
+          </Button>
           <div>
             <h1 className="text-lg font-bold tracking-tight">Análisis de Gastos</h1>
             <p className="text-xs text-muted-foreground">Distribución y comparación de tus consumos</p>
@@ -242,9 +232,8 @@ export function AnalyticsView({ isDesktop = false, onBack, onEditTransaction }: 
       )}
 
       {/* Selectors and Currency Controls */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-6 bg-card/30 border border-border/30 rounded-3xl p-4 backdrop-blur-md">
+      <Card className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-6 p-4 shadow-sm">
         <div className="flex flex-wrap items-center gap-3">
-          {/* Selected Month Dropdown */}
           <div className="flex flex-col gap-1">
             <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider pl-1">Mes a Analizar</span>
             <div className="relative">
@@ -252,13 +241,12 @@ export function AnalyticsView({ isDesktop = false, onBack, onEditTransaction }: 
                 value={selectedMonth}
                 onChange={(e) => {
                   setSelectedMonth(e.target.value)
-                  // If selected month is changed to the same as comparison, shift comparison
                   if (e.target.value === comparisonMonth) {
                     const idx = availableMonths.indexOf(e.target.value)
                     setComparisonMonth(availableMonths[idx + 1] || "none")
                   }
                 }}
-                className="w-48 appearance-none bg-card hover:bg-muted border border-border/40 text-sm font-semibold rounded-2xl pl-3.5 pr-8 py-2.5 transition-colors cursor-pointer text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                className="w-48 appearance-none bg-transparent border border-input text-sm font-semibold rounded-xl pl-3.5 pr-8 py-2 transition-colors cursor-pointer text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 {availableMonths.map((m) => (
                   <option key={m} value={m}>
@@ -270,14 +258,13 @@ export function AnalyticsView({ isDesktop = false, onBack, onEditTransaction }: 
             </div>
           </div>
 
-          {/* Comparison Month Dropdown */}
           <div className="flex flex-col gap-1">
             <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider pl-1">Comparar Con</span>
             <div className="relative">
               <select
                 value={comparisonMonth}
                 onChange={(e) => setComparisonMonth(e.target.value)}
-                className="w-48 appearance-none bg-card hover:bg-muted border border-border/40 text-sm font-semibold rounded-2xl pl-3.5 pr-8 py-2.5 transition-colors cursor-pointer text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                className="w-48 appearance-none bg-transparent border border-input text-sm font-semibold rounded-xl pl-3.5 pr-8 py-2 transition-colors cursor-pointer text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <option value="none">Ninguno (Solo ver mes)</option>
                 {availableMonths
@@ -293,46 +280,40 @@ export function AnalyticsView({ isDesktop = false, onBack, onEditTransaction }: 
           </div>
         </div>
 
-        {/* Currency Toggle */}
         <div className="flex flex-col gap-1 self-end md:self-auto">
           <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider pl-1 self-end md:self-auto">Moneda</span>
-          <div className="flex bg-muted/80 border border-border/10 p-0.5 rounded-2xl shadow-inner">
-            <button
+          <div className="flex rounded-xl bg-muted p-1">
+            <Button
+              variant={selectedCurrency === "ARS" ? "default" : "ghost"}
+              size="sm"
               onClick={() => setSelectedCurrency("ARS")}
-              className={`px-4 py-2 text-xs font-bold rounded-xl transition-all ${
-                selectedCurrency === "ARS"
-                  ? "bg-card text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
+              className="text-xs font-bold px-4"
             >
               ARS ($)
-            </button>
-            <button
+            </Button>
+            <Button
+              variant={selectedCurrency === "USD" ? "default" : "ghost"}
+              size="sm"
               onClick={() => setSelectedCurrency("USD")}
-              className={`px-4 py-2 text-xs font-bold rounded-xl transition-all ${
-                selectedCurrency === "USD"
-                  ? "bg-card text-primary shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
+              className="text-xs font-bold px-4"
             >
               USD (US$)
-            </button>
+            </Button>
           </div>
         </div>
-      </div>
+      </Card>
 
       {/* Main KPI MoM Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
-        {/* Selected Month KPI */}
-        <div className="bg-card border border-border/40 rounded-3xl p-5 shadow-sm relative overflow-hidden flex flex-col justify-between">
+        <Card className="p-5 shadow-sm relative overflow-hidden flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between mb-1.5">
               <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">
                 Total Gastado
               </span>
-              <span className="px-2 py-0.5 rounded-md text-[9px] font-bold bg-muted text-muted-foreground uppercase">
+              <Badge variant="secondary" className="px-2 py-0.5 text-[9px] font-bold uppercase">
                 {selectedCurrency}
-              </span>
+              </Badge>
             </div>
             <p className="text-2xl font-extrabold tracking-tight tabular-nums">
               {formatCurrency(analyticsData.total, selectedCurrency)}
@@ -344,20 +325,19 @@ export function AnalyticsView({ isDesktop = false, onBack, onEditTransaction }: 
           <div className="absolute right-0 bottom-0 translate-x-2 translate-y-2 opacity-5 pointer-events-none">
             <DollarSign className="size-32" />
           </div>
-        </div>
+        </Card>
 
-        {/* Comparison Month KPI */}
         {comparisonMonth !== "none" && (
           <>
-            <div className="bg-card border border-border/40 rounded-3xl p-5 shadow-sm relative overflow-hidden flex flex-col justify-between">
+            <Card className="p-5 shadow-sm relative overflow-hidden flex flex-col justify-between">
               <div>
                 <div className="flex items-center justify-between mb-1.5">
                   <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">
                     Total Referencia
                   </span>
-                  <span className="px-2 py-0.5 rounded-md text-[9px] font-bold bg-muted text-muted-foreground uppercase">
+                  <Badge variant="secondary" className="px-2 py-0.5 text-[9px] font-bold uppercase">
                     {selectedCurrency}
-                  </span>
+                  </Badge>
                 </div>
                 <p className="text-2xl font-extrabold tracking-tight tabular-nums text-muted-foreground">
                   {formatCurrency(analyticsData.comparisonTotal, selectedCurrency)}
@@ -369,20 +349,18 @@ export function AnalyticsView({ isDesktop = false, onBack, onEditTransaction }: 
               <div className="absolute right-0 bottom-0 translate-x-2 translate-y-2 opacity-5 pointer-events-none">
                 <Calendar className="size-32" />
               </div>
-            </div>
+            </Card>
 
-            {/* Variance / Performance KPI */}
-            <div className="bg-card border border-border/40 rounded-3xl p-5 shadow-sm relative overflow-hidden flex flex-col justify-between">
+            <Card className="p-5 shadow-sm relative overflow-hidden flex flex-col justify-between">
               <div>
                 <div className="flex items-center justify-between mb-1.5">
                   <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">
                     Variación Mensual
                   </span>
-                  <span className={`flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
-                    analyticsData.totalDiff > 0 
-                      ? "bg-destructive/10 text-destructive"
-                      : "bg-success/10 text-success"
-                  }`}>
+                  <Badge
+                    variant={analyticsData.totalDiff > 0 ? "destructive" : "default"}
+                    className="flex items-center gap-0.5 text-[10px] font-extrabold"
+                  >
                     {analyticsData.totalDiff > 0 ? (
                       <TrendingUp className="size-3" />
                     ) : (
@@ -392,10 +370,10 @@ export function AnalyticsView({ isDesktop = false, onBack, onEditTransaction }: 
                       ? `${analyticsData.totalDiff > 0 ? "+" : ""}${analyticsData.totalPercentChange.toFixed(1)}%`
                       : "Nuevo"
                     }
-                  </span>
+                  </Badge>
                 </div>
                 <p className={`text-2xl font-extrabold tracking-tight tabular-nums ${
-                  analyticsData.totalDiff > 0 ? "text-destructive" : "text-success"
+                  analyticsData.totalDiff > 0 ? "text-destructive" : "text-emerald-500"
                 }`}>
                   {analyticsData.totalDiff > 0 ? "+" : ""}{formatShort(analyticsData.totalDiff, selectedCurrency)}
                 </p>
@@ -406,13 +384,13 @@ export function AnalyticsView({ isDesktop = false, onBack, onEditTransaction }: 
                   : "¡Ahorraste respecto al mes de comparación!"
                 }
               </p>
-            </div>
+            </Card>
           </>
         )}
       </div>
 
       {/* 6-Month Stacked Trend Chart (Responsive SVG) */}
-      <section className="bg-card border border-border/40 rounded-3xl p-6 shadow-sm mb-8">
+      <Card className="p-6 shadow-sm mb-8">
         <div className="flex items-center gap-2 mb-1">
           <TrendingUp className="size-4.5 text-primary" />
           <h2 className="text-base font-bold tracking-tight">Tendencia Histórica de Gastos</h2>
@@ -422,15 +400,13 @@ export function AnalyticsView({ isDesktop = false, onBack, onEditTransaction }: 
         </p>
 
         {trendData.months.length === 0 || trendData.maxTotal === 1 ? (
-          <div className="h-48 flex items-center justify-center border border-dashed border-border/40 rounded-2xl bg-muted/20">
+          <div className="h-48 flex items-center justify-center border border-dashed border-border rounded-2xl bg-muted/20">
             <p className="text-xs text-muted-foreground">No hay datos suficientes para graficar la tendencia.</p>
           </div>
         ) : (
           <div className="flex flex-col gap-6">
-            {/* SVG Stacked Bar Chart */}
             <div className="w-full h-52">
               <svg viewBox="0 0 500 200" width="100%" height="100%" preserveAspectRatio="none" className="overflow-visible">
-                {/* Horizontal Grid lines */}
                 {[0.25, 0.5, 0.75, 1.0].map((ratio) => {
                   const y = 170 - ratio * 140
                   return (
@@ -444,17 +420,14 @@ export function AnalyticsView({ isDesktop = false, onBack, onEditTransaction }: 
                 })}
                 <line x1="40" y1="170" x2="480" y2="170" stroke="var(--border)" strokeWidth="1.5" />
 
-                {/* Bars for each month */}
                 {trendData.months.map((d, mIdx) => {
                   const barCount = trendData.months.length
                   const colWidth = 440 / barCount
                   const x = 40 + mIdx * colWidth + (colWidth - 32) / 2
                   
-                  // Calculate heights and stack positions
                   let currentY = 170
                   const barItems: { y: number; height: number; color: string; catName: string; amt: number }[] = []
                   
-                  // Extract all category keys registered
                   const catEntries = [...d.categories.entries()].sort((a, b) => b[1] - a[1])
                   
                   for (const [catName, amt] of catEntries) {
@@ -479,7 +452,6 @@ export function AnalyticsView({ isDesktop = false, onBack, onEditTransaction }: 
 
                   return (
                     <g key={d.month} className="group cursor-pointer">
-                      {/* Stacked rects */}
                       {barItems.map((item, i) => (
                         <rect
                           key={i}
@@ -495,7 +467,6 @@ export function AnalyticsView({ isDesktop = false, onBack, onEditTransaction }: 
                         </rect>
                       ))}
 
-                      {/* Transparent overlay for month total tooltip on hover */}
                       <rect
                         x={x - 5}
                         y="20"
@@ -505,7 +476,6 @@ export function AnalyticsView({ isDesktop = false, onBack, onEditTransaction }: 
                         className="peer pointer-events-auto"
                       />
 
-                      {/* Total text overlay on hover */}
                       <g className="opacity-0 peer-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
                         <rect
                           x={Math.max(x - 20, 10)}
@@ -530,7 +500,6 @@ export function AnalyticsView({ isDesktop = false, onBack, onEditTransaction }: 
                         </text>
                       </g>
 
-                      {/* X Axis Month Label */}
                       <text
                         x={x + 16}
                         y="186"
@@ -548,10 +517,8 @@ export function AnalyticsView({ isDesktop = false, onBack, onEditTransaction }: 
               </svg>
             </div>
 
-            {/* Colors Legend */}
-            <div className="flex flex-wrap gap-x-5 gap-y-2 border-t border-border/20 pt-4.5">
+            <div className="flex flex-wrap gap-x-5 gap-y-2 border-t border-border pt-4">
               {categories.map((c) => {
-                // Check if this category exists in any of the displayed months
                 const hasData = trendData.months.some(m => (m.categories.get(c.name) ?? 0) > 0)
                 if (!hasData) return null
                 return (
@@ -564,19 +531,19 @@ export function AnalyticsView({ isDesktop = false, onBack, onEditTransaction }: 
             </div>
           </div>
         )}
-      </section>
+      </Card>
 
       {/* Gastos por Vehículo */}
       {vehicleSpendData.length > 0 && (
-        <section className="bg-card border border-border/40 rounded-3xl p-6 shadow-sm mb-8">
+        <Card className="p-6 shadow-sm mb-8">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h2 className="text-base font-bold tracking-tight">Gastos por Vehículo</h2>
               <p className="text-xs text-muted-foreground mt-0.5">Control de gastos individuales de mantenimiento y combustible en {formatMonthName(selectedMonth)}</p>
             </div>
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            <Badge variant="secondary" className="text-xs font-semibold uppercase tracking-wider">
               {selectedCurrency}
-            </span>
+            </Badge>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -584,7 +551,6 @@ export function AnalyticsView({ isDesktop = false, onBack, onEditTransaction }: 
               const maxVehicleSpent = Math.max(...vehicleSpendData.map(d => d.amount), 1)
               const percent = (v.amount / maxVehicleSpent) * 100
               
-              // Get vehicle icon helper
               const getVehicleIcon = (typeStr: string) => {
                 switch (typeStr) {
                   case "motorcycle":
@@ -600,7 +566,7 @@ export function AnalyticsView({ isDesktop = false, onBack, onEditTransaction }: 
               const VehicleIcon = getVehicleIcon(v.type)
 
               return (
-                <div key={v.id} className="border border-border/30 bg-muted/5 p-4 rounded-2xl flex flex-col justify-between gap-3 shadow-inner">
+                <div key={v.id} className="border border-border bg-card p-4 rounded-2xl flex flex-col justify-between gap-3 shadow-sm">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3 min-w-0">
                       <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20 shadow-sm">
@@ -616,34 +582,28 @@ export function AnalyticsView({ isDesktop = false, onBack, onEditTransaction }: 
                     </span>
                   </div>
 
-                  {/* Progress bar to visually compare vehicle expenditures */}
-                  <div className="h-2 w-full bg-muted/65 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-primary rounded-full transition-all duration-500"
-                      style={{ width: `${percent}%` }}
-                    />
-                  </div>
+                  <Progress value={percent} className="h-2" />
                 </div>
               )
             })}
           </div>
-        </section>
+        </Card>
       )}
 
       {/* Category Breakdown & MoM Comparative Table */}
-      <section className="bg-card border border-border/40 rounded-3xl p-6 shadow-sm">
+      <Card className="p-6 shadow-sm">
         <div className="flex items-center justify-between mb-6">
           <div>
             <h2 className="text-base font-bold tracking-tight">Distribución por Categorías</h2>
             <p className="text-xs text-muted-foreground mt-0.5">Hacé clic en una categoría para auditar sus movimientos</p>
           </div>
-          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          <Badge variant="secondary" className="text-xs font-semibold uppercase tracking-wider">
             {selectedCurrency}
-          </span>
+          </Badge>
         </div>
 
         {analyticsData.rows.length === 0 ? (
-          <p className="text-sm text-muted-foreground py-8 text-center bg-muted/10 border border-dashed border-border/40 rounded-2xl">
+          <p className="text-sm text-muted-foreground py-8 text-center bg-muted/10 border border-dashed border-border rounded-2xl">
             No se encontraron gastos registrados en esta moneda para el mes seleccionado.
           </p>
         ) : (
@@ -653,7 +613,6 @@ export function AnalyticsView({ isDesktop = false, onBack, onEditTransaction }: 
               const percentOfTotal = analyticsData.total > 0 ? (r.amount / analyticsData.total) * 100 : 0
               const isExpanded = expandedCategory === r.category
 
-              // Filter transactions in selected category for detail list
               const categoryTxs = analyticsData.transactions
                 .filter((t) => t.category === r.category)
                 .sort((a, b) => b.date.localeCompare(a.date))
@@ -661,9 +620,8 @@ export function AnalyticsView({ isDesktop = false, onBack, onEditTransaction }: 
               return (
                 <li
                   key={r.category}
-                  className="border-b border-border/20 last:border-b-0 pb-5 last:pb-0"
+                  className="border-b border-border last:border-b-0 pb-5 last:pb-0"
                 >
-                  {/* Category main header row */}
                   <div
                     onClick={() => setExpandedCategory(isExpanded ? null : r.category)}
                     className="flex flex-col gap-2 cursor-pointer group"
@@ -674,9 +632,9 @@ export function AnalyticsView({ isDesktop = false, onBack, onEditTransaction }: 
                         <span className="font-bold group-hover:text-primary transition-colors">
                           {r.category}
                         </span>
-                        <span className="text-[10px] font-semibold text-muted-foreground uppercase bg-muted/60 px-1.5 py-0.5 rounded">
+                        <Badge variant="secondary" className="text-[10px] font-semibold uppercase px-1.5 py-0.5">
                           {percentOfTotal.toFixed(0)}%
-                        </span>
+                        </Badge>
                       </div>
 
                       <div className="flex items-center gap-4">
@@ -685,13 +643,12 @@ export function AnalyticsView({ isDesktop = false, onBack, onEditTransaction }: 
                             {formatShort(r.amount, selectedCurrency)}
                           </span>
                           
-                          {/* Comparison indicator */}
                           {comparisonMonth !== "none" && (
                             <span className={`inline-flex items-center gap-0.5 text-[10px] font-extrabold ${
                               r.diff > 0 
                                 ? "text-destructive" 
                                 : r.diff < 0 
-                                ? "text-success" 
+                                ? "text-emerald-500" 
                                 : "text-muted-foreground"
                             }`}>
                               {r.diff > 0 ? "▲" : r.diff < 0 ? "▼" : "="}{" "}
@@ -711,8 +668,7 @@ export function AnalyticsView({ isDesktop = false, onBack, onEditTransaction }: 
                       </div>
                     </div>
 
-                    {/* Progress Bar */}
-                    <div className="h-2 overflow-hidden rounded-full bg-muted/65 relative w-full">
+                    <div className="h-2 overflow-hidden rounded-full bg-muted relative w-full">
                       <div
                         className="h-full rounded-full transition-all duration-500"
                         style={{
@@ -723,10 +679,9 @@ export function AnalyticsView({ isDesktop = false, onBack, onEditTransaction }: 
                     </div>
                   </div>
 
-                  {/* Expanded Transaction Details Accordion */}
                   {isExpanded && (
-                    <div className="mt-4 pl-5 border-l-2 border-border/40 overflow-hidden animate-in fade-in slide-in-from-top-3 duration-200">
-                      <div className="flex items-center justify-between border-b border-border/20 pb-2 mb-2">
+                    <div className="mt-4 pl-5 border-l-2 border-border overflow-hidden animate-in fade-in slide-in-from-top-3 duration-200">
+                      <div className="flex items-center justify-between border-b border-border pb-2 mb-2">
                         <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Movimientos del Mes</span>
                         <span className="text-[10px] text-muted-foreground font-semibold">{categoryTxs.length} registros</span>
                       </div>
@@ -745,7 +700,7 @@ export function AnalyticsView({ isDesktop = false, onBack, onEditTransaction }: 
                               <li
                                 key={tx.id}
                                 onClick={() => onEditTransaction(tx)}
-                                className="flex items-center justify-between hover:bg-muted/30 p-2 rounded-xl transition-all cursor-pointer group/item active:scale-[0.99]"
+                                className="flex items-center justify-between hover:bg-accent/40 p-2 rounded-xl transition-all cursor-pointer group/item"
                               >
                                 <div className="min-w-0 flex-1 pr-4">
                                   <p className="text-xs font-semibold truncate group-item-hover:text-primary transition-colors">
@@ -770,7 +725,7 @@ export function AnalyticsView({ isDesktop = false, onBack, onEditTransaction }: 
             })}
           </ul>
         )}
-      </section>
+      </Card>
     </div>
   )
 }

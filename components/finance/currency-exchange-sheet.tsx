@@ -3,6 +3,9 @@
 import { useEffect, useMemo, useState } from "react"
 import { ArrowLeftRight, Calendar as CalendarIcon, AlertCircle, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useFinance } from "./finance-provider"
 import { BottomSheet } from "./bottom-sheet"
 import { toast } from "sonner"
@@ -45,7 +48,6 @@ export function CurrencyExchangeSheet({ open, onClose }: CurrencyExchangeSheetPr
     [accounts, fromAccountId]
   )
 
-  // Reset/Prefill form when opened
   useEffect(() => {
     if (open) {
       setDirection("ARS_TO_USD")
@@ -70,7 +72,6 @@ export function CurrencyExchangeSheet({ open, onClose }: CurrencyExchangeSheetPr
     }
   }, [open, arsAccounts, usdAccounts])
 
-  // Handle direction tab change
   const handleDirectionChange = (nextDir: ExchangeDirection) => {
     setDirection(nextDir)
 
@@ -83,7 +84,6 @@ export function CurrencyExchangeSheet({ open, onClose }: CurrencyExchangeSheetPr
     }
   }
 
-  // Bidirectional calculations
   const parsedRate = parseFloat(rate) || 0
 
   const handleArsChange = (val: string) => {
@@ -140,7 +140,6 @@ export function CurrencyExchangeSheet({ open, onClose }: CurrencyExchangeSheetPr
     }
   }
 
-  // Validations
   const numArs = parseFloat(arsAmount) || 0
   const numUsd = parseFloat(usdAmount) || 0
   const sourceBalance = selectedSourceAccount ? Number(selectedSourceAccount.balance) : 0
@@ -204,29 +203,12 @@ export function CurrencyExchangeSheet({ open, onClose }: CurrencyExchangeSheetPr
           : "Registrá una venta de dólares (USD → ARS) indicando la cotización."
       }
     >
-      {/* Direction selector tabs */}
-      <div className="flex rounded-full bg-muted p-1 mb-4">
-        <button
-          type="button"
-          disabled={submitting}
-          onClick={() => handleDirectionChange("ARS_TO_USD")}
-          className={`flex-1 rounded-full py-2 text-xs font-semibold transition-colors ${
-            direction === "ARS_TO_USD" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
-          } disabled:opacity-50 cursor-pointer`}
-        >
-          Comprar USD (ARS → USD)
-        </button>
-        <button
-          type="button"
-          disabled={submitting}
-          onClick={() => handleDirectionChange("USD_TO_ARS")}
-          className={`flex-1 rounded-full py-2 text-xs font-semibold transition-colors ${
-            direction === "USD_TO_ARS" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
-          } disabled:opacity-50 cursor-pointer`}
-        >
-          Vender USD (USD → ARS)
-        </button>
-      </div>
+      <Tabs value={direction} onValueChange={(val) => handleDirectionChange(val as ExchangeDirection)} className="w-full mb-4">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="ARS_TO_USD" disabled={submitting}>Comprar USD (ARS → USD)</TabsTrigger>
+          <TabsTrigger value="USD_TO_ARS" disabled={submitting}>Vender USD (USD → ARS)</TabsTrigger>
+        </TabsList>
+      </Tabs>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         {arsAccounts.length === 0 || usdAccounts.length === 0 ? (
@@ -241,17 +223,16 @@ export function CurrencyExchangeSheet({ open, onClose }: CurrencyExchangeSheetPr
           </div>
         ) : (
           <>
-            {/* Account selectors */}
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold text-muted-foreground">
                   Entregar desde ({sourceCurrency})
-                </label>
+                </Label>
                 <select
                   value={fromAccountId}
                   disabled={submitting}
                   onChange={(e) => setFromAccountId(e.target.value)}
-                  className="mt-1.5 w-full appearance-none rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm outline-none focus:border-ring disabled:opacity-50"
+                  className="w-full h-10 rounded-lg border border-input bg-transparent px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   {sourceAccounts.map((a) => (
                     <option key={a.id} value={a.id}>
@@ -261,15 +242,15 @@ export function CurrencyExchangeSheet({ open, onClose }: CurrencyExchangeSheetPr
                 </select>
               </div>
 
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold text-muted-foreground">
                   Recibir en ({targetCurrency})
-                </label>
+                </Label>
                 <select
                   value={toAccountId}
                   disabled={submitting}
                   onChange={(e) => setToAccountId(e.target.value)}
-                  className="mt-1.5 w-full appearance-none rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm outline-none focus:border-ring disabled:opacity-50"
+                  className="w-full h-10 rounded-lg border border-input bg-transparent px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   {targetAccounts.map((a) => (
                     <option key={a.id} value={a.id}>
@@ -280,45 +261,43 @@ export function CurrencyExchangeSheet({ open, onClose }: CurrencyExchangeSheetPr
               </div>
             </div>
 
-            {/* Exchange Rate (Cotización) */}
-            <div>
-              <label className="text-xs font-semibold text-muted-foreground">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold text-muted-foreground">
                 Cotización (1 USD = ARS)
-              </label>
-              <div className="relative mt-1.5 flex items-center">
-                <span className="absolute left-3.5 text-sm text-muted-foreground font-medium">$</span>
-                <input
+              </Label>
+              <div className="relative flex items-center">
+                <span className="absolute left-3 text-sm text-muted-foreground font-medium">$</span>
+                <Input
                   type="text"
                   inputMode="decimal"
                   disabled={submitting}
                   value={rate}
                   onChange={(e) => handleRateChange(e.target.value)}
                   placeholder="Ej. 1350 o 1050"
-                  className="w-full rounded-xl border border-border bg-background pl-7 pr-3.5 py-2.5 text-sm outline-none focus:border-ring disabled:opacity-50 font-medium tabular-nums"
+                  className="h-10 pl-7 text-sm font-medium tabular-nums"
                   required
                 />
               </div>
             </div>
 
-            {/* ARS & USD Amounts */}
-            <div className="relative flex flex-col gap-3 rounded-2xl bg-muted/30 p-4 border border-border/40">
+            <div className="relative flex flex-col gap-3 rounded-xl bg-muted/40 p-4 border border-border">
               <div className="flex items-center justify-between gap-4">
                 {isBuy ? (
                   <>
-                    <div className="flex-1">
-                      <label className="text-xs font-semibold text-muted-foreground">
+                    <div className="flex-1 space-y-1">
+                      <Label className="text-xs font-semibold text-muted-foreground">
                         Entregás (ARS)
-                      </label>
-                      <div className="relative mt-1 flex items-center">
+                      </Label>
+                      <div className="relative flex items-center">
                         <span className="absolute left-3 text-sm text-muted-foreground font-medium">$</span>
-                        <input
+                        <Input
                           type="text"
                           inputMode="decimal"
                           disabled={submitting}
                           value={arsAmount}
                           onChange={(e) => handleArsChange(e.target.value)}
                           placeholder="0"
-                          className="w-full rounded-xl border border-border bg-background pl-6 pr-3.5 py-2 text-sm outline-none focus:border-ring disabled:opacity-50 font-semibold tabular-nums"
+                          className="h-10 pl-6 text-sm font-semibold tabular-nums"
                         />
                       </div>
                     </div>
@@ -327,40 +306,40 @@ export function CurrencyExchangeSheet({ open, onClose }: CurrencyExchangeSheetPr
                       <ArrowLeftRight className="size-4" />
                     </div>
 
-                    <div className="flex-1">
-                      <label className="text-xs font-semibold text-muted-foreground">
+                    <div className="flex-1 space-y-1">
+                      <Label className="text-xs font-semibold text-muted-foreground">
                         Recibís (USD)
-                      </label>
-                      <div className="relative mt-1 flex items-center">
+                      </Label>
+                      <div className="relative flex items-center">
                         <span className="absolute left-3 text-sm text-muted-foreground font-medium">US$</span>
-                        <input
+                        <Input
                           type="text"
                           inputMode="decimal"
                           disabled={submitting}
                           value={usdAmount}
                           onChange={(e) => handleUsdChange(e.target.value)}
                           placeholder="0.00"
-                          className="w-full rounded-xl border border-border bg-background pl-9 pr-3.5 py-2 text-sm outline-none focus:border-ring disabled:opacity-50 font-semibold tabular-nums"
+                          className="h-10 pl-9 text-sm font-semibold tabular-nums"
                         />
                       </div>
                     </div>
                   </>
                 ) : (
                   <>
-                    <div className="flex-1">
-                      <label className="text-xs font-semibold text-muted-foreground">
+                    <div className="flex-1 space-y-1">
+                      <Label className="text-xs font-semibold text-muted-foreground">
                         Entregás (USD)
-                      </label>
-                      <div className="relative mt-1 flex items-center">
+                      </Label>
+                      <div className="relative flex items-center">
                         <span className="absolute left-3 text-sm text-muted-foreground font-medium">US$</span>
-                        <input
+                        <Input
                           type="text"
                           inputMode="decimal"
                           disabled={submitting}
                           value={usdAmount}
                           onChange={(e) => handleUsdChange(e.target.value)}
                           placeholder="0.00"
-                          className="w-full rounded-xl border border-border bg-background pl-9 pr-3.5 py-2 text-sm outline-none focus:border-ring disabled:opacity-50 font-semibold tabular-nums"
+                          className="h-10 pl-9 text-sm font-semibold tabular-nums"
                         />
                       </div>
                     </div>
@@ -369,20 +348,20 @@ export function CurrencyExchangeSheet({ open, onClose }: CurrencyExchangeSheetPr
                       <ArrowLeftRight className="size-4" />
                     </div>
 
-                    <div className="flex-1">
-                      <label className="text-xs font-semibold text-muted-foreground">
+                    <div className="flex-1 space-y-1">
+                      <Label className="text-xs font-semibold text-muted-foreground">
                         Recibís (ARS)
-                      </label>
-                      <div className="relative mt-1 flex items-center">
+                      </Label>
+                      <div className="relative flex items-center">
                         <span className="absolute left-3 text-sm text-muted-foreground font-medium">$</span>
-                        <input
+                        <Input
                           type="text"
                           inputMode="decimal"
                           disabled={submitting}
                           value={arsAmount}
                           onChange={(e) => handleArsChange(e.target.value)}
                           placeholder="0"
-                          className="w-full rounded-xl border border-border bg-background pl-6 pr-3.5 py-2 text-sm outline-none focus:border-ring disabled:opacity-50 font-semibold tabular-nums"
+                          className="h-10 pl-6 text-sm font-semibold tabular-nums"
                         />
                       </div>
                     </div>
@@ -390,9 +369,8 @@ export function CurrencyExchangeSheet({ open, onClose }: CurrencyExchangeSheetPr
                 )}
               </div>
 
-              {/* Warnings and Calculations summary */}
               {numArs > 0 && numUsd > 0 && parsedRate > 0 && (
-                <div className="mt-2 border-t border-border/40 pt-2 flex flex-col gap-1.5 text-xs text-muted-foreground">
+                <div className="mt-2 border-t border-border pt-2 flex flex-col gap-1.5 text-xs text-muted-foreground">
                   <div className="flex justify-between items-center">
                     <span>Detalle de la operación:</span>
                     <span className="font-semibold text-foreground">
@@ -414,26 +392,24 @@ export function CurrencyExchangeSheet({ open, onClose }: CurrencyExchangeSheetPr
               )}
             </div>
 
-            {/* Note */}
-            <div>
-              <label className="text-xs font-semibold text-muted-foreground">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold text-muted-foreground">
                 Nota (opcional)
-              </label>
-              <input
+              </Label>
+              <Input
                 type="text"
                 disabled={submitting}
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
                 placeholder={isBuy ? "Ej. Compra de dólar MEP" : "Ej. Venta de dólares por gastos"}
-                className="mt-1.5 w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm outline-none focus:border-ring disabled:opacity-50"
+                className="h-10 text-sm"
               />
             </div>
 
-            {/* Date */}
-            <div>
-              <label className="text-xs font-semibold text-muted-foreground">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold text-muted-foreground">
                 Fecha
-              </label>
+              </Label>
               <Popover>
                 <PopoverTrigger
                   render={
@@ -441,7 +417,7 @@ export function CurrencyExchangeSheet({ open, onClose }: CurrencyExchangeSheetPr
                       type="button"
                       variant="outline"
                       disabled={submitting}
-                      className="mt-1.5 w-full justify-start rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm font-normal text-left outline-none hover:bg-muted/10 focus:border-ring disabled:opacity-50 h-auto"
+                      className="w-full justify-start rounded-xl border border-input bg-transparent px-3.5 py-2 text-sm font-normal text-left outline-none hover:bg-muted/10 h-10"
                     />
                   }
                 >
@@ -463,11 +439,11 @@ export function CurrencyExchangeSheet({ open, onClose }: CurrencyExchangeSheetPr
               </Popover>
             </div>
 
-            {/* Submit button */}
-            <button
+            <Button
               type="submit"
               disabled={!canSubmit}
-              className="mt-2 w-full rounded-2xl bg-primary py-3.5 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/10 transition-all hover:shadow-primary/20 active:scale-95 disabled:opacity-50 disabled:active:scale-100 cursor-pointer"
+              size="lg"
+              className="mt-2 w-full font-semibold h-11"
             >
               {submitting ? (
                 <span className="flex items-center justify-center gap-2 font-semibold">
@@ -479,7 +455,7 @@ export function CurrencyExchangeSheet({ open, onClose }: CurrencyExchangeSheetPr
               ) : (
                 "Confirmar Venta (USD → ARS)"
               )}
-            </button>
+            </Button>
           </>
         )}
       </form>

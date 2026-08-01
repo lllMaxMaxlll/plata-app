@@ -1,8 +1,11 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Plus, X, Pencil, Trash2 } from "lucide-react"
+import { Plus, Pencil, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { BottomSheet } from "./bottom-sheet"
 import { useFinance } from "./finance-provider"
 import { DEFAULT_COLORS, type Category } from "@/lib/finance-data"
@@ -45,12 +48,10 @@ export function ManageCategoriesSheet({
     setSubmitting(true)
     try {
       if (editingCategory) {
-        // Edit mode
         await updateCategory(editingCategory.id, name.trim(), selectedColor)
         toast.success(`Categoría "${name.trim()}" modificada con éxito.`)
         setEditingCategory(null)
       } else {
-        // Create mode
         await addCategory(name.trim(), tab, selectedColor)
         toast.success(`Categoría "${name.trim()}" creada con éxito.`)
       }
@@ -94,30 +95,21 @@ export function ManageCategoriesSheet({
     >
       <div className="mt-3 flex flex-col gap-5">
         {/* Type Tabs */}
-        <div className="flex rounded-full bg-muted p-1">
-          {(["expense", "income"] as const).map((t) => (
-            <button
-              key={t}
-              type="button"
-              disabled={submitting}
-              onClick={() => {
-                setTab(t)
-                setEditingCategory(null)
-              }}
-              className={`flex-1 rounded-full py-2 text-sm font-medium transition-colors ${
-                tab === t ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
-              } disabled:opacity-50`}
-            >
-              {t === "expense" ? "Gastos" : "Ingresos"}
-            </button>
-          ))}
-        </div>
+        <Tabs value={tab} onValueChange={(val) => {
+          setTab(val as "expense" | "income")
+          setEditingCategory(null)
+        }} className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="expense" disabled={submitting}>Gastos</TabsTrigger>
+            <TabsTrigger value="income" disabled={submitting}>Ingresos</TabsTrigger>
+          </TabsList>
+        </Tabs>
 
         {/* Categories List */}
         <div className="flex flex-col gap-2 max-h-56 overflow-y-auto no-scrollbar">
-          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-1">
+          <Label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-1">
             Categorías registradas
-          </p>
+          </Label>
           {list.length === 0 ? (
             <p className="text-xs text-muted-foreground py-4 text-center">
               No hay categorías de {tab === "expense" ? "gastos" : "ingresos"} creadas.
@@ -127,7 +119,7 @@ export function ManageCategoriesSheet({
               {list.map((cat) => (
                 <li
                   key={cat.id}
-                  className="flex items-center justify-between gap-3 rounded-xl border border-border/50 bg-card/40 p-3 hover:bg-card transition-all group"
+                  className="flex items-center justify-between gap-3 rounded-xl border border-border bg-card p-3 hover:bg-accent/50 transition-all"
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <span
@@ -138,24 +130,26 @@ export function ManageCategoriesSheet({
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <button
+                    <Button
                       type="button"
+                      variant="ghost"
+                      size="icon-xs"
                       disabled={submitting}
                       onClick={() => setEditingCategory(cat)}
-                      className="flex size-7 items-center justify-center rounded-lg bg-muted/60 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
                       title="Editar"
                     >
-                      <Pencil className="size-3.5" />
-                    </button>
-                    <button
+                      <Pencil className="size-3.5 text-muted-foreground" />
+                    </Button>
+                    <Button
                       type="button"
+                      variant="ghost"
+                      size="icon-xs"
                       disabled={submitting}
                       onClick={() => handleDelete(cat)}
-                      className="flex size-7 items-center justify-center rounded-lg bg-muted/60 text-destructive/80 hover:text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50"
                       title="Eliminar"
                     >
-                      <Trash2 className="size-3.5" />
-                    </button>
+                      <Trash2 className="size-3.5 text-destructive" />
+                    </Button>
                   </div>
                 </li>
               ))}
@@ -164,16 +158,16 @@ export function ManageCategoriesSheet({
         </div>
 
         {/* Creator / Editor Form */}
-        <div className="border-t border-border/40 pt-4 flex flex-col gap-4">
+        <div className="border-t border-border pt-4 flex flex-col gap-4">
           <div className="flex items-center justify-between">
-            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+            <Label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
               {editingCategory ? "Editar categoría" : "Nueva categoría"}
-            </p>
+            </Label>
             {editingCategory && (
               <button
                 type="button"
                 onClick={() => setEditingCategory(null)}
-                className="text-xs font-semibold text-primary hover:underline"
+                className="text-xs font-semibold text-primary hover:underline cursor-pointer"
               >
                 Cancelar edición
               </button>
@@ -181,20 +175,20 @@ export function ManageCategoriesSheet({
           </div>
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-            <div>
-              <p className="mb-1.5 text-xs font-medium text-muted-foreground">Nombre</p>
-              <input
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-muted-foreground">Nombre</Label>
+              <Input
                 value={name}
                 disabled={submitting}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Ej. Gimnasio, Freelance"
                 maxLength={25}
-                className="w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm outline-none focus:border-ring disabled:opacity-50"
+                className="h-10 text-sm"
               />
             </div>
 
-            <div>
-              <p className="mb-1.5 text-xs font-medium text-muted-foreground">Color de categoría</p>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-muted-foreground">Color de categoría</Label>
               <div className="flex flex-wrap gap-2.5 px-1 py-1">
                 {DEFAULT_COLORS.map((c) => {
                   const active = selectedColor === c
@@ -204,7 +198,7 @@ export function ManageCategoriesSheet({
                       type="button"
                       disabled={submitting}
                       onClick={() => setSelectedColor(c)}
-                      className={`size-6 rounded-full border border-black/25 relative transition-all active:scale-90 ${
+                      className={`size-6 rounded-full border border-black/25 relative transition-all active:scale-90 cursor-pointer ${
                         active
                           ? "ring-2 ring-primary ring-offset-2 ring-offset-background scale-105"
                           : "hover:scale-105"
@@ -220,7 +214,7 @@ export function ManageCategoriesSheet({
               type="submit"
               size="lg"
               disabled={submitting || !name.trim()}
-              className="h-12 w-full rounded-xl text-sm mt-1"
+              className="h-11 w-full text-sm font-semibold mt-1"
             >
               {submitting ? (
                 <span className="size-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />

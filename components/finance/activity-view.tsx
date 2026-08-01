@@ -5,6 +5,8 @@ import { Download, ArrowLeft } from "lucide-react"
 import type { TransactionType, Transaction } from "@/lib/finance-data"
 import { useFinance } from "./finance-provider"
 import { TransactionList } from "./transaction-list"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 
 type TypeFilter = "all" | TransactionType
 type DateFilter = "all" | "today" | "week" | "month"
@@ -44,23 +46,27 @@ export function ActivityView({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           {onBack && (
-            <button
+            <Button
+              variant="outline"
+              size="icon-sm"
               onClick={onBack}
-              className="flex size-9 items-center justify-center rounded-xl bg-card border border-border/50 text-muted-foreground transition-colors hover:text-foreground active:scale-95 cursor-pointer shrink-0"
+              className="rounded-xl shrink-0"
             >
               <ArrowLeft className="size-4" />
-            </button>
+            </Button>
           )}
           <h1 className="text-xl font-semibold tracking-tight">Movimientos</h1>
         </div>
         {onOpenExport && (
-          <button
+          <Button
+            variant="outline"
+            size="sm"
             onClick={onOpenExport}
-            className="flex items-center gap-1.5 rounded-xl border border-border/50 bg-card px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted/60 transition-colors cursor-pointer shadow-sm"
+            className="flex items-center gap-1.5 rounded-xl text-xs font-semibold h-8"
           >
             <Download className="size-3.5 text-primary" />
             Exportar
-          </button>
+          </Button>
         )}
       </div>
 
@@ -115,15 +121,12 @@ function Chip({
   children: React.ReactNode
 }) {
   return (
-    <button
+    <Badge
+      variant={active ? "default" : "outline"}
       onClick={onClick}
-      className={`shrink-0 whitespace-nowrap rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors ${
-        active
-          ? "bg-primary text-primary-foreground"
-          : "bg-muted text-muted-foreground hover:text-foreground"
-      }`}
+      className="cursor-pointer shrink-0 whitespace-nowrap px-3.5 py-1 text-xs font-medium"
     >
       {children}
-    </button>
+    </Badge>
   )
 }

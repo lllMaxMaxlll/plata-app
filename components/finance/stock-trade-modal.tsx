@@ -5,6 +5,9 @@ import { BottomSheet } from "./bottom-sheet"
 import { useFinance } from "./finance-provider"
 import { formatShort } from "@/lib/finance-data"
 import { toast } from "sonner"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Button } from "@/components/ui/button"
 
 interface StockTradeModalProps {
   open: boolean
@@ -64,7 +67,6 @@ export function StockTradeModal({
     }
   }, [open, prefilledSymbol, prefilledType])
 
-
   const currentHolding = holdings.find((h) => h.symbol === symbol.toUpperCase().trim())
   const sharesOwned = currentHolding ? currentHolding.shares : 0
 
@@ -93,18 +95,17 @@ export function StockTradeModal({
     setLoading(true)
     try {
       const targetSymbol = symbol.trim().toUpperCase()
-      
+
       // Execute the buy/sell
       await executeStockTransaction({
         symbol: targetSymbol,
         type,
         shares,
         price: Math.round(price * 100) / 100,
-        date: new Date(date + "T12:00:00Z").toISOString(), // timezone safe
+        date: new Date(date + "T12:00:00Z").toISOString(),
         accountId,
       })
 
-      // If they bought a stock, automatically add it to the watchlist so they can track it
       if (type === "buy") {
         await addWatchlistStock(targetSymbol)
       }
@@ -131,48 +132,44 @@ export function StockTradeModal({
       <form onSubmit={handleSubmit} className="mt-4 flex flex-col gap-4">
         {/* Toggle Buy / Sell */}
         <div className="grid grid-cols-2 gap-2 rounded-xl bg-muted p-1">
-          <button
+          <Button
             type="button"
+            variant={type === "buy" ? "default" : "ghost"}
+            size="sm"
             onClick={() => setType("buy")}
-            className={`rounded-lg py-2 text-xs font-semibold transition-all ${
-              type === "buy"
-                ? "bg-card text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
+            className="w-full text-xs font-semibold"
           >
             Compra
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
+            variant={type === "sell" ? "default" : "ghost"}
+            size="sm"
             disabled={sharesOwned <= 0}
             onClick={() => setType("sell")}
-            className={`rounded-lg py-2 text-xs font-semibold transition-all disabled:opacity-50 ${
-              type === "sell"
-                ? "bg-card text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
+            className="w-full text-xs font-semibold"
           >
             Venta {sharesOwned > 0 && `(${sharesOwned} disp.)`}
-          </button>
+          </Button>
         </div>
 
         {/* Ticker Input */}
-        <div>
-          <label htmlFor="symbol" className="text-xs font-semibold text-muted-foreground">
+        <div className="space-y-1.5">
+          <Label htmlFor="symbol" className="text-xs font-semibold text-muted-foreground">
             Símbolo / Ticker
-          </label>
+          </Label>
           {prefilledSymbol !== "" ? (
-            <input
+            <Input
               id="symbol"
               type="text"
               value={symbol}
               disabled
               required
-              className="mt-1 w-full rounded-xl border border-border bg-card px-3.5 py-2.5 text-sm font-medium uppercase focus:outline-none disabled:opacity-60"
+              className="h-10 text-sm uppercase font-medium"
             />
           ) : type === "buy" ? (
             watchlist.length === 0 ? (
-              <div className="mt-1 rounded-xl border border-amber-500/20 bg-amber-500/10 p-3.5 text-xs text-amber-500">
+              <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 p-3 text-xs text-amber-500">
                 Tu lista de seguimiento está vacía. Agregá acciones a tu portafolio de seguimiento primero.
               </div>
             ) : (
@@ -188,7 +185,7 @@ export function StockTradeModal({
                   }
                 }}
                 required
-                className="mt-1 w-full rounded-xl border border-border bg-card px-3 py-2.5 text-sm font-medium focus:outline-none focus:ring-1 focus:ring-primary"
+                className="w-full h-10 rounded-lg border border-input bg-transparent px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <option value="">Seleccionar del seguimiento...</option>
                 {watchlist.map((w) => (
@@ -199,7 +196,7 @@ export function StockTradeModal({
               </select>
             )
           ) : holdings.length === 0 ? (
-            <div className="mt-1 rounded-xl border border-destructive/20 bg-destructive/10 p-3.5 text-xs text-destructive">
+            <div className="rounded-xl border border-destructive/20 bg-destructive/10 p-3 text-xs text-destructive">
               No tenés acciones en tu cartera para vender.
             </div>
           ) : (
@@ -215,7 +212,7 @@ export function StockTradeModal({
                 }
               }}
               required
-              className="mt-1 w-full rounded-xl border border-border bg-card px-3 py-2.5 text-sm font-medium focus:outline-none focus:ring-1 focus:ring-primary"
+              className="w-full h-10 rounded-lg border border-input bg-transparent px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <option value="">Seleccionar de tus tenencias...</option>
               {holdings.map((h) => (
@@ -229,11 +226,11 @@ export function StockTradeModal({
 
         <div className="grid grid-cols-2 gap-4">
           {/* Shares Input */}
-          <div>
+          <div className="space-y-1.5">
             <div className="flex justify-between items-center">
-              <label htmlFor="shares" className="text-xs font-semibold text-muted-foreground">
+              <Label htmlFor="shares" className="text-xs font-semibold text-muted-foreground">
                 Cantidad
-              </label>
+              </Label>
               {type === "sell" && sharesOwned > 0 && (
                 <button
                   type="button"
@@ -244,7 +241,7 @@ export function StockTradeModal({
                 </button>
               )}
             </div>
-            <input
+            <Input
               id="shares"
               type="number"
               min="0"
@@ -260,16 +257,16 @@ export function StockTradeModal({
                 setShares(val)
               }}
               required
-              className="mt-1 w-full rounded-xl border border-border bg-card px-3.5 py-2.5 text-sm font-medium placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+              className="h-10 text-sm font-medium"
             />
           </div>
 
           {/* Price per Share Input */}
-          <div>
-            <label htmlFor="price" className="text-xs font-semibold text-muted-foreground">
+          <div className="space-y-1.5">
+            <Label htmlFor="price" className="text-xs font-semibold text-muted-foreground">
               Precio unitario (USD)
-            </label>
-            <input
+            </Label>
+            <Input
               id="price"
               type="number"
               min="0"
@@ -278,18 +275,18 @@ export function StockTradeModal({
               value={price || ""}
               onChange={(e) => setPrice(Math.max(0, parseFloat(e.target.value) || 0))}
               required
-              className="mt-1 w-full rounded-xl border border-border bg-card px-3.5 py-2.5 text-sm font-medium placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+              className="h-10 text-sm font-medium"
             />
           </div>
         </div>
 
         {/* Link to USD account */}
-        <div>
-          <label htmlFor="accountId" className="text-xs font-semibold text-muted-foreground">
+        <div className="space-y-1.5">
+          <Label htmlFor="accountId" className="text-xs font-semibold text-muted-foreground">
             Cuenta de fondos (USD)
-          </label>
+          </Label>
           {usdAccounts.length === 0 ? (
-            <div className="mt-1 rounded-xl border border-destructive/20 bg-destructive/10 p-3 text-xs text-destructive">
+            <div className="rounded-xl border border-destructive/20 bg-destructive/10 p-3 text-xs text-destructive">
               No tenés ninguna cuenta en Dólares (USD). Primero debés crear una cuenta en USD desde la sección Cuentas.
             </div>
           ) : (
@@ -298,7 +295,7 @@ export function StockTradeModal({
               value={accountId}
               onChange={(e) => setAccountId(e.target.value)}
               required
-              className="mt-1 w-full rounded-xl border border-border bg-card px-3 py-2.5 text-sm font-medium focus:outline-none focus:ring-1 focus:ring-primary"
+              className="w-full h-10 rounded-lg border border-input bg-transparent px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               {usdAccounts.map((acc) => (
                 <option key={acc.id} value={acc.id}>
@@ -310,23 +307,23 @@ export function StockTradeModal({
         </div>
 
         {/* Date Input */}
-        <div>
-          <label htmlFor="date" className="text-xs font-semibold text-muted-foreground">
+        <div className="space-y-1.5">
+          <Label htmlFor="date" className="text-xs font-semibold text-muted-foreground">
             Fecha de operación
-          </label>
-          <input
+          </Label>
+          <Input
             id="date"
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
             required
-            className="mt-1 w-full rounded-xl border border-border bg-card px-3 py-2.5 text-sm font-medium focus:outline-none focus:ring-1 focus:ring-primary"
+            className="h-10 text-sm font-medium"
           />
         </div>
 
         {/* Preview / Warning Box */}
         {shares > 0 && price > 0 && (
-          <div className="rounded-2xl bg-muted/60 p-4">
+          <div className="rounded-xl bg-muted/60 p-4">
             <div className="flex items-center justify-between text-xs font-medium">
               <span className="text-muted-foreground">
                 {type === "buy" ? "Total a Debitar:" : "Total a Acreditar:"}
@@ -351,13 +348,14 @@ export function StockTradeModal({
         )}
 
         {/* Submit */}
-        <button
+        <Button
           type="submit"
           disabled={!canSubmit}
-          className="mt-2 w-full rounded-2xl bg-primary py-3.5 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/10 transition-all hover:shadow-primary/20 active:scale-95 disabled:opacity-50 disabled:active:scale-100"
+          size="lg"
+          className="mt-2 w-full font-semibold"
         >
           {loading ? "Registrando..." : type === "buy" ? "Registrar Compra" : "Registrar Venta"}
-        </button>
+        </Button>
       </form>
     </BottomSheet>
   )

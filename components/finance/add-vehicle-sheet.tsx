@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import type { Vehicle, VehicleType } from "@/lib/finance-data"
 import { BottomSheet } from "./bottom-sheet"
 import { useFinance } from "./finance-provider"
@@ -128,44 +130,41 @@ export function AddVehicleSheet({
     >
       <form onSubmit={handleSubmit} className="mt-4 flex flex-col gap-4">
         {/* Nombre */}
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="veh-name" className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+        <div className="space-y-1.5">
+          <Label htmlFor="veh-name" className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
             Nombre / Apodo
-          </label>
-          <input
+          </Label>
+          <Input
             id="veh-name"
             type="text"
             required
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Ej. Mi Honda GLH, El auto familiar"
-            className="h-11 w-full rounded-xl border border-border bg-muted/30 px-3 text-sm outline-none focus:border-primary"
+            className="h-10 text-sm"
           />
         </div>
 
         {/* Tipo */}
-        <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+        <div className="space-y-1.5">
+          <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
             Tipo de Vehículo
-          </label>
+          </Label>
           <div className="grid grid-cols-4 gap-2">
             {TYPES.map((t) => {
               const SelectedIcon = t.Icon
               const active = type === t.value
               return (
-                <button
+                <Button
                   key={t.value}
                   type="button"
+                  variant={active ? "default" : "outline"}
                   onClick={() => setType(t.value)}
-                  className={`flex flex-col items-center justify-center gap-1 rounded-xl border p-2 text-center transition-all cursor-pointer ${
-                    active
-                      ? "border-primary bg-primary/10 text-primary font-semibold"
-                      : "border-border bg-muted/10 text-muted-foreground hover:bg-muted/30"
-                  }`}
+                  className="flex h-14 flex-col items-center justify-center gap-1 p-1"
                 >
-                  <SelectedIcon className="size-5" />
+                  <SelectedIcon className="size-4" />
                   <span className="text-[10px]">{t.label}</span>
-                </button>
+                </Button>
               )
             })}
           </div>
@@ -173,105 +172,105 @@ export function AddVehicleSheet({
 
         <div className="grid grid-cols-2 gap-3">
           {/* Marca */}
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor="veh-brand" className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+          <div className="space-y-1.5">
+            <Label htmlFor="veh-brand" className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
               Marca
-            </label>
-            <input
+            </Label>
+            <Input
               id="veh-brand"
               type="text"
               value={brand}
               onChange={(e) => setBrand(e.target.value)}
               placeholder="Ej. Honda, Fiat"
-              className="h-11 w-full rounded-xl border border-border bg-muted/30 px-3 text-sm outline-none focus:border-primary"
+              className="h-10 text-sm"
             />
           </div>
 
           {/* Modelo */}
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor="veh-model" className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+          <div className="space-y-1.5">
+            <Label htmlFor="veh-model" className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
               Modelo
-            </label>
-            <input
+            </Label>
+            <Input
               id="veh-model"
               type="text"
               value={model}
               onChange={(e) => setModel(e.target.value)}
               placeholder="Ej. GLH 150, Cronos"
-              className="h-11 w-full rounded-xl border border-border bg-muted/30 px-3 text-sm outline-none focus:border-primary"
+              className="h-10 text-sm"
             />
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           {/* Año */}
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor="veh-year" className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+          <div className="space-y-1.5">
+            <Label htmlFor="veh-year" className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
               Año
-            </label>
-            <input
+            </Label>
+            <Input
               id="veh-year"
               type="number"
               value={year}
               onChange={(e) => setYear(e.target.value)}
               placeholder="Ej. 2023"
-              className="h-11 w-full rounded-xl border border-border bg-muted/30 px-3 text-sm outline-none focus:border-primary"
+              className="h-10 text-sm"
             />
           </div>
 
           {/* Patente */}
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor="veh-plate" className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+          <div className="space-y-1.5">
+            <Label htmlFor="veh-plate" className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
               Patente / Dominio
-            </label>
-            <input
+            </Label>
+            <Input
               id="veh-plate"
               type="text"
               value={plate}
               onChange={(e) => setPlate(e.target.value)}
               placeholder="Ej. A123BCD"
-              className="h-11 w-full rounded-xl border border-border bg-muted/30 px-3 text-sm outline-none focus:border-primary"
+              className="h-10 text-sm uppercase"
             />
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           {/* Kilometraje inicial */}
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor="veh-odo" className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+          <div className="space-y-1.5">
+            <Label htmlFor="veh-odo" className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
               Kilometraje (Km)
-            </label>
-            <input
+            </Label>
+            <Input
               id="veh-odo"
               type="number"
               required
               value={odometer}
               onChange={(e) => setOdometer(e.target.value)}
               placeholder="Ej. 1200"
-              className="h-11 w-full rounded-xl border border-border bg-muted/30 px-3 text-sm outline-none focus:border-primary"
+              className="h-10 text-sm"
             />
           </div>
 
           {/* Capacidad del tanque */}
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor="veh-tank" className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+          <div className="space-y-1.5">
+            <Label htmlFor="veh-tank" className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
               Tanque (Litros)
-            </label>
-            <input
+            </Label>
+            <Input
               id="veh-tank"
               type="number"
               step="any"
               value={fuelCapacity}
               onChange={(e) => setFuelCapacity(e.target.value)}
               placeholder="Ej. 12"
-              className="h-11 w-full rounded-xl border border-border bg-muted/30 px-3 text-sm outline-none focus:border-primary"
+              className="h-10 text-sm"
             />
           </div>
         </div>
 
         {/* Botones de acción */}
         <div className="mt-4 flex flex-col gap-2">
-          <Button type="submit" size="lg" className="w-full rounded-xl h-12" disabled={submitting}>
+          <Button type="submit" size="lg" className="w-full rounded-xl h-11 font-semibold" disabled={submitting}>
             {vehicle ? "Guardar cambios" : "Agregar vehículo"}
           </Button>
 
@@ -280,7 +279,7 @@ export function AddVehicleSheet({
               type="button"
               variant="destructive"
               size="lg"
-              className="w-full rounded-xl h-12 shadow-sm"
+              className="w-full rounded-xl h-11"
               onClick={handleDelete}
               disabled={submitting}
             >

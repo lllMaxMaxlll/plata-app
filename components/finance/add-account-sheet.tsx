@@ -2,6 +2,10 @@
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Badge } from "@/components/ui/badge"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { Account, Currency } from "@/lib/finance-data"
 import { BottomSheet } from "./bottom-sheet"
 import { useFinance } from "./finance-provider"
@@ -34,7 +38,6 @@ export function AddAccountSheet({
   const [balance, setBalance] = useState("")
   const [submitting, setSubmitting] = useState(false)
 
-  // Pre-fill fields if editing an existing account
   useEffect(() => {
     if (open) {
       if (account) {
@@ -59,7 +62,6 @@ export function AddAccountSheet({
     try {
       const parsedBalance = Math.round((parseFloat(balance) || 0) * 100) / 100
       if (account) {
-        // Edit mode
         await updateAccount(account.id, {
           name: name.trim(),
           currency,
@@ -68,7 +70,6 @@ export function AddAccountSheet({
         })
         toast.success(`Cuenta "${name.trim()}" modificada con éxito.`)
       } else {
-        // Create mode
         await addAccount({
           name: name.trim(),
           currency,
@@ -116,87 +117,74 @@ export function AddAccountSheet({
       description={account ? "Modificá o eliminá esta cuenta." : "Agregá un banco, billetera o ahorro."}
     >
       <form onSubmit={handleSubmit} className="mt-3 flex flex-col gap-4">
-        <div>
-          <p className="mb-1.5 text-xs font-medium text-muted-foreground">Nombre</p>
-          <input
+        <div className="space-y-1.5">
+          <Label className="text-xs font-semibold text-muted-foreground">Nombre</Label>
+          <Input
             value={name}
             disabled={submitting}
             onChange={(e) => setName(e.target.value)}
             placeholder="Ej. Banco Galicia"
-            className="w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm outline-none focus:border-ring disabled:opacity-50"
+            className="h-10 text-sm"
           />
           {!account && (
             <div className="no-scrollbar mt-2 flex gap-2 overflow-x-auto">
               {PRESETS.map((p) => (
-                <button
+                <Badge
                   key={p}
-                  type="button"
-                  disabled={submitting}
-                  onClick={() => setName(p)}
-                  className="shrink-0 rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground hover:text-foreground disabled:opacity-50"
+                  variant="outline"
+                  className="cursor-pointer shrink-0 text-xs hover:bg-accent"
+                  onClick={() => !submitting && setName(p)}
                 >
                   {p}
-                </button>
+                </Badge>
               ))}
             </div>
           )}
         </div>
 
-        <div>
-          <p className="mb-1.5 text-xs font-medium text-muted-foreground">Moneda</p>
-          <div className="flex rounded-full bg-muted p-1">
-            {(["ARS", "USD"] as Currency[]).map((c) => (
-              <button
-                key={c}
-                type="button"
-                disabled={submitting}
-                onClick={() => setCurrency(c)}
-                className={`flex-1 rounded-full py-2 text-sm font-medium transition-colors ${
-                  currency === c ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
-                } disabled:opacity-50`}
-              >
-                {c === "ARS" ? "Pesos (ARS)" : "Dólares (USD)"}
-              </button>
-            ))}
-          </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs font-semibold text-muted-foreground">Moneda</Label>
+          <Tabs value={currency} onValueChange={(val) => setCurrency(val as Currency)} className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="ARS" disabled={submitting}>Pesos (ARS)</TabsTrigger>
+              <TabsTrigger value="USD" disabled={submitting}>Dólares (USD)</TabsTrigger>
+            </TabsList>
+          </Tabs>
         </div>
 
-        <div>
-          <p className="mb-1.5 text-xs font-medium text-muted-foreground">Tipo</p>
+        <div className="space-y-1.5">
+          <Label className="text-xs font-semibold text-muted-foreground">Tipo</Label>
           <div className="grid grid-cols-5 gap-2">
             {KINDS.map((k) => (
-              <button
+              <Button
                 key={k.value}
                 type="button"
+                variant={kind === k.value ? "default" : "outline"}
                 disabled={submitting}
                 onClick={() => setKind(k.value)}
-                className={`flex flex-col items-center gap-1.5 rounded-xl border px-1 py-2.5 text-[11px] font-medium transition-colors ${
-                  kind === k.value
-                    ? "border-primary bg-primary/10 text-foreground"
-                    : "border-border text-muted-foreground hover:text-foreground"
-                } disabled:opacity-50`}
+                className="flex h-14 flex-col items-center justify-center gap-1 p-1 text-[11px]"
               >
                 <AccountIcon kind={k.value} className="size-4" />
-                {k.label}
-              </button>
+                <span>{k.label}</span>
+              </Button>
             ))}
           </div>
         </div>
 
-        <div>
-          <p className="mb-1.5 text-xs font-medium text-muted-foreground">Saldo</p>
-          <input
+        <div className="space-y-1.5">
+          <Label className="text-xs font-semibold text-muted-foreground">Saldo inicial</Label>
+          <Input
             inputMode="decimal"
             value={balance}
             disabled={submitting}
             onChange={(e) => setBalance(e.target.value.replace(/[^0-9.-]/g, ""))}
             placeholder="0"
-            className="w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm tabular-nums outline-none focus:border-ring disabled:opacity-50"
+            className="h-10 text-sm tabular-nums"
           />
         </div>
 
         <div className="mt-2 flex flex-col gap-2">
-          <Button type="submit" size="lg" disabled={submitting} className="h-12 w-full rounded-xl text-sm">
+          <Button type="submit" size="lg" disabled={submitting} className="h-11 w-full font-semibold">
             {submitting ? (
               <span className="size-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
             ) : account ? (
@@ -212,7 +200,7 @@ export function AddAccountSheet({
               variant="destructive"
               disabled={submitting}
               onClick={handleDelete}
-              className="h-12 w-full rounded-xl text-sm"
+              className="h-11 w-full"
             >
               {submitting ? (
                 <span className="size-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />

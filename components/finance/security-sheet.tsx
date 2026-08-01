@@ -1,8 +1,11 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { ShieldCheck, ShieldAlert, KeyRound, Mail, RefreshCw, Lock, Eye, EyeOff, CheckCircle2 } from "lucide-react"
+import { ShieldAlert, KeyRound, Mail, RefreshCw, Lock, Eye, EyeOff, CheckCircle2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Card } from "@/components/ui/card"
 import { BottomSheet } from "./bottom-sheet"
 import { useFinance } from "./finance-provider"
 import { toast } from "sonner"
@@ -10,24 +13,20 @@ import { toast } from "sonner"
 export function SecuritySheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { user, changePassword, sendEmailVerificationLink, reloadUser } = useFinance()
 
-  // Form states
   const [currentPassword, setCurrentPassword] = useState("")
   const [newPassword, setNewPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
 
-  // Visibility toggles
   const [showCurrent, setShowCurrent] = useState(false)
   const [showNew, setShowNew] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
 
-  // Status states
   const [submitting, setSubmitting] = useState(false)
   const [sendingVerification, setSendingVerification] = useState(false)
   const [verificationCooldown, setVerificationCooldown] = useState(0)
   const [reloading, setReloading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Cooldown countdown timer
   useEffect(() => {
     if (verificationCooldown <= 0) return
     const timer = setInterval(() => {
@@ -46,7 +45,7 @@ export function SecuritySheet({ open, onClose }: { open: boolean; onClose: () =>
     try {
       await sendEmailVerificationLink()
       toast.success("Correo de verificación enviado. Revisá tu bandeja de entrada.")
-      setVerificationCooldown(60) // 1 minute cooldown
+      setVerificationCooldown(60)
     } catch (err: any) {
       console.error(err)
       let message = "Ocurrió un error al enviar el correo de verificación."
@@ -97,7 +96,6 @@ export function SecuritySheet({ open, onClose }: { open: boolean; onClose: () =>
     try {
       await changePassword(currentPassword, newPassword)
       toast.success("Contraseña actualizada con éxito.")
-      // Clear form
       setCurrentPassword("")
       setNewPassword("")
       setConfirmPassword("")
@@ -127,31 +125,31 @@ export function SecuritySheet({ open, onClose }: { open: boolean; onClose: () =>
     >
       <div className="mt-4 flex flex-col gap-6">
         {/* Account Info Panel */}
-        <div className="rounded-2xl border border-border/50 bg-muted/30 p-4">
+        <Card className="p-4 shadow-sm">
           <div className="flex items-center gap-3">
             <div className="flex size-10 items-center justify-center rounded-xl bg-card border border-border">
               <Mail className="size-4.5 text-muted-foreground" />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+              <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
                 Correo Electrónico
-              </p>
+              </Label>
               <p className="truncate text-sm font-semibold mt-0.5 text-foreground">{user.email}</p>
             </div>
             {isGoogleUser && (
-              <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-primary/10 border border-primary/20 px-2 py-0.5 text-[10px] font-semibold text-primary">
+              <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-primary/10 border border-primary/20 px-2.5 py-0.5 text-[10px] font-semibold text-primary">
                 Google
               </span>
             )}
           </div>
-        </div>
+        </Card>
 
         {/* Email Verification Section */}
         <section className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
-            <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+            <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
               Verificación de Correo
-            </h3>
+            </Label>
             {!user.emailVerified && (
               <button
                 type="button"
@@ -166,7 +164,7 @@ export function SecuritySheet({ open, onClose }: { open: boolean; onClose: () =>
           </div>
 
           {user.emailVerified ? (
-            <div className="flex items-start gap-3 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-4 text-emerald-600 dark:text-emerald-400">
+            <div className="flex items-start gap-3 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4 text-emerald-600 dark:text-emerald-400">
               <CheckCircle2 className="size-5 shrink-0 mt-0.5" />
               <div className="text-xs">
                 <p className="font-bold">Dirección de correo verificada</p>
@@ -176,7 +174,7 @@ export function SecuritySheet({ open, onClose }: { open: boolean; onClose: () =>
               </div>
             </div>
           ) : (
-            <div className="flex flex-col gap-3.5 rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4 text-amber-600 dark:text-amber-400">
+            <div className="flex flex-col gap-3.5 rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 text-amber-600 dark:text-amber-400">
               <div className="flex items-start gap-3">
                 <ShieldAlert className="size-5 shrink-0 mt-0.5" />
                 <div className="text-xs">
@@ -208,13 +206,13 @@ export function SecuritySheet({ open, onClose }: { open: boolean; onClose: () =>
         </section>
 
         {/* Change Password Section */}
-        <section className="border-t border-border/40 pt-5 flex flex-col gap-3">
-          <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">
+        <section className="border-t border-border pt-5 flex flex-col gap-3">
+          <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">
             Contraseña
-          </h3>
+          </Label>
 
           {isGoogleUser ? (
-            <div className="flex items-start gap-3 rounded-2xl border border-border bg-muted/20 p-4">
+            <div className="flex items-start gap-3 rounded-xl border border-border bg-muted/20 p-4">
               <div className="flex size-8 items-center justify-center rounded-lg bg-card border border-border text-muted-foreground shrink-0 mt-0.5">
                 <GoogleIcon />
               </div>
@@ -228,17 +226,17 @@ export function SecuritySheet({ open, onClose }: { open: boolean; onClose: () =>
           ) : (
             <form onSubmit={handleSubmitPassword} className="flex flex-col gap-3">
               {/* Current Password */}
-              <div>
-                <p className="mb-1 text-xs font-semibold text-muted-foreground">Contraseña actual</p>
-                <div className="flex items-center gap-2 rounded-xl border border-border bg-background px-3.5 py-2.5 focus-within:border-ring">
+              <div className="space-y-1">
+                <Label className="text-xs font-semibold text-muted-foreground">Contraseña actual</Label>
+                <div className="flex items-center gap-2 rounded-lg border border-input bg-transparent px-3 py-1 focus-within:ring-2 focus-within:ring-ring">
                   <Lock className="size-4 text-muted-foreground shrink-0" />
-                  <input
+                  <Input
                     type={showCurrent ? "text" : "password"}
                     value={currentPassword}
                     disabled={submitting}
                     onChange={(e) => setCurrentPassword(e.target.value)}
                     placeholder="••••••••"
-                    className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground/60"
+                    className="border-none shadow-none focus-visible:ring-0 h-8 text-sm"
                   />
                   <button
                     type="button"
@@ -252,17 +250,17 @@ export function SecuritySheet({ open, onClose }: { open: boolean; onClose: () =>
               </div>
 
               {/* New Password */}
-              <div>
-                <p className="mb-1 text-xs font-semibold text-muted-foreground">Nueva contraseña</p>
-                <div className="flex items-center gap-2 rounded-xl border border-border bg-background px-3.5 py-2.5 focus-within:border-ring">
+              <div className="space-y-1">
+                <Label className="text-xs font-semibold text-muted-foreground">Nueva contraseña</Label>
+                <div className="flex items-center gap-2 rounded-lg border border-input bg-transparent px-3 py-1 focus-within:ring-2 focus-within:ring-ring">
                   <KeyRound className="size-4 text-muted-foreground shrink-0" />
-                  <input
+                  <Input
                     type={showNew ? "text" : "password"}
                     value={newPassword}
                     disabled={submitting}
                     onChange={(e) => setNewPassword(e.target.value)}
                     placeholder="Mínimo 6 caracteres"
-                    className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground/60"
+                    className="border-none shadow-none focus-visible:ring-0 h-8 text-sm"
                   />
                   <button
                     type="button"
@@ -276,17 +274,17 @@ export function SecuritySheet({ open, onClose }: { open: boolean; onClose: () =>
               </div>
 
               {/* Confirm Password */}
-              <div>
-                <p className="mb-1 text-xs font-semibold text-muted-foreground">Confirmar nueva contraseña</p>
-                <div className="flex items-center gap-2 rounded-xl border border-border bg-background px-3.5 py-2.5 focus-within:border-ring">
+              <div className="space-y-1">
+                <Label className="text-xs font-semibold text-muted-foreground">Confirmar nueva contraseña</Label>
+                <div className="flex items-center gap-2 rounded-lg border border-input bg-transparent px-3 py-1 focus-within:ring-2 focus-within:ring-ring">
                   <KeyRound className="size-4 text-muted-foreground shrink-0" />
-                  <input
+                  <Input
                     type={showConfirm ? "text" : "password"}
                     value={confirmPassword}
                     disabled={submitting}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="Repetir nueva contraseña"
-                    className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground/60"
+                    className="border-none shadow-none focus-visible:ring-0 h-8 text-sm"
                   />
                   <button
                     type="button"
@@ -309,7 +307,7 @@ export function SecuritySheet({ open, onClose }: { open: boolean; onClose: () =>
                 type="submit"
                 size="lg"
                 disabled={submitting || !currentPassword || !newPassword || !confirmPassword}
-                className="h-11 w-full rounded-xl text-sm mt-2"
+                className="h-11 w-full rounded-xl text-sm font-semibold mt-2"
               >
                 {submitting ? (
                   <span className="size-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />

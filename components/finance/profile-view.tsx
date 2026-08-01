@@ -2,6 +2,7 @@
 
 import { LogOut, CreditCard, Bell, ShieldCheck, CircleHelp, ChevronRight, Tag, ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
 import { formatShort } from "@/lib/finance-data"
 import { useFinance } from "./finance-provider"
 
@@ -28,17 +29,19 @@ export function ProfileView({
     <section className="px-5 pt-[calc(env(safe-area-inset-top)+1.25rem)]">
       <div className="flex items-center gap-3">
         {onBack && (
-          <button
+          <Button
+            variant="outline"
+            size="icon-sm"
             onClick={onBack}
-            className="flex size-9 items-center justify-center rounded-xl bg-card border border-border/50 text-muted-foreground transition-colors hover:text-foreground active:scale-95 cursor-pointer shrink-0"
+            className="rounded-xl shrink-0"
           >
             <ArrowLeft className="size-4" />
-          </button>
+          </Button>
         )}
         <h1 className="text-xl font-semibold tracking-tight">Perfil</h1>
       </div>
 
-      <div className="mt-5 flex items-center gap-3.5 rounded-3xl border border-border bg-card p-4">
+      <Card className="mt-5 flex items-center gap-3.5 rounded-3xl p-4 shadow-sm">
         <span className="flex size-14 items-center justify-center rounded-full bg-primary text-lg font-semibold text-primary-foreground">
           {user?.name?.charAt(0) ?? "U"}
         </span>
@@ -46,7 +49,7 @@ export function ProfileView({
           <p className="truncate text-base font-semibold">{user?.name}</p>
           <p className="truncate text-sm text-muted-foreground">{user?.email}</p>
         </div>
-      </div>
+      </Card>
 
       <div className="mt-3 grid grid-cols-3 gap-2.5">
         <Stat label="Cuentas" value={String(accounts.length)} />
@@ -54,12 +57,12 @@ export function ProfileView({
         <Stat label="Patrimonio USD" value={formatShort(totalsByCurrency.USD, "USD")} />
       </div>
 
-      <ul className="mt-5 overflow-hidden rounded-2xl border border-border bg-card">
+      <ul className="mt-5 overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
         {items.map((item, i) => (
           <li key={item.label}>
             <button
               onClick={item.onClick}
-              className={`flex w-full items-center gap-3 px-4 py-3.5 text-left text-sm transition-colors hover:bg-muted cursor-pointer ${
+              className={`flex w-full items-center gap-3 px-4 py-3.5 text-left text-sm transition-colors hover:bg-accent/40 cursor-pointer ${
                 i !== 0 ? "border-t border-border" : ""
               }`}
             >
@@ -75,7 +78,7 @@ export function ProfileView({
         variant="destructive"
         size="lg"
         onClick={logout}
-        className="mt-5 h-12 w-full rounded-xl text-sm"
+        className="mt-5 h-11 w-full rounded-xl text-sm font-semibold"
       >
         <LogOut className="size-4" />
         Cerrar sesión
@@ -88,9 +91,9 @@ export function ProfileView({
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-border bg-card p-3 text-center">
+    <Card className="p-3 text-center shadow-sm">
       <p className="truncate text-sm font-semibold tabular-nums">{value}</p>
       <p className="mt-0.5 text-[11px] text-muted-foreground">{label}</p>
-    </div>
+    </Card>
   )
 }

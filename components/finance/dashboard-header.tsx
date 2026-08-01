@@ -4,6 +4,8 @@ import { useState } from "react"
 import { Eye, EyeOff, LogOut, ArrowLeftRight } from "lucide-react"
 import { formatShort } from "@/lib/finance-data"
 import { useFinance } from "./finance-provider"
+import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
 
 export function DashboardHeader({ onOpenExchange }: { onOpenExchange: () => void }) {
   const { user, totalsByCurrency, logout } = useFinance()
@@ -19,24 +21,28 @@ export function DashboardHeader({ onOpenExchange }: { onOpenExchange: () => void
           <p className="text-base font-semibold tracking-tight">{user?.name ?? "Usuario"}</p>
         </div>
         <div className="flex items-center gap-1.5">
-          <button
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => setHidden((h) => !h)}
             aria-label={hidden ? "Mostrar saldos" : "Ocultar saldos"}
-            className="flex size-9 items-center justify-center rounded-full bg-muted text-muted-foreground transition-colors hover:text-foreground"
+            className="rounded-full text-muted-foreground hover:text-foreground"
           >
             {hidden ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={logout}
             aria-label="Cerrar sesión"
-            className="flex size-9 items-center justify-center rounded-full bg-muted text-muted-foreground transition-colors hover:text-foreground"
+            className="rounded-full text-muted-foreground hover:text-foreground"
           >
             <LogOut className="size-4" />
-          </button>
+          </Button>
         </div>
       </div>
 
-      <div className="mt-5 rounded-3xl border border-border bg-card p-5">
+      <Card className="mt-5 rounded-3xl p-5 shadow-sm">
         <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
           Saldo consolidado
         </p>
@@ -55,14 +61,15 @@ export function DashboardHeader({ onOpenExchange }: { onOpenExchange: () => void
           </div>
         </div>
 
-        <button
+        <Button
+          variant="secondary"
           onClick={onOpenExchange}
-          className="mt-3.5 w-full flex items-center justify-center gap-2 rounded-2xl bg-primary/10 py-3 text-xs font-semibold text-primary hover:bg-primary/20 active:scale-[0.99] transition-all cursor-pointer"
+          className="mt-3.5 w-full flex items-center justify-center gap-2 rounded-2xl py-3 text-xs font-semibold text-primary hover:bg-primary/20 transition-all cursor-pointer"
         >
           <ArrowLeftRight className="size-4" />
           Cambio de moneda
-        </button>
-      </div>
+        </Button>
+      </Card>
     </header>
   )
 }

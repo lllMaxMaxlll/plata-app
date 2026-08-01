@@ -3,6 +3,10 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { Upload, Check, Calendar as CalendarIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Badge } from "@/components/ui/badge"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -180,15 +184,6 @@ export function TransactionSheet({
     }
   }
 
-  const accentBg =
-    type === "income" ? "bg-primary" : type === "expense" ? "bg-destructive" : "bg-secondary"
-  const accentText =
-    type === "income"
-      ? "text-primary-foreground"
-      : type === "expense"
-        ? "text-background"
-        : "text-secondary-foreground"
-
   return (
     <>
       <BottomSheet
@@ -197,21 +192,15 @@ export function TransactionSheet({
         title={transaction ? "Editar movimiento" : "Nuevo movimiento"}
         description={transaction ? "Modificá o eliminá este movimiento." : "Registrá un ingreso, gasto o transferencia."}
       >
-        <div className="flex rounded-full bg-muted p-1">
-          {TABS.map((t) => (
-            <button
-              key={t.value}
-              type="button"
-              disabled={submitting}
-              onClick={() => handleTab(t.value)}
-              className={`flex-1 rounded-full py-2 text-sm font-medium transition-colors ${
-                type === t.value ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
-              } disabled:opacity-50`}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
+        <Tabs value={type} onValueChange={(val) => handleTab(val as TransactionType)} className="w-full">
+          <TabsList className="grid w-full grid-cols-3">
+            {TABS.map((t) => (
+              <TabsTrigger key={t.value} value={t.value} disabled={submitting}>
+                {t.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
 
         <form onSubmit={handleSubmit} className="mt-5 flex flex-col gap-4">
           {/* Amount */}
@@ -221,14 +210,14 @@ export function TransactionSheet({
             </span>
             <div className="flex items-center gap-1.5">
               <span className="text-2xl font-medium text-muted-foreground">$</span>
-              <input
+              <Input
                 autoFocus
                 inputMode="decimal"
                 disabled={submitting}
                 value={amount}
                 onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, ""))}
                 placeholder="0"
-                className="w-40 bg-transparent text-center text-4xl font-semibold tracking-tight tabular-nums outline-none placeholder:text-muted-foreground/40 disabled:opacity-50"
+                className="h-14 w-44 bg-transparent text-center text-4xl font-semibold tracking-tight tabular-nums border-none shadow-none focus-visible:ring-0 placeholder:text-muted-foreground/40"
               />
             </div>
           </div>
@@ -252,13 +241,13 @@ export function TransactionSheet({
           {/* Exchange rate for cross-currency transfers */}
           {crossCurrency && (
             <Field label={`Cotización (1 ${fromAccount?.currency === "USD" ? "USD → ARS" : "USD = ARS"})`}>
-              <input
+              <Input
                 inputMode="decimal"
                 disabled={submitting}
                 value={rate}
                 onChange={(e) => setRate(e.target.value.replace(/[^0-9.]/g, ""))}
                 placeholder="Ej. 1050"
-                className="w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm outline-none focus:border-ring disabled:opacity-50"
+                className="h-10 text-sm"
               />
               {toAmountPreview != null && (
                 <p className="mt-1.5 text-xs text-muted-foreground">
@@ -276,19 +265,14 @@ export function TransactionSheet({
             <Field label="Categoría">
               <div className="flex flex-wrap gap-2">
                 {categoriesList.map((c) => (
-                  <button
+                  <Badge
                     key={c.id}
-                    type="button"
-                    disabled={submitting}
-                    onClick={() => setCategory(c.name)}
-                    className={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
-                      category === c.name
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-muted text-muted-foreground hover:text-foreground"
-                    } disabled:opacity-50`}
+                    variant={category === c.name ? "default" : "outline"}
+                    className="cursor-pointer px-3 py-1 text-xs font-medium"
+                    onClick={() => !submitting && setCategory(c.name)}
                   >
                     {c.name}
-                  </button>
+                  </Badge>
                 ))}
               </div>
             </Field>
@@ -296,12 +280,12 @@ export function TransactionSheet({
 
           {/* Note */}
           <Field label="Nota (opcional)">
-            <input
+            <Input
               value={note}
               disabled={submitting}
               onChange={(e) => setNote(e.target.value)}
               placeholder="Ej. Compra del super"
-              className="w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm outline-none focus:border-ring disabled:opacity-50"
+              className="h-10 text-sm"
             />
           </Field>
 
@@ -314,7 +298,7 @@ export function TransactionSheet({
                     type="button"
                     variant="outline"
                     disabled={submitting}
-                    className="w-full justify-start rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm font-normal text-left outline-none hover:bg-muted/10 focus:border-ring disabled:opacity-50 h-auto"
+                    className="w-full justify-start rounded-xl border border-input bg-transparent px-3.5 py-2 text-sm font-normal text-left outline-none hover:bg-muted/10 h-10"
                   />
                 }
               >
@@ -338,19 +322,16 @@ export function TransactionSheet({
 
           {/* Receipt upload */}
           <Field label="Comprobante (opcional)">
-            <button
+            <Button
               type="button"
+              variant="outline"
               disabled={submitting}
               onClick={() => fileRef.current?.click()}
-              className={`flex w-full items-center gap-3 rounded-xl border border-dashed px-3.5 py-3 text-left text-sm transition-colors ${
-                receipt
-                  ? "border-primary/50 text-foreground"
-                  : "border-border text-muted-foreground hover:border-ring"
-              } disabled:opacity-50`}
+              className="flex h-11 w-full items-center justify-start gap-3 rounded-xl border-dashed px-3.5 text-left text-sm font-normal"
             >
               {receipt ? <Check className="size-4 text-primary" /> : <Upload className="size-4" />}
               <span className="truncate">{receipt ?? "Subir foto o PDF del comprobante"}</span>
-            </button>
+            </Button>
             <input
               ref={fileRef}
               type="file"
@@ -365,10 +346,11 @@ export function TransactionSheet({
               type="submit"
               size="lg"
               disabled={submitting}
-              className={`h-12 w-full rounded-xl text-sm ${accentBg} ${accentText}`}
+              variant={type === "expense" ? "destructive" : "default"}
+              className="h-11 w-full rounded-xl text-sm font-semibold"
             >
               {submitting ? (
-                <span className="size-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
+                <span className="size-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
               ) : transaction ? (
                 "Guardar cambios"
               ) : (
@@ -379,13 +361,13 @@ export function TransactionSheet({
             {transaction && (
               <Button
                 type="button"
-                variant="destructive"
+                variant="outline"
                 disabled={submitting}
                 onClick={() => setDeleteConfirmOpen(true)}
-                className="h-12 w-full rounded-xl text-sm cursor-pointer"
+                className="h-11 w-full rounded-xl text-sm text-destructive hover:bg-destructive/10"
               >
                 {submitting ? (
-                  <span className="size-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
+                  <span className="size-4 animate-spin rounded-full border-2 border-destructive border-t-transparent" />
                 ) : (
                   "Eliminar movimiento"
                 )}
@@ -426,8 +408,8 @@ export function TransactionSheet({
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div>
-      <p className="mb-1.5 text-xs font-medium text-muted-foreground">{label}</p>
+    <div className="space-y-1.5">
+      <Label className="text-xs font-semibold text-muted-foreground">{label}</Label>
       {children}
     </div>
   )
@@ -449,7 +431,7 @@ function AccountSelect({
       value={value}
       disabled={disabled}
       onChange={(e) => onChange(e.target.value)}
-      className="w-full appearance-none rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm outline-none focus:border-ring disabled:opacity-50"
+      className="w-full h-10 rounded-lg border border-input bg-transparent px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
     >
       {accounts.map((a) => (
         <option key={a.id} value={a.id}>

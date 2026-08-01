@@ -9,11 +9,13 @@ import {
   Calendar as CalendarIcon,
   TrendingUp,
   TrendingDown,
-  CheckCircle2,
 } from "lucide-react"
 import { useFinance } from "./finance-provider"
 import { BottomSheet } from "./bottom-sheet"
 import { toast } from "sonner"
+import { Button } from "@/components/ui/button"
+import { Label } from "@/components/ui/label"
+import { Card } from "@/components/ui/card"
 import {
   getAvailableMonths,
   filterTransactionsByMonth,
@@ -59,7 +61,6 @@ export function ExportSheet({ open, onClose }: ExportSheetProps) {
     return calculateMonthlySummary(monthTransactions, accounts)
   }, [monthTransactions, accounts])
 
-  // Quick month pickers
   const handleSelectCurrentMonth = () => {
     const now = new Date()
     setSelectedMonthKey(`${now.getFullYear()}-${now.getMonth() + 1}`)
@@ -111,16 +112,16 @@ export function ExportSheet({ open, onClose }: ExportSheetProps) {
     >
       <div className="flex flex-col gap-6 py-2">
         {/* 1. Month Selector & Quick Action Pills */}
-        <div className="flex flex-col gap-3">
-          <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        <div className="space-y-1.5">
+          <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Seleccionar Mes y Año
-          </label>
+          </Label>
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             <div className="relative flex-1">
               <select
                 value={selectedMonthKey}
                 onChange={(e) => setSelectedMonthKey(e.target.value)}
-                className="w-full appearance-none rounded-2xl border border-border/60 bg-card/80 px-4 py-3 text-sm font-semibold outline-none focus:border-primary cursor-pointer transition-colors shadow-sm"
+                className="w-full appearance-none rounded-xl border border-input bg-transparent px-4 py-2.5 text-sm font-semibold outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer"
               >
                 {availableMonths.map((m) => (
                   <option key={`${m.year}-${m.month}`} value={`${m.year}-${m.month}`}>
@@ -132,27 +133,31 @@ export function ExportSheet({ open, onClose }: ExportSheetProps) {
             </div>
 
             <div className="flex items-center gap-2">
-              <button
+              <Button
                 type="button"
+                variant="outline"
+                size="sm"
                 onClick={handleSelectCurrentMonth}
-                className="flex-1 sm:flex-none rounded-xl border border-border/50 bg-muted/40 hover:bg-muted px-3 py-2 text-xs font-semibold transition-colors cursor-pointer"
+                className="flex-1 sm:flex-none text-xs font-semibold"
               >
                 Este mes
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
+                variant="outline"
+                size="sm"
                 onClick={handleSelectPreviousMonth}
-                className="flex-1 sm:flex-none rounded-xl border border-border/50 bg-muted/40 hover:bg-muted px-3 py-2 text-xs font-semibold transition-colors cursor-pointer"
+                className="flex-1 sm:flex-none text-xs font-semibold"
               >
                 Mes pasado
-              </button>
+              </Button>
             </div>
           </div>
         </div>
 
         {/* 2. Month Preview Summary Card */}
-        <div className="rounded-2xl border border-border/50 bg-card/45 p-4.5 shadow-inner">
-          <div className="flex items-center justify-between border-b border-border/30 pb-3 mb-3">
+        <Card className="p-4 shadow-sm">
+          <div className="flex items-center justify-between border-b border-border pb-3 mb-3">
             <div className="flex items-center gap-2">
               <span className="flex size-2 rounded-full bg-primary animate-pulse" />
               <span className="text-xs font-bold uppercase tracking-wide text-foreground">
@@ -199,77 +204,80 @@ export function ExportSheet({ open, onClose }: ExportSheetProps) {
               </div>
             </div>
           )}
-        </div>
+        </Card>
 
         {/* 3. Export Format Options */}
-        <div className="flex flex-col gap-3">
-          <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        <div className="space-y-2">
+          <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Formato de Exportación
-          </label>
+          </Label>
 
           <div className="flex flex-col gap-3">
             {/* Excel Option */}
-            <button
+            <Button
               type="button"
+              variant="outline"
               disabled={exportingFormat !== null}
               onClick={() => handleExport("excel")}
-              className="flex items-center justify-between rounded-2xl border border-border/60 bg-card/60 p-4 text-left transition-all hover:bg-card hover:border-emerald-500/50 hover:shadow-md group cursor-pointer disabled:opacity-50"
+              className="flex h-auto items-center justify-between p-4 text-left font-normal border-input hover:border-emerald-500/50 hover:bg-emerald-500/5"
             >
               <div className="flex items-center gap-3.5">
-                <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-500 group-hover:scale-105 transition-transform">
-                  <FileSpreadsheet className="size-6" />
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-500">
+                  <FileSpreadsheet className="size-5" />
                 </span>
                 <div>
                   <h4 className="text-sm font-bold text-foreground">Excel (.xlsx)</h4>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    Planilla de cálculo con resumen ejecutivo y tabla completa de datos.
+                    Planilla de cálculo con resumen ejecutivo y datos.
                   </p>
                 </div>
               </div>
-              <Download className="size-4 text-muted-foreground group-hover:text-emerald-500 transition-colors shrink-0 ml-2" />
-            </button>
+              <Download className="size-4 text-muted-foreground shrink-0 ml-2" />
+            </Button>
 
             {/* PDF Option */}
-            <button
+            <Button
               type="button"
+              variant="outline"
               disabled={exportingFormat !== null}
               onClick={() => handleExport("pdf")}
-              className="flex items-center justify-between rounded-2xl border border-border/60 bg-card/60 p-4 text-left transition-all hover:bg-card hover:border-primary/50 hover:shadow-md group cursor-pointer disabled:opacity-50"
+              className="flex h-auto items-center justify-between p-4 text-left font-normal border-input hover:border-primary/50 hover:bg-primary/5"
             >
               <div className="flex items-center gap-3.5">
-                <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary group-hover:scale-105 transition-transform">
-                  <FileText className="size-6" />
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                  <FileText className="size-5" />
                 </span>
                 <div>
                   <h4 className="text-sm font-bold text-foreground">PDF (.pdf)</h4>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    Documento visual para imprimir con tarjetas de balance y gráfico.
+                    Documento visual para imprimir con tarjetas y resumen.
                   </p>
                 </div>
               </div>
-              <Download className="size-4 text-muted-foreground group-hover:text-primary transition-colors shrink-0 ml-2" />
-            </button>
+              <Download className="size-4 text-muted-foreground shrink-0 ml-2" />
+            </Button>
 
             {/* Markdown Option */}
-            <button
+            <Button
               type="button"
+              variant="outline"
               disabled={exportingFormat !== null}
               onClick={() => handleExport("markdown")}
-              className="flex items-center justify-between rounded-2xl border border-border/60 bg-card/60 p-4 text-left transition-all hover:bg-card hover:border-purple-500/50 hover:shadow-md group cursor-pointer disabled:opacity-50"
+              className="flex h-auto items-center justify-between p-4 text-left font-normal border-input hover:border-purple-500/50 hover:bg-purple-500/5"
             >
               <div className="flex items-center gap-3.5">
-                <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-purple-500/10 text-purple-500 group-hover:scale-105 transition-transform">
-                  <FileCode className="size-6" />
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-purple-500/10 text-purple-500">
+                  <FileCode className="size-5" />
                 </span>
                 <div>
                   <h4 className="text-sm font-bold text-foreground">Markdown (.md)</h4>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    Texto formateado en GFM para Notion, Obsidian o notas personales.
+                    Texto formateado en GFM para Notion, Obsidian o notas.
                   </p>
                 </div>
               </div>
-              <Download className="size-4 text-muted-foreground group-hover:text-purple-500 transition-colors shrink-0 ml-2" />
-            </button>
+              <Download className="size-4 text-muted-foreground shrink-0 ml-2" />
+            </Button>
           </div>
         </div>
       </div>

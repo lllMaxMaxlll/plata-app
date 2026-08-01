@@ -4,6 +4,8 @@ import { Plus } from "lucide-react"
 import { ACCENT_BY_KIND, formatShort, type Account, type Currency } from "@/lib/finance-data"
 import { useFinance } from "./finance-provider"
 import { AccountIcon } from "./account-icon"
+import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
 
 export function AccountsView({
   onAddAccount,
@@ -24,13 +26,14 @@ export function AccountsView({
       <section className="px-5 pt-[calc(env(safe-area-inset-top)+1.25rem)]">
         <div className="flex items-center justify-between">
           <h1 className="text-xl font-semibold tracking-tight">Cuentas</h1>
-          <button
+          <Button
+            size="sm"
             onClick={onAddAccount}
-            className="flex items-center gap-1 rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground"
+            className="flex items-center gap-1 rounded-full text-xs font-semibold h-8 px-3"
           >
             <Plus className="size-3.5" />
             Nueva
-          </button>
+          </Button>
         </div>
         <div className="mt-20 flex flex-col items-center justify-center text-center">
           <div className="mb-4 flex size-12 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
@@ -40,12 +43,13 @@ export function AccountsView({
           <p className="mt-1 text-xs text-muted-foreground max-w-[240px]">
             Agregá una cuenta para empezar a registrar tus ingresos y gastos.
           </p>
-          <button
+          <Button
+            variant="secondary"
             onClick={onAddAccount}
-            className="mt-4 rounded-xl bg-secondary px-4 py-2 text-xs font-semibold text-secondary-foreground"
+            className="mt-4 rounded-xl text-xs font-semibold"
           >
             Crear cuenta
-          </button>
+          </Button>
         </div>
       </section>
     )
@@ -55,13 +59,14 @@ export function AccountsView({
     <section className="px-5 pt-[calc(env(safe-area-inset-top)+1.25rem)]">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold tracking-tight">Cuentas</h1>
-        <button
+        <Button
+          size="sm"
           onClick={onAddAccount}
-          className="flex items-center gap-1 rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground"
+          className="flex items-center gap-1 rounded-full text-xs font-semibold h-8 px-3"
         >
           <Plus className="size-3.5" />
           Nueva
-        </button>
+        </Button>
       </div>
 
       {groups.map((g) => {
@@ -79,24 +84,22 @@ export function AccountsView({
             </div>
             <ul className="flex flex-col gap-2.5">
               {list.map((acc) => (
-                <li
-                  key={acc.id}
-                  onClick={() => onEditAccount(acc)}
-                  className="flex cursor-pointer items-center gap-3 rounded-2xl border border-border bg-card p-3.5 transition-colors hover:bg-muted/30"
-                >
-                  <span
-                    className="flex size-10 items-center justify-center rounded-xl"
-                    style={{ background: ACCENT_BY_KIND[acc.kind], color: "oklch(0.18 0.02 264)" }}
-                  >
-                    <AccountIcon kind={acc.kind} className="size-5" />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium">{acc.name}</p>
-                    <p className="text-xs text-muted-foreground capitalize">{acc.kind}</p>
-                  </div>
-                  <p className="text-sm font-semibold tabular-nums">
-                    {formatShort(acc.balance, acc.currency)}
-                  </p>
+                <li key={acc.id} onClick={() => onEditAccount(acc)}>
+                  <Card className="flex cursor-pointer items-center gap-3 p-3.5 transition-colors hover:bg-accent/40 border-border shadow-sm">
+                    <span
+                      className="flex size-10 items-center justify-center rounded-xl shrink-0"
+                      style={{ background: ACCENT_BY_KIND[acc.kind], color: "oklch(0.18 0.02 264)" }}
+                    >
+                      <AccountIcon kind={acc.kind} className="size-5" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium">{acc.name}</p>
+                      <p className="text-xs text-muted-foreground capitalize">{acc.kind}</p>
+                    </div>
+                    <p className="text-sm font-semibold tabular-nums">
+                      {formatShort(acc.balance, acc.currency)}
+                    </p>
+                  </Card>
                 </li>
               ))}
             </ul>
