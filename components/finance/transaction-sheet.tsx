@@ -21,7 +21,13 @@ import {
   type TransactionType,
   type Transaction,
 } from "@/lib/finance-data"
-import { BottomSheet } from "./bottom-sheet"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog"
 import { useFinance } from "./finance-provider"
 import { toast } from "sonner"
 import { Calendar } from "@/components/ui/calendar"
@@ -99,81 +105,90 @@ export function TransactionSheet({
         setCategory(defaultCat)
         const defaultFrom = accounts[0]?.id ?? ""
         setAccountId(defaultFrom)
-        setToAccountId(accounts.find((a) => a.id !== defaultFrom)?.id ?? "")
+        const defaultTo = accounts.find((a) => a.id !== defaultFrom)?.id ?? ""
+        setToAccountId(defaultTo)
         setDate(new Date())
       }
     }
-  }, [transaction, open, accounts, categories])
+  }, [open, transaction, categories, accounts])
 
-  function handleTab(next: TransactionType) {
-    setType(next)
-    if (next === "income") {
-      const defaultCat = categories.find((c) => c.type === "income")?.name ?? ""
-      setCategory(defaultCat)
-    } else if (next === "expense") {
-      const defaultCat = categories.find((c) => c.type === "expense")?.name ?? ""
-      setCategory(defaultCat)
-    } else {
-      setCategory("Transferencia")
+  function handleTab(val: TransactionType) {
+    setType(val)
+    if (val === "income") {
+      const first = categories.find((c) => c.type === "income")
+      if (first) setCategory(first.name)
+    } else if (val === "expense") {
+      const first = categories.find((c) => c.type === "expense")
+      if (first) setCategory(first.name)
     }
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    const amt = Math.round((parseFloat(amount) || 0) * 100) / 100
-    if (!amt || amt <= 0 || !accountId) return
-    if (type === "transfer" && accountId === toAccountId) return
+    const parsedAmount = parseFloat(amount)
+    if (isNaN(parsedAmount) || parsedAmount <= 0) {
+      toast.error("Ingresá un monto mayor a 0.")
+      return
+    }
+    if (!accountId) {
+      toast.error("Seleccioná una cuenta de origen.")
+      return
+    }
+    if (type === "transfer") {
+      if (!toAccountId) {
+        toast.error("Seleccioná una cuenta de destino.")
+        return
+      }
+      if (accountId === toAccountId) {
+        toast.error("La cuenta de origen y destino deben ser distintas.")
+        return
+      }
+      if (crossCurrency) {
+        const parsedRate = parseFloat(rate)
+        if (isNaN(parsedRate) || parsedRate <= 0) {
+          toast.error("Ingresá un tipo de cambio válido mayor a 0.")
+          return
+        }
+      }
+    }
 
     setSubmitting(true)
     try {
-      let isoDate = new Date().toISOString()
-      if (date) {
-        const d = transaction ? new Date(transaction.date) : new Date()
-        d.setFullYear(date.getFullYear())
-        d.setMonth(date.getMonth())
-        d.setDate(date.getDate())
-        isoDate = d.toISOString()
-      }
-
-      const payload = {
+      const input = {
         type,
-        amount: amt,
+        amount: Math.round(parsedAmount * 100) / 100,
         accountId,
-        category,
+        toAccountId: type === "transfer" ? toAccountId : undefined,
+        toAmount: crossCurrency && toAmountPreview ? toAmountPreview : undefined,
+        exchangeRate: crossCurrency ? parseFloat(rate) : undefined,
+        category: type === "transfer" ? "Transferencia" : category,
         note: note.trim() || undefined,
-        receiptName: receipt ?? undefined,
-        date: isoDate,
-        ...(type === "transfer"
-          ? {
-              toAccountId,
-              exchangeRate: crossCurrency ? Math.round((parseFloat(rate) || 0) * 100) / 100 || undefined : undefined,
-              toAmount: crossCurrency ? toAmountPreview ?? undefined : amt,
-            }
-          : {}),
+        receiptName: receipt || undefined,
+        date: date ? date.toISOString() : new Date().toISOString(),
       }
 
       if (transaction) {
-        await updateTransaction(transaction.id, payload)
+        await updateTransaction(transaction.id, input)
         toast.success("Movimiento modificado con éxito.")
       } else {
-        await addTransaction(payload)
+        await addTransaction(input)
         toast.success("Movimiento registrado con éxito.")
       }
       onClose()
     } catch (err: any) {
       console.error(err)
-      toast.error(err.message || "Error al registrar el movimiento.")
+      toast.error(err.message || "Error al guardar el movimiento.")
     } finally {
       setSubmitting(false)
     }
   }
 
-  async function executeDelete() {
+  async function handleConfirmDelete() {
     if (!transaction) return
     setSubmitting(true)
     try {
       await deleteTransaction(transaction.id)
-      toast.success("Movimiento eliminado con éxito.")
+      toast.success("Movimiento eliminado correctamente.")
       setDeleteConfirmOpen(false)
       onClose()
     } catch (err: any) {
@@ -186,21 +201,26 @@ export function TransactionSheet({
 
   return (
     <>
-      <BottomSheet
-        open={open}
-        onClose={onClose}
-        title={transaction ? "Editar movimiento" : "Nuevo movimiento"}
-        description={transaction ? "Modificá o eliminá este movimiento." : "Registrá un ingreso, gasto o transferencia."}
-      >
-        <Tabs value={type} onValueChange={(val) => handleTab(val as TransactionType)} className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            {TABS.map((t) => (
-              <TabsTrigger key={t.value} value={t.value} disabled={submitting}>
-                {t.label}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </Tabs>
+      <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+        <DialogContent className="max-w-lg w-full rounded-3xl bg-card border border-border p-6 shadow-2xl overflow-y-auto max-h-[90vh]">
+          <DialogHeader className="text-left pb-1">
+            <DialogTitle className="text-lg font-semibold tracking-tight text-foreground">
+              {transaction ? "Editar movimiento" : "Nuevo movimiento"}
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
+              {transaction ? "Modificá o eliminá este movimiento." : "Registrá un ingreso, gasto o transferencia."}
+            </DialogDescription>
+          </DialogHeader>
+
+          <Tabs value={type} onValueChange={(val) => handleTab(val as TransactionType)} className="w-full mt-2">
+            <TabsList className="grid w-full grid-cols-3 rounded-xl">
+              {TABS.map((t) => (
+                <TabsTrigger key={t.value} value={t.value} disabled={submitting} className="rounded-lg text-xs font-semibold">
+                  {t.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
 
         <form onSubmit={handleSubmit} className="mt-5 flex flex-col gap-4">
           {/* Amount */}
@@ -375,7 +395,8 @@ export function TransactionSheet({
             )}
           </div>
         </form>
-      </BottomSheet>
+      </DialogContent>
+    </Dialog>
 
       <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
         <AlertDialogContent>
@@ -389,7 +410,7 @@ export function TransactionSheet({
             <AlertDialogCancel className="cursor-pointer">Cancelar</AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
-              onClick={executeDelete}
+              onClick={handleConfirmDelete}
               disabled={submitting}
               className="cursor-pointer"
             >

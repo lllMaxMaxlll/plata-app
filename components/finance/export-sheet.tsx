@@ -9,9 +9,17 @@ import {
   Calendar as CalendarIcon,
   TrendingUp,
   TrendingDown,
+  FileCheck,
 } from "lucide-react"
 import { useFinance } from "./finance-provider"
-import { BottomSheet } from "./bottom-sheet"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
@@ -25,42 +33,60 @@ import {
   exportToMarkdown,
 } from "@/lib/export-utils"
 
-interface ExportSheetProps {
-  open: boolean
-  onClose: () => void
-}
+export type ExportFormat = "excel" | "pdf" | "markdown"
 
-export function ExportSheet({ open, onClose }: ExportSheetProps) {
-  const { transactions, accounts, user, vehicles } = useFinance()
+export function ExportSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const { transactions, accounts, user } = useFinance()
+  const [exportingFormat, setExportingFormat] = useState<ExportFormat | null>(null)
 
-  const availableMonths = useMemo(() => getAvailableMonths(transactions), [transactions])
+  // Calculate available months with data
+  const availableMonths = useMemo(() => {
+    return getAvailableMonths(transactions)
+  }, [transactions])
 
+  // Current selected month state
   const [selectedMonthKey, setSelectedMonthKey] = useState<string>(() => {
-    if (availableMonths.length > 0) {
-      return `${availableMonths[0].year}-${availableMonths[0].month}`
-    }
     const now = new Date()
     return `${now.getFullYear()}-${now.getMonth() + 1}`
   })
 
-  const [exportingFormat, setExportingFormat] = useState<"excel" | "pdf" | "markdown" | null>(null)
-
+  // Selected month metadata
   const selectedMonthObj = useMemo(() => {
-    const [yStr, mStr] = selectedMonthKey.split("-")
-    const year = parseInt(yStr, 10)
-    const month = parseInt(mStr, 10)
-    const found = availableMonths.find((m) => m.year === year && m.month === month)
-    return found ?? { year, month, label: `Mes ${month}/${year}` }
-  }, [selectedMonthKey, availableMonths])
+    const found = availableMonths.find((m) => `${m.year}-${m.month}` === selectedMonthKey)
+    if (found) return found
+    const now = new Date()
+    const monthNames = [
+      "Enero",
+      "Febrero",
+      "Marzo",
+      "Abril",
+      "Mayo",
+      "Junio",
+      "Julio",
+      "Agosto",
+      "Septiembre",
+      "Octubre",
+      "Noviembre",
+      "Diciembre",
+    ]
+    const m1 = now.getMonth() + 1
+    return {
+      year: now.getFullYear(),
+      month: m1,
+      label: `${monthNames[m1 - 1]} ${now.getFullYear()}`,
+    }
+  }, [availableMonths, selectedMonthKey])
 
-  const monthTransactions = useMemo(() => {
+  // Monthly filtered data and metrics
+  const monthlyTransactions = useMemo(() => {
     return filterTransactionsByMonth(transactions, selectedMonthObj.year, selectedMonthObj.month)
   }, [transactions, selectedMonthObj])
 
   const summary = useMemo(() => {
-    return calculateMonthlySummary(monthTransactions, accounts)
-  }, [monthTransactions, accounts])
+    return calculateMonthlySummary(monthlyTransactions, accounts)
+  }, [monthlyTransactions, accounts])
 
+  // Shortcuts
   const handleSelectCurrentMonth = () => {
     const now = new Date()
     setSelectedMonthKey(`${now.getFullYear()}-${now.getMonth() + 1}`)
@@ -68,30 +94,34 @@ export function ExportSheet({ open, onClose }: ExportSheetProps) {
 
   const handleSelectPreviousMonth = () => {
     const now = new Date()
-    const prevDate = new Date(now.getFullYear(), now.getMonth() - 1, 1)
-    setSelectedMonthKey(`${prevDate.getFullYear()}-${prevDate.getMonth() + 1}`)
+    let y = now.getFullYear()
+    let m = now.getMonth() // 0-indexed month before current
+    if (m === 0) {
+      m = 12
+      y -= 1
+    }
+    setSelectedMonthKey(`${y}-${m}`)
   }
 
-  const handleExport = (format: "excel" | "pdf" | "markdown") => {
+  // Trigger export
+  const handleExport = async (formatType: ExportFormat) => {
+    setExportingFormat(formatType)
     try {
-      setExportingFormat(format)
-
       const payload = {
-        monthTransactions,
+        monthTransactions: monthlyTransactions,
         accounts,
         year: selectedMonthObj.year,
         month: selectedMonthObj.month,
-        userName: user?.name ?? "Usuario",
-        vehicles,
+        userName: user?.name || "Usuario",
       }
 
-      if (format === "excel") {
+      if (formatType === "excel") {
         exportToExcel(payload)
         toast.success(`Reporte Excel de ${selectedMonthObj.label} descargado correctamente`)
-      } else if (format === "pdf") {
+      } else if (formatType === "pdf") {
         exportToPdf(payload)
         toast.success(`Reporte PDF de ${selectedMonthObj.label} descargado correctamente`)
-      } else if (format === "markdown") {
+      } else if (formatType === "markdown") {
         exportToMarkdown(payload)
         toast.success(`Reporte Markdown de ${selectedMonthObj.label} descargado correctamente`)
       }
@@ -104,183 +134,172 @@ export function ExportSheet({ open, onClose }: ExportSheetProps) {
   }
 
   return (
-    <BottomSheet
-      open={open}
-      onClose={onClose}
-      title="Exportar Movimientos Mensuales"
-      description="Descargá tu reporte mensual de ingresos y gastos en Excel, PDF o Markdown."
-    >
-      <div className="flex flex-col gap-6 py-2">
-        {/* 1. Month Selector & Quick Action Pills */}
-        <div className="space-y-1.5">
-          <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Seleccionar Mes y Año
-          </Label>
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-            <div className="relative flex-1">
-              <select
-                value={selectedMonthKey}
-                onChange={(e) => setSelectedMonthKey(e.target.value)}
-                className="w-full appearance-none rounded-xl border border-input bg-transparent px-4 py-2.5 text-sm font-semibold outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer"
-              >
-                {availableMonths.map((m) => (
-                  <option key={`${m.year}-${m.month}`} value={`${m.year}-${m.month}`}>
-                    {m.label}
-                  </option>
-                ))}
-              </select>
-              <CalendarIcon className="absolute right-3.5 top-1/2 -translate-y-1/2 size-4 pointer-events-none text-muted-foreground" />
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleSelectCurrentMonth}
-                className="flex-1 sm:flex-none text-xs font-semibold"
-              >
-                Este mes
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleSelectPreviousMonth}
-                className="flex-1 sm:flex-none text-xs font-semibold"
-              >
-                Mes pasado
-              </Button>
+    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+      <DialogContent className="w-full sm:max-w-xl max-w-[calc(100vw-2rem)] h-auto max-h-[90vh] rounded-3xl bg-card border border-border p-6 shadow-2xl overflow-y-auto overflow-x-hidden transition-all duration-200">
+        <DialogHeader className="text-left pb-1">
+          <div className="flex items-center gap-2.5">
+            <span className="flex size-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <Download className="size-5" />
+            </span>
+            <div>
+              <DialogTitle className="text-lg font-semibold tracking-tight text-foreground">
+                Exportar Movimientos Mensuales
+              </DialogTitle>
+              <DialogDescription className="text-xs text-muted-foreground">
+                Descargá tu reporte mensual de ingresos y gastos en Excel, PDF o Markdown.
+              </DialogDescription>
             </div>
           </div>
-        </div>
+        </DialogHeader>
 
-        {/* 2. Month Preview Summary Card */}
-        <Card className="p-4 shadow-sm">
-          <div className="flex items-center justify-between border-b border-border pb-3 mb-3">
-            <div className="flex items-center gap-2">
-              <span className="flex size-2 rounded-full bg-primary animate-pulse" />
-              <span className="text-xs font-bold uppercase tracking-wide text-foreground">
-                {selectedMonthObj.label}
+        <div className="mt-2 flex min-w-0 flex-col gap-5">
+          {/* 1. Month Selector & Quick Action Pills */}
+          <div className="min-w-0 space-y-1.5">
+            <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              Mes a Exportar
+            </Label>
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 min-w-0">
+              <div className="flex-1 min-w-0">
+                <Select value={selectedMonthKey} onValueChange={(v) => v && setSelectedMonthKey(v)}>
+                  <SelectTrigger className="w-full rounded-xl border-border bg-card/60">
+                    <SelectValue>{selectedMonthObj.label}</SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableMonths.map((m) => (
+                      <SelectItem key={`${m.year}-${m.month}`} value={`${m.year}-${m.month}`}>
+                        {m.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleSelectCurrentMonth}
+                  className="flex-1 sm:flex-none text-xs font-semibold rounded-xl h-10 border-border/60 bg-card/60 cursor-pointer"
+                >
+                  Este mes
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleSelectPreviousMonth}
+                  className="flex-1 sm:flex-none text-xs font-semibold rounded-xl h-10 border-border/60 bg-card/60 cursor-pointer"
+                >
+                  Mes pasado
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* 2. Month Preview Summary Card */}
+          <Card className="p-4 shadow-sm border-border/60 bg-card/60 rounded-2xl min-w-0">
+            <div className="flex items-center justify-between border-b border-border/50 pb-3 mb-3 min-w-0">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="flex size-2 rounded-full bg-primary animate-pulse shrink-0" />
+                <span className="text-xs font-bold uppercase tracking-wider text-foreground truncate">
+                  {selectedMonthObj.label}
+                </span>
+              </div>
+              <span className="rounded-lg bg-muted/60 px-2.5 py-0.5 text-[11px] font-semibold text-muted-foreground shrink-0 border border-border/40">
+                {summary.count} {summary.count === 1 ? "movimiento" : "movimientos"}
               </span>
             </div>
-            <span className="rounded-lg bg-muted px-2.5 py-0.5 text-[11px] font-semibold text-muted-foreground">
-              {summary.count} {summary.count === 1 ? "movimiento" : "movimientos"}
-            </span>
-          </div>
 
-          {summary.count === 0 ? (
-            <p className="text-center text-xs text-muted-foreground py-2">
-              No hay movimientos registrados en este mes. Se exportará la plantilla vacía.
-            </p>
-          ) : (
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider mb-1">
-                  Resumen ARS
-                </p>
-                <p className="text-xs text-emerald-500 font-medium flex items-center gap-1">
-                  <TrendingUp className="size-3 shrink-0" />
-                  +${summary.totalIncomeARS.toLocaleString("es-AR")}
-                </p>
-                <p className="text-xs text-rose-500 font-medium flex items-center gap-1 mt-0.5">
-                  <TrendingDown className="size-3 shrink-0" />
-                  -${summary.totalExpenseARS.toLocaleString("es-AR")}
-                </p>
-              </div>
+            {summary.count === 0 ? (
+              <p className="text-center text-xs text-muted-foreground py-2">
+                No hay movimientos registrados en este mes. Se exportará la plantilla vacía.
+              </p>
+            ) : (
+              <div className="grid grid-cols-2 gap-4 min-w-0">
+                <div className="min-w-0">
+                  <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider mb-1">
+                    Resumen ARS
+                  </p>
+                  <p className="text-xs text-emerald-500 font-semibold flex items-center gap-1">
+                    <TrendingUp className="size-3 shrink-0" />
+                    +${summary.totalIncomeARS.toLocaleString("es-AR")}
+                  </p>
+                  <p className="text-xs text-rose-500 font-semibold flex items-center gap-1 mt-0.5">
+                    <TrendingDown className="size-3 shrink-0" />
+                    -${summary.totalExpenseARS.toLocaleString("es-AR")}
+                  </p>
+                </div>
 
-              <div>
-                <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider mb-1">
-                  Resumen USD
-                </p>
-                <p className="text-xs text-emerald-500 font-medium flex items-center gap-1">
-                  <TrendingUp className="size-3 shrink-0" />
-                  +${summary.totalIncomeUSD.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
-                </p>
-                <p className="text-xs text-rose-500 font-medium flex items-center gap-1 mt-0.5">
-                  <TrendingDown className="size-3 shrink-0" />
-                  -${summary.totalExpenseUSD.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
-                </p>
+                <div className="min-w-0">
+                  <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider mb-1">
+                    Resumen USD
+                  </p>
+                  <p className="text-xs text-emerald-500 font-semibold flex items-center gap-1">
+                    <TrendingUp className="size-3 shrink-0" />
+                    +US${summary.totalIncomeUSD.toLocaleString("en-US")}
+                  </p>
+                  <p className="text-xs text-rose-500 font-semibold flex items-center gap-1 mt-0.5">
+                    <TrendingDown className="size-3 shrink-0" />
+                    -US${summary.totalExpenseUSD.toLocaleString("en-US")}
+                  </p>
+                </div>
               </div>
+            )}
+          </Card>
+
+          {/* 3. Format Download Actions */}
+          <div className="min-w-0 space-y-2">
+            <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              Formato de Descarga
+            </Label>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 min-w-0">
+              {/* Excel Button */}
+              <button
+                type="button"
+                disabled={exportingFormat !== null}
+                onClick={() => handleExport("excel")}
+                className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-3.5 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/15 transition-all cursor-pointer disabled:opacity-50 min-w-0"
+              >
+                <FileSpreadsheet className="size-6 shrink-0" />
+                <div className="text-center min-w-0">
+                  <p className="text-xs font-bold">Excel (.xlsx)</p>
+                  <p className="text-[10px] opacity-80 mt-0.5">Planilla estructurada</p>
+                </div>
+              </button>
+
+              {/* PDF Button */}
+              <button
+                type="button"
+                disabled={exportingFormat !== null}
+                onClick={() => handleExport("pdf")}
+                className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-rose-500/20 bg-rose-500/10 p-3.5 text-rose-600 dark:text-rose-400 hover:bg-rose-500/15 transition-all cursor-pointer disabled:opacity-50 min-w-0"
+              >
+                <FileText className="size-6 shrink-0" />
+                <div className="text-center min-w-0">
+                  <p className="text-xs font-bold">PDF (.pdf)</p>
+                  <p className="text-[10px] opacity-80 mt-0.5">Documento imprimible</p>
+                </div>
+              </button>
+
+              {/* Markdown Button */}
+              <button
+                type="button"
+                disabled={exportingFormat !== null}
+                onClick={() => handleExport("markdown")}
+                className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-blue-500/20 bg-blue-500/10 p-3.5 text-blue-600 dark:text-blue-400 hover:bg-blue-500/15 transition-all cursor-pointer disabled:opacity-50 min-w-0"
+              >
+                <FileCode className="size-6 shrink-0" />
+                <div className="text-center min-w-0">
+                  <p className="text-xs font-bold">Markdown (.md)</p>
+                  <p className="text-[10px] opacity-80 mt-0.5">Formato texto plano</p>
+                </div>
+              </button>
             </div>
-          )}
-        </Card>
-
-        {/* 3. Export Format Options */}
-        <div className="space-y-2">
-          <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Formato de Exportación
-          </Label>
-
-          <div className="flex flex-col gap-3">
-            {/* Excel Option */}
-            <Button
-              type="button"
-              variant="outline"
-              disabled={exportingFormat !== null}
-              onClick={() => handleExport("excel")}
-              className="flex h-auto items-center justify-between p-4 text-left font-normal border-input hover:border-emerald-500/50 hover:bg-emerald-500/5"
-            >
-              <div className="flex items-center gap-3.5">
-                <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-500">
-                  <FileSpreadsheet className="size-5" />
-                </span>
-                <div>
-                  <h4 className="text-sm font-bold text-foreground">Excel (.xlsx)</h4>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    Planilla de cálculo con resumen ejecutivo y datos.
-                  </p>
-                </div>
-              </div>
-              <Download className="size-4 text-muted-foreground shrink-0 ml-2" />
-            </Button>
-
-            {/* PDF Option */}
-            <Button
-              type="button"
-              variant="outline"
-              disabled={exportingFormat !== null}
-              onClick={() => handleExport("pdf")}
-              className="flex h-auto items-center justify-between p-4 text-left font-normal border-input hover:border-primary/50 hover:bg-primary/5"
-            >
-              <div className="flex items-center gap-3.5">
-                <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                  <FileText className="size-5" />
-                </span>
-                <div>
-                  <h4 className="text-sm font-bold text-foreground">PDF (.pdf)</h4>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    Documento visual para imprimir con tarjetas y resumen.
-                  </p>
-                </div>
-              </div>
-              <Download className="size-4 text-muted-foreground shrink-0 ml-2" />
-            </Button>
-
-            {/* Markdown Option */}
-            <Button
-              type="button"
-              variant="outline"
-              disabled={exportingFormat !== null}
-              onClick={() => handleExport("markdown")}
-              className="flex h-auto items-center justify-between p-4 text-left font-normal border-input hover:border-purple-500/50 hover:bg-purple-500/5"
-            >
-              <div className="flex items-center gap-3.5">
-                <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-purple-500/10 text-purple-500">
-                  <FileCode className="size-5" />
-                </span>
-                <div>
-                  <h4 className="text-sm font-bold text-foreground">Markdown (.md)</h4>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    Texto formateado en GFM para Notion, Obsidian o notas.
-                  </p>
-                </div>
-              </div>
-              <Download className="size-4 text-muted-foreground shrink-0 ml-2" />
-            </Button>
           </div>
         </div>
-      </div>
-    </BottomSheet>
+      </DialogContent>
+    </Dialog>
   )
 }

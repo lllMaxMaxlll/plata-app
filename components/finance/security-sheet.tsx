@@ -6,7 +6,13 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card } from "@/components/ui/card"
-import { BottomSheet } from "./bottom-sheet"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog"
 import { useFinance } from "./finance-provider"
 import { toast } from "sonner"
 
@@ -28,16 +34,27 @@ export function SecuritySheet({ open, onClose }: { open: boolean; onClose: () =>
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (verificationCooldown <= 0) return
-    const timer = setInterval(() => {
-      setVerificationCooldown((prev) => prev - 1)
-    }, 1000)
+    if (!open) {
+      setCurrentPassword("")
+      setNewPassword("")
+      setConfirmPassword("")
+      setError(null)
+    }
+  }, [open])
+
+  useEffect(() => {
+    let timer: any
+    if (verificationCooldown > 0) {
+      timer = setInterval(() => {
+        setVerificationCooldown((prev) => prev - 1)
+      }, 1000)
+    }
     return () => clearInterval(timer)
   }, [verificationCooldown])
 
   if (!user) return null
 
-  const isGoogleUser = user.providerId === "google.com"
+  const isGoogleUser = (user as any).providerData?.some((p: any) => p.providerId === "google.com")
 
   async function handleSendVerification() {
     setSendingVerification(true)
@@ -48,12 +65,7 @@ export function SecuritySheet({ open, onClose }: { open: boolean; onClose: () =>
       setVerificationCooldown(60)
     } catch (err: any) {
       console.error(err)
-      let message = "Ocurrió un error al enviar el correo de verificación."
-      if (err.code === "auth/too-many-requests") {
-        message = "Demasiadas solicitudes. Por favor, intentá de nuevo más tarde."
-      }
-      setError(message)
-      toast.error(message)
+      toast.error(err.message || "Error al enviar el correo de verificación.")
     } finally {
       setSendingVerification(false)
     }
@@ -61,34 +73,31 @@ export function SecuritySheet({ open, onClose }: { open: boolean; onClose: () =>
 
   async function handleReloadUser() {
     setReloading(true)
-    setError(null)
     try {
       await reloadUser()
       toast.success("Estado de cuenta actualizado.")
-    } catch (err: any) {
+    } catch (err) {
       console.error(err)
-      toast.error("Error al actualizar el estado de la cuenta.")
     } finally {
       setReloading(false)
     }
   }
 
-  async function handleSubmitPassword(e: React.FormEvent) {
+  async function handleChangePassword(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
 
-    if (!currentPassword || !newPassword || !confirmPassword) {
-      setError("Todos los campos de contraseña son requeridos.")
-      return
-    }
-
     if (newPassword.length < 6) {
-      setError("La nueva contraseña debe tener al menos 6 caracteres.")
+      const msg = "La nueva contraseña debe tener al menos 6 caracteres."
+      setError(msg)
+      toast.error(msg)
       return
     }
 
     if (newPassword !== confirmPassword) {
-      setError("La nueva contraseña y la confirmación no coinciden.")
+      const msg = "Las contraseñas nuevas no coinciden."
+      setError(msg)
+      toast.error(msg)
       return
     }
 
@@ -101,7 +110,7 @@ export function SecuritySheet({ open, onClose }: { open: boolean; onClose: () =>
       setConfirmPassword("")
     } catch (err: any) {
       console.error(err)
-      let message = "Ocurrió un error al cambiar la contraseña."
+      let message = "No se pudo actualizar la contraseña."
       if (err.code === "auth/invalid-credential" || err.code === "auth/wrong-password") {
         message = "La contraseña actual es incorrecta."
       } else if (err.code === "auth/weak-password") {
@@ -117,219 +126,204 @@ export function SecuritySheet({ open, onClose }: { open: boolean; onClose: () =>
   }
 
   return (
-    <BottomSheet
-      open={open}
-      onClose={onClose}
-      title="Seguridad y Accesos"
-      description="Gestioná la seguridad de tu cuenta, tu contraseña y métodos de inicio de sesión."
-    >
-      <div className="mt-4 flex flex-col gap-6">
-        {/* Account Info Panel */}
-        <Card className="p-4 shadow-sm">
-          <div className="flex items-center gap-3">
-            <div className="flex size-10 items-center justify-center rounded-xl bg-card border border-border">
-              <Mail className="size-4.5 text-muted-foreground" />
+    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+      <DialogContent className="w-full sm:max-w-xl max-w-[calc(100vw-2rem)] h-auto max-h-[90vh] rounded-3xl bg-card border border-border p-6 shadow-2xl overflow-y-auto overflow-x-hidden transition-all duration-200">
+        <DialogHeader className="text-left pb-1">
+          <div className="flex items-center gap-2.5">
+            <span className="flex size-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <ShieldAlert className="size-5" />
+            </span>
+            <div>
+              <DialogTitle className="text-lg font-semibold tracking-tight text-foreground">
+                Seguridad y Accesos
+              </DialogTitle>
+              <DialogDescription className="text-xs text-muted-foreground">
+                Gestioná la seguridad de tu cuenta, tu contraseña y métodos de inicio de sesión.
+              </DialogDescription>
             </div>
-            <div className="min-w-0 flex-1">
-              <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                Correo Electrónico
-              </Label>
-              <p className="truncate text-sm font-semibold mt-0.5 text-foreground">{user.email}</p>
-            </div>
-            {isGoogleUser && (
-              <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-primary/10 border border-primary/20 px-2.5 py-0.5 text-[10px] font-semibold text-primary">
-                Google
-              </span>
-            )}
           </div>
-        </Card>
+        </DialogHeader>
 
-        {/* Email Verification Section */}
-        <section className="flex flex-col gap-3">
-          <div className="flex items-center justify-between">
-            <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-              Verificación de Correo
-            </Label>
-            {!user.emailVerified && (
-              <button
-                type="button"
-                disabled={reloading || sendingVerification}
-                onClick={handleReloadUser}
-                className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary hover:underline cursor-pointer disabled:opacity-50"
-              >
-                <RefreshCw className={`size-3 ${reloading ? "animate-spin" : ""}`} />
-                Refrescar estado
-              </button>
-            )}
-          </div>
-
-          {user.emailVerified ? (
-            <div className="flex items-start gap-3 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4 text-emerald-600 dark:text-emerald-400">
-              <CheckCircle2 className="size-5 shrink-0 mt-0.5" />
-              <div className="text-xs">
-                <p className="font-bold">Dirección de correo verificada</p>
-                <p className="mt-0.5 text-muted-foreground font-medium">
-                  Tu correo ya está verificado de forma segura. Tu cuenta tiene acceso completo a todas las funciones.
-                </p>
+        <div className="mt-2 flex min-w-0 flex-col gap-5">
+          {/* User Profile Summary Header */}
+          <Card className="p-3.5 border-border/60 bg-card/60 rounded-2xl min-w-0">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary shrink-0">
+                <Mail className="size-5" />
               </div>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-3.5 rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 text-amber-600 dark:text-amber-400">
-              <div className="flex items-start gap-3">
-                <ShieldAlert className="size-5 shrink-0 mt-0.5" />
-                <div className="text-xs">
-                  <p className="font-bold">Verificación pendiente</p>
-                  <p className="mt-0.5 text-muted-foreground font-medium">
-                    Todavía no has verificado tu correo electrónico. Te recomendamos verificarlo para proteger tu acceso.
-                  </p>
-                </div>
+              <div className="min-w-0 flex-1">
+                <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                  Correo Electrónico
+                </Label>
+                <p className="truncate text-sm font-semibold text-foreground">{user.email}</p>
               </div>
-
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={sendingVerification || verificationCooldown > 0}
-                onClick={handleSendVerification}
-                className="w-full text-xs font-semibold py-2 h-9 border-amber-500/30 hover:bg-amber-500/10 text-amber-700 dark:text-amber-300"
-              >
-                {sendingVerification ? (
-                  <span className="size-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                ) : verificationCooldown > 0 ? (
-                  `Reenviar en ${verificationCooldown}s`
-                ) : (
-                  "Enviar correo de verificación"
-                )}
-              </Button>
-            </div>
-          )}
-        </section>
-
-        {/* Change Password Section */}
-        <section className="border-t border-border pt-5 flex flex-col gap-3">
-          <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">
-            Contraseña
-          </Label>
-
-          {isGoogleUser ? (
-            <div className="flex items-start gap-3 rounded-xl border border-border bg-muted/20 p-4">
-              <div className="flex size-8 items-center justify-center rounded-lg bg-card border border-border text-muted-foreground shrink-0 mt-0.5">
-                <GoogleIcon />
-              </div>
-              <div className="text-xs font-medium text-muted-foreground leading-normal">
-                <p className="font-semibold text-foreground">Inicio de sesión con Google</p>
-                <p className="mt-0.5">
-                  Tu cuenta está asociada a tu perfil de Google. No necesitas configurar o cambiar una contraseña local.
-                </p>
-              </div>
-            </div>
-          ) : (
-            <form onSubmit={handleSubmitPassword} className="flex flex-col gap-3">
-              {/* Current Password */}
-              <div className="space-y-1">
-                <Label className="text-xs font-semibold text-muted-foreground">Contraseña actual</Label>
-                <div className="flex items-center gap-2 rounded-lg border border-input bg-transparent px-3 py-1 focus-within:ring-2 focus-within:ring-ring">
-                  <Lock className="size-4 text-muted-foreground shrink-0" />
-                  <Input
-                    type={showCurrent ? "text" : "password"}
-                    value={currentPassword}
-                    disabled={submitting}
-                    onChange={(e) => setCurrentPassword(e.target.value)}
-                    placeholder="••••••••"
-                    className="border-none shadow-none focus-visible:ring-0 h-8 text-sm"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowCurrent(!showCurrent)}
-                    className="text-muted-foreground hover:text-foreground cursor-pointer shrink-0"
-                    title={showCurrent ? "Ocultar" : "Mostrar"}
-                  >
-                    {showCurrent ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                  </button>
-                </div>
-              </div>
-
-              {/* New Password */}
-              <div className="space-y-1">
-                <Label className="text-xs font-semibold text-muted-foreground">Nueva contraseña</Label>
-                <div className="flex items-center gap-2 rounded-lg border border-input bg-transparent px-3 py-1 focus-within:ring-2 focus-within:ring-ring">
-                  <KeyRound className="size-4 text-muted-foreground shrink-0" />
-                  <Input
-                    type={showNew ? "text" : "password"}
-                    value={newPassword}
-                    disabled={submitting}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="Mínimo 6 caracteres"
-                    className="border-none shadow-none focus-visible:ring-0 h-8 text-sm"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowNew(!showNew)}
-                    className="text-muted-foreground hover:text-foreground cursor-pointer shrink-0"
-                    title={showNew ? "Ocultar" : "Mostrar"}
-                  >
-                    {showNew ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                  </button>
-                </div>
-              </div>
-
-              {/* Confirm Password */}
-              <div className="space-y-1">
-                <Label className="text-xs font-semibold text-muted-foreground">Confirmar nueva contraseña</Label>
-                <div className="flex items-center gap-2 rounded-lg border border-input bg-transparent px-3 py-1 focus-within:ring-2 focus-within:ring-ring">
-                  <KeyRound className="size-4 text-muted-foreground shrink-0" />
-                  <Input
-                    type={showConfirm ? "text" : "password"}
-                    value={confirmPassword}
-                    disabled={submitting}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="Repetir nueva contraseña"
-                    className="border-none shadow-none focus-visible:ring-0 h-8 text-sm"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirm(!showConfirm)}
-                    className="text-muted-foreground hover:text-foreground cursor-pointer shrink-0"
-                    title={showConfirm ? "Ocultar" : "Mostrar"}
-                  >
-                    {showConfirm ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                  </button>
-                </div>
-              </div>
-
-              {error && (
-                <div className="rounded-xl bg-destructive/10 p-3 text-center text-xs font-medium text-destructive">
-                  {error}
-                </div>
+              {isGoogleUser && (
+                <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-primary/10 border border-primary/20 px-2.5 py-0.5 text-[10px] font-semibold text-primary">
+                  Google
+                </span>
               )}
+            </div>
+          </Card>
 
-              <Button
-                type="submit"
-                size="lg"
-                disabled={submitting || !currentPassword || !newPassword || !confirmPassword}
-                className="h-11 w-full rounded-xl text-sm font-semibold mt-2"
-              >
-                {submitting ? (
-                  <span className="size-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
-                ) : (
-                  "Actualizar contraseña"
+          {/* Email Verification Section */}
+          <section className="flex min-w-0 flex-col gap-3">
+            <div className="flex items-center justify-between min-w-0">
+              <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                Verificación de Correo
+              </Label>
+              {!user.emailVerified && (
+                <button
+                  type="button"
+                  disabled={reloading || sendingVerification}
+                  onClick={handleReloadUser}
+                  className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary hover:underline cursor-pointer disabled:opacity-50"
+                >
+                  <RefreshCw className={`size-3 ${reloading ? "animate-spin" : ""}`} />
+                  Comprobar estado
+                </button>
+              )}
+            </div>
+
+            {user.emailVerified ? (
+              <div className="flex items-center gap-2.5 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-3 text-xs text-emerald-600 dark:text-emerald-400 font-semibold min-w-0">
+                <CheckCircle2 className="size-4 shrink-0" />
+                <span>Tu correo electrónico está verificado correctamente.</span>
+              </div>
+            ) : (
+              <div className="flex min-w-0 flex-col gap-2 rounded-2xl border border-amber-500/20 bg-amber-500/10 p-3.5 text-amber-700 dark:text-amber-300">
+                <div className="flex items-start gap-2.5 min-w-0">
+                  <ShieldAlert className="size-4 shrink-0 mt-0.5" />
+                  <div className="text-xs min-w-0">
+                    <p className="font-bold">Verificación pendiente</p>
+                    <p className="mt-0.5 text-muted-foreground font-medium">
+                      Todavía no has verificado tu correo electrónico. Te recomendamos verificarlo para proteger tu acceso.
+                    </p>
+                  </div>
+                </div>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={sendingVerification || verificationCooldown > 0}
+                  onClick={handleSendVerification}
+                  className="w-full text-xs font-semibold py-2 h-9 rounded-xl border-amber-500/30 hover:bg-amber-500/10 text-amber-700 dark:text-amber-300 cursor-pointer mt-1"
+                >
+                  {sendingVerification ? (
+                    <span className="size-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  ) : verificationCooldown > 0 ? (
+                    `Reenviar en ${verificationCooldown}s`
+                  ) : (
+                    "Enviar correo de verificación"
+                  )}
+                </Button>
+              </div>
+            )}
+          </section>
+
+          {/* Change Password Section */}
+          <section className="flex min-w-0 flex-col gap-3 border-t border-border/50 pt-4">
+            <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+              Cambiar Contraseña
+            </Label>
+
+            {isGoogleUser ? (
+              <p className="text-xs text-muted-foreground bg-muted/40 p-3 rounded-2xl border border-border/40">
+                Iniciaste sesión con Google. La contraseña se gestiona directamente desde tu cuenta de Google.
+              </p>
+            ) : (
+              <form onSubmit={handleChangePassword} className="flex min-w-0 flex-col gap-3.5">
+                {error && (
+                  <div className="rounded-xl border border-destructive/20 bg-destructive/10 p-3 text-xs text-destructive font-semibold">
+                    {error}
+                  </div>
                 )}
-              </Button>
-            </form>
-          )}
-        </section>
-      </div>
-    </BottomSheet>
-  )
-}
 
-function GoogleIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="size-4" aria-hidden="true">
-      <path
-        fill="#EA4335"
-        d="M12 10.2v3.9h5.5c-.24 1.4-1.7 4.1-5.5 4.1-3.3 0-6-2.7-6-6.2s2.7-6.2 6-6.2c1.9 0 3.1.8 3.9 1.5l2.6-2.5C17.1 3.2 14.8 2 12 2 6.9 2 2.8 6.1 2.8 11.2S6.9 20.4 12 20.4c5.3 0 8.8-3.7 8.8-9 0-.6-.06-1-.15-1.5H12z"
-      />
-    </svg>
+                {/* Contraseña Actual */}
+                <div className="min-w-0 space-y-1.5">
+                  <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Contraseña Actual</Label>
+                  <div className="relative flex items-center">
+                    <Input
+                      type={showCurrent ? "text" : "password"}
+                      required
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="h-10 text-sm pr-10 rounded-xl border-border bg-card/60"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowCurrent(!showCurrent)}
+                      className="absolute right-3 text-muted-foreground hover:text-foreground cursor-pointer"
+                    >
+                      {showCurrent ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Nueva Contraseña */}
+                <div className="min-w-0 space-y-1.5">
+                  <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Nueva Contraseña</Label>
+                  <div className="relative flex items-center">
+                    <Input
+                      type={showNew ? "text" : "password"}
+                      required
+                      minLength={6}
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="h-10 text-sm pr-10 rounded-xl border-border bg-card/60"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowNew(!showNew)}
+                      className="absolute right-3 text-muted-foreground hover:text-foreground cursor-pointer"
+                    >
+                      {showNew ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Confirmar Nueva Contraseña */}
+                <div className="min-w-0 space-y-1.5">
+                  <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Confirmar Nueva Contraseña</Label>
+                  <div className="relative flex items-center">
+                    <Input
+                      type={showConfirm ? "text" : "password"}
+                      required
+                      minLength={6}
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="h-10 text-sm pr-10 rounded-xl border-border bg-card/60"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirm(!showConfirm)}
+                      className="absolute right-3 text-muted-foreground hover:text-foreground cursor-pointer"
+                    >
+                      {showConfirm ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                <Button
+                  type="submit"
+                  size="lg"
+                  disabled={submitting || !currentPassword || !newPassword || !confirmPassword}
+                  className="h-11 w-full text-sm font-semibold rounded-xl bg-primary text-primary-foreground shadow-lg shadow-primary/20 cursor-pointer mt-1"
+                >
+                  {submitting ? (
+                    <span className="size-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
+                  ) : (
+                    "Actualizar contraseña"
+                  )}
+                </Button>
+              </form>
+            )}
+          </section>
+        </div>
+      </DialogContent>
+    </Dialog>
   )
 }

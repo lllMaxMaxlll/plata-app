@@ -4,13 +4,19 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog"
 import type { Account, Currency } from "@/lib/finance-data"
-import { BottomSheet } from "./bottom-sheet"
 import { useFinance } from "./finance-provider"
 import { AccountIcon } from "./account-icon"
 import { toast } from "sonner"
+import { Trash2, Wallet } from "lucide-react"
 
 const KINDS: { value: Account["kind"]; label: string }[] = [
   { value: "bank", label: "Banco" },
@@ -20,7 +26,16 @@ const KINDS: { value: Account["kind"]; label: string }[] = [
   { value: "savings", label: "Ahorro" },
 ]
 
-const PRESETS = ["Banco Galicia", "Banco Nación", "Mercado Pago", "Ualá", "Brubank", "Efectivo", "Binance", "Colchón"]
+const PRESETS = [
+  "Banco Galicia",
+  "Banco Nación",
+  "Mercado Pago",
+  "Ualá",
+  "Brubank",
+  "Efectivo",
+  "Binance",
+  "Colchón",
+]
 
 export function AddAccountSheet({
   open,
@@ -56,7 +71,10 @@ export function AddAccountSheet({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!name.trim()) return
+    if (!name.trim()) {
+      toast.error("Ingresá un nombre para la cuenta.")
+      return
+    }
 
     setSubmitting(true)
     try {
@@ -93,7 +111,9 @@ export function AddAccountSheet({
 
   async function handleDelete() {
     if (!account) return
-    const confirmed = window.confirm(`¿Estás seguro de que querés eliminar la cuenta "${account.name}"?\n(Las transacciones registradas no se borrarán)`)
+    const confirmed = window.confirm(
+      `¿Estás seguro de que querés eliminar la cuenta "${account.name}"?\n(Las transacciones registradas no se borrarán)`
+    )
     if (!confirmed) return
 
     setSubmitting(true)
@@ -110,107 +130,172 @@ export function AddAccountSheet({
   }
 
   return (
-    <BottomSheet
-      open={open}
-      onClose={onClose}
-      title={account ? "Editar cuenta" : "Nueva cuenta"}
-      description={account ? "Modificá o eliminá esta cuenta." : "Agregá un banco, billetera o ahorro."}
-    >
-      <form onSubmit={handleSubmit} className="mt-3 flex flex-col gap-4">
-        <div className="space-y-1.5">
-          <Label className="text-xs font-semibold text-muted-foreground">Nombre</Label>
-          <Input
-            value={name}
-            disabled={submitting}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Ej. Banco Galicia"
-            className="h-10 text-sm"
-          />
-          {!account && (
-            <div className="no-scrollbar mt-2 flex gap-2 overflow-x-auto">
-              {PRESETS.map((p) => (
-                <Badge
-                  key={p}
-                  variant="outline"
-                  className="cursor-pointer shrink-0 text-xs hover:bg-accent"
-                  onClick={() => !submitting && setName(p)}
-                >
-                  {p}
-                </Badge>
-              ))}
+    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+      <DialogContent className="w-full sm:max-w-xl max-w-[calc(100vw-2rem)] h-auto max-h-[90vh] rounded-3xl bg-card border border-border p-6 shadow-2xl overflow-y-auto overflow-x-hidden transition-all duration-200">
+        <DialogHeader className="text-left pb-1">
+          <div className="flex items-center gap-2.5">
+            <span className="flex size-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <Wallet className="size-5" />
+            </span>
+            <div>
+              <DialogTitle className="text-lg font-semibold tracking-tight text-foreground">
+                {account ? "Editar Cuenta" : "Nueva Cuenta"}
+              </DialogTitle>
+              <DialogDescription className="text-xs text-muted-foreground">
+                {account
+                  ? "Modificá la información de tu cuenta o elimínala."
+                  : "Agregá un banco, billetera digital, efectivo o ahorro."}
+              </DialogDescription>
             </div>
-          )}
-        </div>
-
-        <div className="space-y-1.5">
-          <Label className="text-xs font-semibold text-muted-foreground">Moneda</Label>
-          <Tabs value={currency} onValueChange={(val) => setCurrency(val as Currency)} className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="ARS" disabled={submitting}>Pesos (ARS)</TabsTrigger>
-              <TabsTrigger value="USD" disabled={submitting}>Dólares (USD)</TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </div>
-
-        <div className="space-y-1.5">
-          <Label className="text-xs font-semibold text-muted-foreground">Tipo</Label>
-          <div className="grid grid-cols-5 gap-2">
-            {KINDS.map((k) => (
-              <Button
-                key={k.value}
-                type="button"
-                variant={kind === k.value ? "default" : "outline"}
-                disabled={submitting}
-                onClick={() => setKind(k.value)}
-                className="flex h-14 flex-col items-center justify-center gap-1 p-1 text-[11px]"
-              >
-                <AccountIcon kind={k.value} className="size-4" />
-                <span>{k.label}</span>
-              </Button>
-            ))}
           </div>
-        </div>
+        </DialogHeader>
 
-        <div className="space-y-1.5">
-          <Label className="text-xs font-semibold text-muted-foreground">Saldo inicial</Label>
-          <Input
-            inputMode="decimal"
-            value={balance}
-            disabled={submitting}
-            onChange={(e) => setBalance(e.target.value.replace(/[^0-9.-]/g, ""))}
-            placeholder="0"
-            className="h-10 text-sm tabular-nums"
-          />
-        </div>
-
-        <div className="mt-2 flex flex-col gap-2">
-          <Button type="submit" size="lg" disabled={submitting} className="h-11 w-full font-semibold">
-            {submitting ? (
-              <span className="size-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
-            ) : account ? (
-              "Guardar cambios"
-            ) : (
-              "Crear cuenta"
-            )}
-          </Button>
-
-          {account && (
-            <Button
-              type="button"
-              variant="destructive"
+        <form onSubmit={handleSubmit} className="mt-3 flex min-w-0 flex-col gap-4">
+          {/* Nombre de la Cuenta */}
+          <div className="min-w-0 space-y-1.5">
+            <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              Nombre de la Cuenta
+            </Label>
+            <Input
+              value={name}
               disabled={submitting}
-              onClick={handleDelete}
-              className="h-11 w-full"
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Ej. Banco Galicia, Mercado Pago, Efectivo"
+              required
+              className="h-10 text-sm rounded-xl border-border bg-card/60"
+            />
+
+            {/* Presets rápidos */}
+            {!account && (
+              <div className="no-scrollbar mt-2 flex gap-1.5 overflow-x-auto py-1">
+                {PRESETS.map((p) => (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => !submitting && setName(p)}
+                    className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium transition-colors cursor-pointer border ${name === p
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-muted/40 text-muted-foreground hover:bg-muted border-border/50"
+                      }`}
+                  >
+                    {p}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Selector de Moneda */}
+          <div className="min-w-0 space-y-1.5">
+            <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              Moneda
+            </Label>
+            <Tabs
+              value={currency}
+              onValueChange={(val) => setCurrency(val as Currency)}
+              className="w-full min-w-0"
+            >
+              <TabsList className="grid w-full grid-cols-2 rounded-xl bg-muted/40 border border-border/50">
+                <TabsTrigger
+                  value="ARS"
+                  disabled={submitting}
+                  className="rounded-lg text-xs font-semibold cursor-pointer"
+                >
+                  Pesos (ARS $)
+                </TabsTrigger>
+                <TabsTrigger
+                  value="USD"
+                  disabled={submitting}
+                  className="rounded-lg text-xs font-semibold cursor-pointer"
+                >
+                  Dólares (USD US$)
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+
+          {/* Tipo de Cuenta */}
+          <div className="min-w-0 space-y-1.5">
+            <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              Tipo de Cuenta
+            </Label>
+            <div className="grid w-full grid-cols-3 sm:grid-cols-5 gap-2">
+              {KINDS.map((k) => {
+                const active = kind === k.value
+                return (
+                  <button
+                    key={k.value}
+                    type="button"
+                    disabled={submitting}
+                    onClick={() => setKind(k.value)}
+                    className={`flex min-w-0 flex-col items-center justify-center gap-1.5 rounded-2xl p-2.5 transition-all cursor-pointer border ${active
+                      ? "bg-primary/15 border-primary text-primary font-bold shadow-sm"
+                      : "bg-card/40 border-border/60 text-muted-foreground hover:bg-card/80 hover:text-foreground"
+                      }`}
+                  >
+                    <AccountIcon kind={k.value} className="size-5 shrink-0" />
+                    <span className="text-xs leading-none truncate w-full text-center">
+                      {k.label}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Saldo Inicial */}
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              Saldo Actual / Inicial
+            </Label>
+            <div className="relative flex items-center">
+              <span className="absolute left-3 text-sm font-bold text-muted-foreground">
+                {currency === "ARS" ? "$" : "US$"}
+              </span>
+              <Input
+                inputMode="decimal"
+                value={balance}
+                disabled={submitting}
+                onChange={(e) => setBalance(e.target.value.replace(/[^0-9.-]/g, ""))}
+                placeholder="0.00"
+                className="pl-10 h-11 text-sm font-extrabold tabular-nums rounded-xl border-border bg-card/60"
+              />
+            </div>
+          </div>
+
+          {/* Botones de acción */}
+          <div className="mt-3 flex items-center gap-3">
+            {account && (
+              <Button
+                type="button"
+                variant="destructive"
+                size="icon"
+                disabled={submitting}
+                onClick={handleDelete}
+                className="rounded-xl shrink-0 h-11 w-11 cursor-pointer"
+                title="Eliminar cuenta"
+              >
+                <Trash2 className="size-4" />
+              </Button>
+            )}
+
+            <Button
+              type="submit"
+              size="lg"
+              disabled={submitting}
+              className="flex-1 rounded-xl h-11 font-semibold bg-primary text-primary-foreground shadow-lg shadow-primary/20 cursor-pointer"
             >
               {submitting ? (
                 <span className="size-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
+              ) : account ? (
+                "Guardar Cambios"
               ) : (
-                "Eliminar cuenta"
+                "Crear Cuenta"
               )}
             </Button>
-          )}
-        </div>
-      </form>
-    </BottomSheet>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
   )
 }

@@ -37,6 +37,8 @@ import { AccountIcon } from "./account-icon"
 import { StockTradeModal } from "./stock-trade-modal"
 import { AdvisorView } from "./advisor-view"
 import { VehiclesView } from "./vehicles-view"
+import { AnalyticsView } from "./analytics-view"
+import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
@@ -55,7 +57,7 @@ import {
   type StockHolding
 } from "@/lib/finance-data"
 
-type View = "home" | "accounts" | "vehicles" | "stocks" | "activity" | "profile" | "advisor" | "analytics"
+type View = "home" | "accounts" | "vehicles" | "stocks" | "activity" | "profile" | "advisor" | "analytics" | "more"
 
 interface DesktopViewProps {
   view: View

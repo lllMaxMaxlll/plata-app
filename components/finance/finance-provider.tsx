@@ -14,6 +14,9 @@ import {
   type VehicleLog,
   type VehicleType,
   type VehicleLogType,
+  type DueItem,
+  type DueFrequency,
+  type DueItemStatus,
 } from "@/lib/finance-data"
 import { auth, db } from "@/lib/firebase"
 import {
@@ -116,6 +119,17 @@ interface FinanceContextValue {
   addVehicleLog: (input: Omit<VehicleLog, "id" | "transactionId">) => Promise<void>
   updateVehicleLog: (id: string, input: Omit<VehicleLog, "id">) => Promise<void>
   deleteVehicleLog: (id: string) => Promise<void>
+
+  dueItems: DueItem[]
+  addDueItem: (input: Omit<DueItem, "id" | "createdAt">) => Promise<void>
+  updateDueItem: (id: string, input: Partial<Omit<DueItem, "id">>) => Promise<void>
+  deleteDueItem: (id: string) => Promise<void>
+  markDueItemAsPaid: (
+    id: string,
+    registerTx?: { accountId: string; amount?: number; category?: string; note?: string }
+  ) => Promise<void>
+  markDueItemAsPending: (id: string) => Promise<void>
+  saveFCMToken: (token: string) => Promise<void>
 }
 
 const FinanceContext = createContext<FinanceContextValue | null>(null)
@@ -133,6 +147,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
 
   const [vehicles, setVehicles] = useState<Vehicle[]>([])
   const [vehicleLogs, setVehicleLogs] = useState<VehicleLog[]>([])
+  const [dueItems, setDueItems] = useState<DueItem[]>([])
 
   // 1. Listen to Auth State Changes
   useEffect(() => {
@@ -155,6 +170,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         setStockPrices({})
         setVehicles([])
         setVehicleLogs([])
+        setDueItems([])
       }
       setLoading(false)
     })
@@ -286,6 +302,17 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       setVehicleLogs(vlList)
     })
 
+    // Sync dueItems subcollection (ordered by dueDate ascending)
+    const dueItemsRef = collection(db, "users", user.uid, "dueItems")
+    const dueItemsQuery = query(dueItemsRef, orderBy("dueDate", "asc"))
+    const unsubscribeDueItems = onSnapshot(dueItemsQuery, (snapshot) => {
+      const dList: DueItem[] = []
+      snapshot.forEach((doc) => {
+        dList.push({ id: doc.id, ...doc.data() } as DueItem)
+      })
+      setDueItems(dList)
+    })
+
     return () => {
       unsubscribeAccounts()
       unsubscribeTransactions()
@@ -294,6 +321,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       unsubscribeStockTxs()
       unsubscribeVehicles()
       unsubscribeVehicleLogs()
+      unsubscribeDueItems()
     }
   }, [user])
 
@@ -1309,6 +1337,127 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  // --- Due Dates & Recurring Services Management ---
+
+  function calcNextDueDate(currentDueDate: string, frequency: DueFrequency): string {
+    const parts = currentDueDate.split("-").map(Number)
+    if (parts.length !== 3 || parts.some(isNaN)) {
+      const d = new Date()
+      return d.toISOString().split("T")[0]
+    }
+    const [y, m, d] = parts
+    const date = new Date(Date.UTC(y, m - 1, d))
+
+    if (frequency === "monthly") {
+      date.setUTCMonth(date.getUTCMonth() + 1)
+    } else if (frequency === "yearly") {
+      date.setUTCFullYear(date.getUTCFullYear() + 1)
+    } else if (frequency === "biweekly") {
+      date.setUTCDate(date.getUTCDate() + 14)
+    }
+    return date.toISOString().split("T")[0]
+  }
+
+  async function addDueItem(input: Omit<DueItem, "id" | "createdAt">) {
+    if (!user) throw new Error("Usuario no autenticado.")
+    const newRef = doc(collection(db, "users", user.uid, "dueItems"))
+    await setDoc(newRef, {
+      id: newRef.id,
+      ...input,
+      status: input.status || "pending",
+      createdAt: new Date().toISOString(),
+    })
+  }
+
+  async function updateDueItem(id: string, input: Partial<Omit<DueItem, "id">>) {
+    if (!user) throw new Error("Usuario no autenticado.")
+    const docRef = doc(db, "users", user.uid, "dueItems", id)
+    await setDoc(docRef, { ...input, updatedAt: new Date().toISOString() }, { merge: true })
+  }
+
+  async function deleteDueItem(id: string) {
+    if (!user) throw new Error("Usuario no autenticado.")
+    const docRef = doc(db, "users", user.uid, "dueItems", id)
+    const { deleteDoc } = await import("firebase/firestore")
+    await deleteDoc(docRef)
+  }
+
+  async function markDueItemAsPaid(
+    id: string,
+    registerTx?: { accountId: string; amount?: number; category?: string; note?: string }
+  ) {
+    if (!user) throw new Error("Usuario no autenticado.")
+    const item = dueItems.find((d) => d.id === id)
+    if (!item) throw new Error("El vencimiento no existe.")
+
+    const nowIso = new Date().toISOString()
+
+    // 1. If requested, register transaction expense
+    if (registerTx && registerTx.accountId) {
+      const amount = registerTx.amount ?? item.amount
+      const category = registerTx.category || item.category || "Servicios"
+      const note = registerTx.note || `Pago de vencimiento: ${item.title}`
+      await addTransaction({
+        type: "expense",
+        accountId: registerTx.accountId,
+        amount,
+        category,
+        note,
+        date: nowIso,
+      })
+    }
+
+    // 2. If autoRenew is true and frequency is not one_time, advance date to next period
+    const docRef = doc(db, "users", user.uid, "dueItems", id)
+    if (item.autoRenew && item.frequency !== "one_time") {
+      const nextDate = calcNextDueDate(item.dueDate, item.frequency)
+      await setDoc(
+        docRef,
+        {
+          dueDate: nextDate,
+          status: "pending",
+          paidAt: nowIso,
+          updatedAt: nowIso,
+        },
+        { merge: true }
+      )
+    } else {
+      await setDoc(
+        docRef,
+        {
+          status: "paid",
+          paidAt: nowIso,
+          updatedAt: nowIso,
+        },
+        { merge: true }
+      )
+    }
+  }
+
+  async function markDueItemAsPending(id: string) {
+    if (!user) throw new Error("Usuario no autenticado.")
+    const docRef = doc(db, "users", user.uid, "dueItems", id)
+    await setDoc(
+      docRef,
+      {
+        status: "pending",
+        paidAt: null,
+        updatedAt: new Date().toISOString(),
+      },
+      { merge: true }
+    )
+  }
+
+  async function saveFCMToken(token: string) {
+    if (!user || !token) return
+    const tokenRef = doc(db, "users", user.uid, "fcmTokens", token)
+    await setDoc(tokenRef, {
+      token,
+      updatedAt: new Date().toISOString(),
+      userAgent: typeof navigator !== "undefined" ? navigator.userAgent : "",
+    })
+  }
+
   const totalsByCurrency = useMemo(() => {
     return accounts.reduce(
       (acc, a) => {
@@ -1361,6 +1510,13 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     addVehicleLog,
     updateVehicleLog,
     deleteVehicleLog,
+    dueItems,
+    addDueItem,
+    updateDueItem,
+    deleteDueItem,
+    markDueItemAsPaid,
+    markDueItemAsPending,
+    saveFCMToken,
   }
 
   return <FinanceContext.Provider value={value}>{children}</FinanceContext.Provider>
@@ -1371,3 +1527,4 @@ export function useFinance() {
   if (!ctx) throw new Error("useFinance must be used within FinanceProvider")
   return ctx
 }
+

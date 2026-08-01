@@ -176,4 +176,37 @@ export interface VehicleLog {
   itemName?: string
 }
 
+// ---------------------------------------------------------------------------
+// Due Dates and Recurring Services Data Types
+// ---------------------------------------------------------------------------
 
+export type DueFrequency = "monthly" | "yearly" | "biweekly" | "one_time"
+export type DueItemStatus = "pending" | "paid"
+
+export interface DueItem {
+  id: string
+  title: string
+  category: string
+  amount: number
+  currency: Currency
+  dueDate: string // YYYY-MM-DD
+  frequency: DueFrequency
+  reminderDaysBefore: number // 1, 2, 3, 5, 7, 10 days before
+  status: DueItemStatus
+  autoRenew: boolean
+  accountId?: string // Default account for payment
+  paidAt?: string | null
+  createdAt: string
+  updatedAt?: string
+}
+
+export const DUE_CATEGORIES = [
+  "Servicios",
+  "Alquiler",
+  "Tarjeta de Crédito",
+  "Impuestos",
+  "Subscripciones",
+  "Seguros",
+  "Educación",
+  "Otros",
+]

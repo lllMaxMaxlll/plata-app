@@ -5,8 +5,14 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog"
 import type { Vehicle, VehicleLog, VehicleLogType } from "@/lib/finance-data"
-import { BottomSheet } from "./bottom-sheet"
 import { useFinance } from "./finance-provider"
 import { toast } from "sonner"
 import { Fuel, Wrench, Settings, ShieldAlert, Sparkles, ShoppingBag } from "lucide-react"
@@ -39,23 +45,22 @@ export function AddVehicleLogSheet({
   const [date, setDate] = useState("")
   const [odometer, setOdometer] = useState("")
   const [amount, setAmount] = useState("")
-  const [note, setNote] = useState("")
-  const [accountId, setAccountId] = useState("")
+  const [accountId, setAccountId] = useState<string>("")
 
-  // Fuel specific
+  // Combustible
   const [liters, setLiters] = useState("")
   const [gasStation, setGasStation] = useState("YPF")
   const [customGasStation, setCustomGasStation] = useState("")
   const [isFullTank, setIsFullTank] = useState(true)
 
-  // Service specific
+  // Service
   const [serviceType, setServiceType] = useState("")
   const [provider, setProvider] = useState("")
   const [nextServiceOdometer, setNextServiceOdometer] = useState("")
   const [nextServiceDate, setNextServiceDate] = useState("")
 
-  // Part / Gear
-  const [itemName, setItemName] = useState("")
+  // Repuestos / Indumentaria / Otro / Seguro
+  const [logDetails, setLogDetails] = useState("")
 
   const [submitting, setSubmitting] = useState(false)
 
@@ -63,75 +68,68 @@ export function AddVehicleLogSheet({
     if (open) {
       if (log) {
         setType(log.type)
-        setDate(log.date ? log.date.split("T")[0] : new Date().toISOString().split("T")[0])
+        setDate(log.date ? new Date(log.date).toISOString().split("T")[0] : new Date().toISOString().split("T")[0])
         setOdometer(String(log.odometer))
         setAmount(String(log.amount))
-        setNote(log.note || "")
         setAccountId(log.accountId || "")
 
-        // Fuel
-        setLiters(log.liters ? String(log.liters) : "")
-        if (log.gasStation && GAS_STATIONS.includes(log.gasStation)) {
-          setGasStation(log.gasStation)
-          setCustomGasStation("")
-        } else if (log.gasStation) {
-          setGasStation("Otro")
-          setCustomGasStation(log.gasStation)
+        if (log.type === "fuel") {
+          setLiters(log.liters ? String(log.liters) : "")
+          if (log.gasStation && GAS_STATIONS.includes(log.gasStation)) {
+            setGasStation(log.gasStation)
+            setCustomGasStation("")
+          } else if (log.gasStation) {
+            setGasStation("Otro")
+            setCustomGasStation(log.gasStation)
+          } else {
+            setGasStation("YPF")
+            setCustomGasStation("")
+          }
+          setIsFullTank(log.isFullTank ?? true)
+        } else if (log.type === "service") {
+          setServiceType(log.serviceType || "")
+          setProvider(log.provider || "")
+          setNextServiceOdometer(log.nextServiceOdometer ? String(log.nextServiceOdometer) : "")
+          setNextServiceDate(
+            log.nextServiceDate ? new Date(log.nextServiceDate).toISOString().split("T")[0] : ""
+          )
         } else {
-          setGasStation("YPF")
-          setCustomGasStation("")
+          setLogDetails(log.itemName || log.note || "")
         }
-        setIsFullTank(log.isFullTank ?? true)
-
-        // Service
-        setServiceType(log.serviceType || "")
-        setProvider(log.provider || "")
-        setNextServiceOdometer(log.nextServiceOdometer ? String(log.nextServiceOdometer) : "")
-        setNextServiceDate(log.nextServiceDate ? log.nextServiceDate.split("T")[0] : "")
-
-        // Item
-        setItemName(log.itemName || log.note || "")
       } else {
         setType("fuel")
         setDate(new Date().toISOString().split("T")[0])
-        setOdometer(String(vehicle.odometer))
+        setOdometer(vehicle ? String(vehicle.odometer) : "0")
         setAmount("")
-        setNote("")
         setAccountId("")
-
-        // Fuel
         setLiters("")
         setGasStation("YPF")
         setCustomGasStation("")
         setIsFullTank(true)
-
-        // Service
         setServiceType("")
         setProvider("")
         setNextServiceOdometer("")
         setNextServiceDate("")
-
-        // Item
-        setItemName("")
+        setLogDetails("")
       }
     }
-  }, [log, open, vehicle])
+  }, [open, log, vehicle])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    const parsedAmount = Math.round((parseFloat(amount) || 0) * 100) / 100
-    const parsedOdometer = parseInt(odometer) || 0
 
-    if (parsedOdometer < 0) {
-      toast.error("El kilometraje no puede ser menor a 0.")
+    const parsedOdometer = parseInt(odometer)
+    if (isNaN(parsedOdometer) || parsedOdometer < 0) {
+      toast.error("Ingresá un kilometraje válido.")
       return
     }
 
+    const parsedAmount = parseFloat(amount) || 0
+
+    const selectedGasStation = gasStation === "Otro" ? customGasStation.trim() : gasStation
+
     setSubmitting(true)
     try {
-      const selectedGasStation = gasStation === "Otro" ? customGasStation.trim() : gasStation
-      const logDetails = itemName.trim()
-
       const data: any = {
         vehicleId: vehicle.id,
         type,
@@ -199,276 +197,284 @@ export function AddVehicleLogSheet({
   }
 
   return (
-    <BottomSheet
-      open={open}
-      onClose={onClose}
-      title={log ? "Editar Registro" : "Nuevo Registro"}
-      description={log ? "Modificá los detalles del registro" : `Registrar evento para ${vehicle.name}`}
-    >
-      <form onSubmit={handleSubmit} className="mt-4 flex flex-col gap-4">
-        {/* Selector de Tipo de Gasto */}
-        <div className="space-y-1.5">
-          <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-            Categoría del Registro
-          </Label>
-          <div className="grid grid-cols-3 gap-2">
-            {LOG_TYPES.map((t) => {
-              const active = type === t.value
-              return (
-                <Button
-                  key={t.value}
-                  type="button"
-                  variant={active ? "default" : "outline"}
-                  onClick={() => setType(t.value)}
-                  className="flex h-11 items-center gap-1.5 px-2 text-xs"
-                >
-                  <t.Icon className="size-4 shrink-0" />
-                  <span>{t.label}</span>
-                </Button>
-              )
-            })}
+    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+      <DialogContent className="max-w-lg w-full rounded-3xl bg-card border border-border p-6 shadow-2xl overflow-y-auto max-h-[90vh]">
+        <DialogHeader className="text-left pb-1">
+          <DialogTitle className="text-lg font-semibold tracking-tight text-foreground">
+            {log ? "Editar Registro" : "Nuevo Registro"}
+          </DialogTitle>
+          <DialogDescription className="text-xs text-muted-foreground">
+            {log ? "Modificá los detalles del registro" : `Registrar evento para ${vehicle.name}`}
+          </DialogDescription>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit} className="mt-2 flex flex-col gap-4">
+          {/* Selector de Tipo de Gasto */}
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+              Categoría del Registro
+            </Label>
+            <div className="grid grid-cols-3 gap-2">
+              {LOG_TYPES.map((t) => {
+                const active = type === t.value
+                return (
+                  <Button
+                    key={t.value}
+                    type="button"
+                    variant={active ? "default" : "outline"}
+                    onClick={() => setType(t.value)}
+                    className="flex h-12 flex-col items-center justify-center gap-1 p-1 rounded-xl cursor-pointer"
+                  >
+                    <t.Icon className="size-4" />
+                    <span className="text-[10px]">{t.label}</span>
+                  </Button>
+                )
+              })}
+            </div>
           </div>
-        </div>
 
-        {/* COMBUSTIBLE */}
-        {type === "fuel" && (
-          <div className="flex flex-col gap-4 border-l-2 border-orange-500/35 pl-3 py-1">
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="fuel-liters" className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                  Litros Cargados
-                </Label>
-                <Input
-                  id="fuel-liters"
-                  type="number"
-                  step="any"
-                  value={liters}
-                  onChange={(e) => setLiters(e.target.value)}
-                  placeholder="Ej. 10.5"
-                  className="h-10 text-sm"
-                />
-              </div>
-
-              <div className="flex items-center justify-between mt-6 bg-muted/20 border border-input rounded-lg px-3 h-10">
-                <span className="text-xs font-semibold text-foreground">¿Tanque Lleno?</span>
-                <Switch checked={isFullTank} onCheckedChange={setIsFullTank} />
-              </div>
+          <div className="grid grid-cols-2 gap-3">
+            {/* Fecha */}
+            <div className="space-y-1.5">
+              <Label htmlFor="log-date" className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                Fecha
+              </Label>
+              <Input
+                id="log-date"
+                type="date"
+                required
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className="h-10 text-sm rounded-xl border-border bg-card/60"
+              />
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                  Estación de Carga
-                </Label>
-                <select
-                  value={gasStation}
-                  onChange={(e) => setGasStation(e.target.value)}
-                  className="w-full h-10 rounded-lg border border-input bg-transparent px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  {GAS_STATIONS.map((st) => (
-                    <option key={st} value={st}>
-                      {st}
-                    </option>
-                  ))}
-                </select>
+            {/* Odometer */}
+            <div className="space-y-1.5">
+              <Label htmlFor="log-odo" className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                Kilometraje Actual (Km)
+              </Label>
+              <Input
+                id="log-odo"
+                type="number"
+                required
+                value={odometer}
+                onChange={(e) => setOdometer(e.target.value)}
+                className="h-10 text-sm rounded-xl border-border bg-card/60"
+              />
+            </div>
+          </div>
+
+          {/* Formulario según Tipo de Gasto */}
+          {type === "fuel" && (
+            <div className="space-y-3.5 rounded-2xl border border-border/40 bg-card/40 p-3.5">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="fuel-liters" className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                    Litros cargados
+                  </Label>
+                  <Input
+                    id="fuel-liters"
+                    type="number"
+                    step="any"
+                    value={liters}
+                    onChange={(e) => setLiters(e.target.value)}
+                    placeholder="Ej. 10.5"
+                    className="h-10 text-sm rounded-xl border-border bg-card/60"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                    Estación de Servicio
+                  </Label>
+                  <select
+                    value={gasStation}
+                    onChange={(e) => setGasStation(e.target.value)}
+                    className="w-full h-10 rounded-xl border border-border bg-card/60 px-3 text-sm"
+                  >
+                    {GAS_STATIONS.map((st) => (
+                      <option key={st} value={st}>
+                        {st}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               {gasStation === "Otro" && (
                 <div className="space-y-1.5">
                   <Label htmlFor="fuel-custom-station" className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                    ¿Cuál?
+                    Nombre de la estación
                   </Label>
                   <Input
                     id="fuel-custom-station"
                     type="text"
                     value={customGasStation}
                     onChange={(e) => setCustomGasStation(e.target.value)}
-                    placeholder="Ej. Sol"
-                    className="h-10 text-sm"
+                    placeholder="Ej. Gulf, Dapsa"
+                    className="h-10 text-sm rounded-xl border-border bg-card/60"
                   />
                 </div>
               )}
-            </div>
-          </div>
-        )}
 
-        {/* SERVICE */}
-        {type === "service" && (
-          <div className="flex flex-col gap-4 border-l-2 border-blue-500/35 pl-3 py-1">
-            <div className="space-y-1.5">
-              <Label htmlFor="svc-type" className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                Tipo de Service
-              </Label>
-              <Input
-                id="svc-type"
-                type="text"
-                value={serviceType}
-                onChange={(e) => setServiceType(e.target.value)}
-                placeholder="Ej. Cambio de Aceite y Filtro, Transmisión"
-                className="h-10 text-sm"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="svc-prov" className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                Taller / Proveedor
-              </Label>
-              <Input
-                id="svc-prov"
-                type="text"
-                value={provider}
-                onChange={(e) => setProvider(e.target.value)}
-                placeholder="Ej. Taller Honda Oficial, Mecánico del barrio"
-                className="h-10 text-sm"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="svc-next-odo" className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                  Próx. Service (Km)
-                </Label>
-                <Input
-                  id="svc-next-odo"
-                  type="number"
-                  value={nextServiceOdometer}
-                  onChange={(e) => setNextServiceOdometer(e.target.value)}
-                  placeholder="Ej. 7000"
-                  className="h-10 text-sm"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="svc-next-date" className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                  Próx. Service (Fecha)
-                </Label>
-                <Input
-                  id="svc-next-date"
-                  type="date"
-                  value={nextServiceDate}
-                  onChange={(e) => setNextServiceDate(e.target.value)}
-                  className="h-10 text-sm"
-                />
+              <div className="flex items-center justify-between pt-1">
+                <span className="text-xs font-medium text-foreground">¿Tanque lleno?</span>
+                <Switch checked={isFullTank} onCheckedChange={setIsFullTank} />
               </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* REPUESTOS / INDUMENTARIA / SEGURO / OTROS */}
-        {(type === "part" || type === "gear" || type === "insurance" || type === "other") && (
-          <div className="flex flex-col gap-4 border-l-2 border-purple-500/35 pl-3 py-1">
+          {type === "service" && (
+            <div className="space-y-3.5 rounded-2xl border border-border/40 bg-card/40 p-3.5">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="service-type" className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                    Tipo de Service
+                  </Label>
+                  <Input
+                    id="service-type"
+                    type="text"
+                    value={serviceType}
+                    onChange={(e) => setServiceType(e.target.value)}
+                    placeholder="Ej. Cambio de Aceite y Filtro"
+                    className="h-10 text-sm rounded-xl border-border bg-card/60"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="service-provider" className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                    Taller / Mecánico
+                  </Label>
+                  <Input
+                    id="service-provider"
+                    type="text"
+                    value={provider}
+                    onChange={(e) => setProvider(e.target.value)}
+                    placeholder="Ej. Taller Oficial"
+                    className="h-10 text-sm rounded-xl border-border bg-card/60"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="next-service-odo" className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                    Próximo Service (Km)
+                  </Label>
+                  <Input
+                    id="next-service-odo"
+                    type="number"
+                    value={nextServiceOdometer}
+                    onChange={(e) => setNextServiceOdometer(e.target.value)}
+                    placeholder="Ej. 6000"
+                    className="h-10 text-sm rounded-xl border-border bg-card/60"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="next-service-date" className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                    Próximo Service (Fecha)
+                  </Label>
+                  <Input
+                    id="next-service-date"
+                    type="date"
+                    value={nextServiceDate}
+                    onChange={(e) => setNextServiceDate(e.target.value)}
+                    className="h-10 text-sm rounded-xl border-border bg-card/60"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {(type === "part" || type === "gear" || type === "insurance" || type === "other") && (
             <div className="space-y-1.5">
-              <Label htmlFor="item-name" className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                Artículo / Detalle
+              <Label htmlFor="log-details" className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                Detalle / Descripción
               </Label>
               <Input
-                id="item-name"
+                id="log-details"
                 type="text"
-                value={itemName}
-                onChange={(e) => setItemName(e.target.value)}
+                value={logDetails}
+                onChange={(e) => setLogDetails(e.target.value)}
                 placeholder={
-                  type === "part" ? "Ej. Cubierta delantera, Bujía NGK" :
-                  type === "gear" ? "Ej. Casco LS2, Guantes de cuero" :
-                  type === "insurance" ? "Ej. Cuota Seguro ATM, Patente 03/26" :
-                  "Ej. Peajes, Multa, Estacionamiento"
+                  type === "part"
+                    ? "Ej. Pastillas de freno, Transmisión"
+                    : type === "gear"
+                    ? "Ej. Casco, Guantes, Campera"
+                    : type === "insurance"
+                    ? "Ej. Cuota Seguro / Patente ARBA"
+                    : "Detalle del gasto"
                 }
-                className="h-10 text-sm"
+                className="h-10 text-sm rounded-xl border-border bg-card/60"
               />
             </div>
-          </div>
-        )}
+          )}
 
-        {/* CAMPOS COMUNES */}
-        <div className="grid grid-cols-2 gap-3">
-          {/* Fecha */}
-          <div className="space-y-1.5">
-            <Label htmlFor="log-date" className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-              Fecha
-            </Label>
-            <Input
-              id="log-date"
-              type="date"
-              required
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="h-10 text-sm"
-            />
-          </div>
+          {/* Costo y cuenta */}
+          <div className="space-y-3 rounded-2xl border border-border/40 bg-card/40 p-3.5">
+            <div className="space-y-1.5">
+              <Label htmlFor="log-amount" className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                Costo Total ($)
+              </Label>
+              <Input
+                id="log-amount"
+                type="number"
+                step="any"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                placeholder="0.00"
+                className="h-10 text-sm font-semibold rounded-xl border-border bg-card/60"
+              />
+            </div>
 
-          {/* Kilometraje */}
-          <div className="space-y-1.5">
-            <Label htmlFor="log-odo" className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-              Kilometraje (Km)
-            </Label>
-            <Input
-              id="log-odo"
-              type="number"
-              required
-              value={odometer}
-              onChange={(e) => setOdometer(e.target.value)}
-              placeholder={`Km actual: ${vehicle.odometer}`}
-              className="h-10 text-sm"
-            />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          {/* Monto Gastado */}
-          <div className="space-y-1.5">
-            <Label htmlFor="log-cost" className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-              Costo total
-            </Label>
-            <Input
-              id="log-cost"
-              type="number"
-              required
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              placeholder="Ej. 12000"
-              className="h-10 text-sm"
-            />
+            {/* Sincronización con cuenta */}
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                Pagar desde cuenta
+              </Label>
+              <select
+                value={accountId}
+                onChange={(e) => setAccountId(e.target.value)}
+                className="w-full h-10 rounded-xl border border-border bg-card/60 px-3 text-sm"
+              >
+                <option value="">No descontar (Solo registrar)</option>
+                {accounts.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.name} ({a.currency})
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
-          {/* Sincronización con cuenta */}
-          <div className="space-y-1.5">
-            <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-              Pagar desde
-            </Label>
-            <select
-              value={accountId}
-              onChange={(e) => setAccountId(e.target.value)}
-              className="w-full h-10 rounded-lg border border-input bg-transparent px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <option value="">No descontar (Solo registrar)</option>
-              {accounts.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.name} ({a.currency})
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        {/* Botones de acción */}
-        <div className="mt-4 flex flex-col gap-2">
-          <Button type="submit" size="lg" className="w-full rounded-xl h-11 font-semibold" disabled={submitting}>
-            {log ? "Guardar cambios" : "Registrar evento"}
-          </Button>
-
-          {log && (
+          {/* Botones de acción */}
+          <div className="mt-2 flex flex-col gap-2">
             <Button
-              type="button"
-              variant="destructive"
+              type="submit"
               size="lg"
-              className="w-full rounded-xl h-11"
-              onClick={handleDelete}
+              className="w-full rounded-xl h-11 font-semibold bg-primary text-primary-foreground shadow-lg shadow-primary/20 cursor-pointer"
               disabled={submitting}
             >
-              Eliminar registro
+              {log ? "Guardar cambios" : "Registrar evento"}
             </Button>
-          )}
-        </div>
-      </form>
-    </BottomSheet>
+
+            {log && (
+              <Button
+                type="button"
+                variant="destructive"
+                size="lg"
+                className="w-full rounded-xl h-11 cursor-pointer"
+                onClick={handleDelete}
+                disabled={submitting}
+              >
+                Eliminar registro
+              </Button>
+            )}
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
   )
 }

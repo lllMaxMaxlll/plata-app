@@ -10,7 +10,8 @@ import {
   ChevronRight,
   AlertTriangle,
   TrendingUp,
-  TrendingDown
+  TrendingDown,
+  CalendarClock,
 } from "lucide-react"
 import { useFinance } from "./finance-provider"
 import { formatShort } from "@/lib/finance-data"
@@ -24,8 +25,13 @@ export function MoreView() {
     vehicleLogs,
     portfolioTotalValue,
     portfolioTotalProfitLossPercent,
-    transactions
+    transactions,
+    dueItems,
   } = useFinance()
+
+  const pendingDueCount = useMemo(() => {
+    return dueItems.filter((i) => i.status !== "paid").length
+  }, [dueItems])
 
   const alertCount = useMemo(() => {
     let count = 0
@@ -51,7 +57,7 @@ export function MoreView() {
     return count
   }, [vehicles, vehicleLogs])
 
-  const profitLossPercentVal = parseFloat(portfolioTotalProfitLossPercent) || 0
+  const profitLossPercentVal = portfolioTotalProfitLossPercent || 0
 
   return (
     <section className="px-5 pt-[calc(env(safe-area-inset-top)+1.25rem)]">
@@ -62,11 +68,7 @@ export function MoreView() {
 
       {/* Mini Profile Card Header */}
       <Link href="/profile" className="block mt-5">
-        <Card className="w-full flex items-center justify-between gap-3.5 p-4.5 hover:bg-accent/40 transition-all cursor-pointer isolate relative overflow-hidden group shadow-sm">
-          <span
-            aria-hidden
-            className="absolute -right-8 -top-8 size-20 rounded-full bg-primary/10 opacity-30 blur-2xl group-hover:opacity-40 transition-opacity"
-          />
+        <Card className="w-full flex items-center justify-between p-4.5 hover:bg-accent/40 transition-all cursor-pointer group shadow-sm">
           <div className="flex items-center gap-3.5 min-w-0">
             <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-primary text-base font-bold text-primary-foreground">
               {user?.name?.charAt(0) ?? "U"}
@@ -82,6 +84,33 @@ export function MoreView() {
 
       {/* Hub Options Grid */}
       <div className="mt-5 grid grid-cols-1 gap-3.5">
+        {/* Vencimientos Card */}
+        <Link href="/dashboard/vencimientos" className="block">
+          <Card className="w-full flex items-center justify-between p-4 hover:bg-accent/40 transition-all text-left cursor-pointer group shadow-sm">
+            <div className="flex items-center gap-4 min-w-0">
+              <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-purple-500/10 text-purple-500 border border-purple-500/20 group-hover:scale-105 transition-transform">
+                <CalendarClock className="size-5.5" />
+              </span>
+              <div className="min-w-0">
+                <h2 className="text-sm font-bold text-foreground">Vencimientos y Servicios</h2>
+                <p className="text-[11px] text-muted-foreground mt-0.5 truncate">
+                  {pendingDueCount === 0
+                    ? "Al día sin facturas pendientes"
+                    : `${pendingDueCount} ${pendingDueCount === 1 ? "vencimiento pendiente" : "vencimientos pendientes"}`}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              {pendingDueCount > 0 && (
+                <Badge variant="secondary" className="bg-purple-500/10 text-purple-400 border-purple-500/20 text-[10px] font-bold">
+                  {pendingDueCount}
+                </Badge>
+              )}
+              <ChevronRight className="size-4.5 text-muted-foreground group-hover:text-foreground transition-colors" />
+            </div>
+          </Card>
+        </Link>
         {/* Vehicles Card */}
         <Link href="/vehicles" className="block">
           <Card className="w-full flex items-center justify-between p-4 hover:bg-accent/40 transition-all text-left cursor-pointer group shadow-sm">

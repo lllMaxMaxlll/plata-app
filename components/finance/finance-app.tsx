@@ -101,7 +101,7 @@ export function FinanceApp() {
             />
           )}
           {view === "more" && (
-            <MoreView onNavigate={setView} />
+            <MoreView />
           )}
           {view === "advisor" && (
             <AdvisorView />
@@ -111,7 +111,7 @@ export function FinanceApp() {
           )}
         </main>
 
-        <BottomNav active={view} onChange={setView} onAdd={handleAddTransaction} />
+        <BottomNav onAdd={handleAddTransaction} />
       </div>
 
       {/* Desktop View */}

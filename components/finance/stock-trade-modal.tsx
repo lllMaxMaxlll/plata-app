@@ -1,13 +1,21 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { BottomSheet } from "./bottom-sheet"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useFinance } from "./finance-provider"
 import { formatShort } from "@/lib/finance-data"
 import { toast } from "sonner"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
+import { TrendingUp, AlertTriangle } from "lucide-react"
 
 interface StockTradeModalProps {
   open: boolean
@@ -122,241 +130,277 @@ export function StockTradeModal({
     }
   }
 
-  return (
-    <BottomSheet
-      open={open}
-      onClose={onClose}
-      title={type === "buy" ? "Comprar Acción" : "Vender Acción"}
-      description="Registrá una operación y actualizá tu portafolio"
-    >
-      <form onSubmit={handleSubmit} className="mt-4 flex flex-col gap-4">
-        {/* Toggle Buy / Sell */}
-        <div className="grid grid-cols-2 gap-2 rounded-xl bg-muted p-1">
-          <Button
-            type="button"
-            variant={type === "buy" ? "default" : "ghost"}
-            size="sm"
-            onClick={() => setType("buy")}
-            className="w-full text-xs font-semibold"
-          >
-            Compra
-          </Button>
-          <Button
-            type="button"
-            variant={type === "sell" ? "default" : "ghost"}
-            size="sm"
-            disabled={sharesOwned <= 0}
-            onClick={() => setType("sell")}
-            className="w-full text-xs font-semibold"
-          >
-            Venta {sharesOwned > 0 && `(${sharesOwned} disp.)`}
-          </Button>
-        </div>
+  const selectedStockWatchItem = watchlist.find((w) => w.symbol === symbol)
+  const selectedHoldingItem = holdings.find((h) => h.symbol === symbol)
 
-        {/* Ticker Input */}
-        <div className="space-y-1.5">
-          <Label htmlFor="symbol" className="text-xs font-semibold text-muted-foreground">
-            Símbolo / Ticker
-          </Label>
-          {prefilledSymbol !== "" ? (
-            <Input
-              id="symbol"
-              type="text"
-              value={symbol}
-              disabled
-              required
-              className="h-10 text-sm uppercase font-medium"
-            />
-          ) : type === "buy" ? (
-            watchlist.length === 0 ? (
-              <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 p-3 text-xs text-amber-500">
-                Tu lista de seguimiento está vacía. Agregá acciones a tu portafolio de seguimiento primero.
+  return (
+    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+      <DialogContent className="w-full sm:max-w-xl max-w-[calc(100vw-2rem)] h-auto max-h-[90vh] rounded-3xl bg-card border border-border p-6 shadow-2xl overflow-y-auto overflow-x-hidden transition-all duration-200">
+        <DialogHeader className="text-left pb-1">
+          <div className="flex items-center gap-2.5">
+            <span className="flex size-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <TrendingUp className="size-5" />
+            </span>
+            <div>
+              <DialogTitle className="text-lg font-semibold tracking-tight text-foreground">
+                {type === "buy" ? "Comprar Acción" : "Vender Acción"}
+              </DialogTitle>
+              <DialogDescription className="text-xs text-muted-foreground">
+                Registrá una operación y actualizá tu portafolio de inversión.
+              </DialogDescription>
+            </div>
+          </div>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit} className="mt-2 flex min-w-0 flex-col gap-4">
+          {/* Toggle Buy / Sell */}
+          <div className="grid grid-cols-2 gap-2 rounded-xl bg-muted/40 p-1 border border-border/50">
+            <Button
+              type="button"
+              variant={type === "buy" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setType("buy")}
+              className="w-full text-xs font-semibold rounded-lg cursor-pointer"
+            >
+              Compra
+            </Button>
+            <Button
+              type="button"
+              variant={type === "sell" ? "default" : "ghost"}
+              size="sm"
+              disabled={sharesOwned <= 0}
+              onClick={() => setType("sell")}
+              className="w-full text-xs font-semibold rounded-lg cursor-pointer"
+            >
+              Venta {sharesOwned > 0 && `(${sharesOwned} disp.)`}
+            </Button>
+          </div>
+
+          {/* Ticker Input / Select */}
+          <div className="min-w-0 space-y-1.5">
+            <Label htmlFor="symbol" className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              Símbolo / Ticker
+            </Label>
+            {prefilledSymbol !== "" ? (
+              <Input
+                id="symbol"
+                type="text"
+                value={symbol}
+                disabled
+                required
+                className="h-10 text-sm uppercase font-semibold rounded-xl border-border bg-card/60"
+              />
+            ) : type === "buy" ? (
+              watchlist.length === 0 ? (
+                <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 p-3 text-xs text-amber-500 flex items-center gap-2">
+                  <AlertTriangle className="size-4 shrink-0" />
+                  <span>Tu lista de seguimiento está vacía. Agregá acciones a tu seguimiento primero.</span>
+                </div>
+              ) : (
+                <Select
+                  value={symbol}
+                  onValueChange={(val) => {
+                    if (val) {
+                      setSymbol(val)
+                      const clean = val.trim().toUpperCase()
+                      if (clean && stockPrices[clean]) {
+                        setPrice(stockPrices[clean].price)
+                      }
+                    }
+                  }}
+                >
+                  <SelectTrigger className="w-full rounded-xl border-border bg-card/60">
+                    <SelectValue>
+                      {selectedStockWatchItem
+                        ? `${selectedStockWatchItem.symbol} - ${selectedStockWatchItem.name}`
+                        : "Seleccionar del seguimiento..."}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {watchlist.map((w) => (
+                      <SelectItem key={w.symbol} value={w.symbol}>
+                        {w.symbol} - {w.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )
+            ) : holdings.length === 0 ? (
+              <div className="rounded-xl border border-destructive/20 bg-destructive/10 p-3 text-xs text-destructive flex items-center gap-2">
+                <AlertTriangle className="size-4 shrink-0" />
+                <span>No tenés acciones en tu cartera para vender.</span>
               </div>
             ) : (
-              <select
-                id="symbol"
+              <Select
                 value={symbol}
-                onChange={(e) => {
-                  const val = e.target.value
-                  setSymbol(val)
-                  const clean = val.trim().toUpperCase()
-                  if (clean && stockPrices[clean]) {
-                    setPrice(stockPrices[clean].price)
+                onValueChange={(val) => {
+                  if (val) {
+                    setSymbol(val)
+                    const clean = val.trim().toUpperCase()
+                    if (clean && stockPrices[clean]) {
+                      setPrice(stockPrices[clean].price)
+                    }
                   }
                 }}
-                required
-                className="w-full h-10 rounded-lg border border-input bg-transparent px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
-                <option value="">Seleccionar del seguimiento...</option>
-                {watchlist.map((w) => (
-                  <option key={w.symbol} value={w.symbol}>
-                    {w.symbol} - {w.name}
-                  </option>
-                ))}
-              </select>
-            )
-          ) : holdings.length === 0 ? (
-            <div className="rounded-xl border border-destructive/20 bg-destructive/10 p-3 text-xs text-destructive">
-              No tenés acciones en tu cartera para vender.
-            </div>
-          ) : (
-            <select
-              id="symbol"
-              value={symbol}
-              onChange={(e) => {
-                const val = e.target.value
-                setSymbol(val)
-                const clean = val.trim().toUpperCase()
-                if (clean && stockPrices[clean]) {
-                  setPrice(stockPrices[clean].price)
-                }
-              }}
-              required
-              className="w-full h-10 rounded-lg border border-input bg-transparent px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <option value="">Seleccionar de tus tenencias...</option>
-              {holdings.map((h) => (
-                <option key={h.symbol} value={h.symbol}>
-                  {h.symbol} - {h.name} ({h.shares} disponibles)
-                </option>
-              ))}
-            </select>
-          )}
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          {/* Shares Input */}
-          <div className="space-y-1.5">
-            <div className="flex justify-between items-center">
-              <Label htmlFor="shares" className="text-xs font-semibold text-muted-foreground">
-                Cantidad
-              </Label>
-              {type === "sell" && sharesOwned > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setShares(sharesOwned)}
-                  className="text-[10px] font-bold text-primary hover:underline cursor-pointer"
-                >
-                  Usar máx ({sharesOwned})
-                </button>
-              )}
-            </div>
-            <Input
-              id="shares"
-              type="number"
-              min="0"
-              max={type === "sell" ? sharesOwned : undefined}
-              step="any"
-              placeholder="0.00"
-              value={shares || ""}
-              onChange={(e) => {
-                let val = Math.max(0, parseFloat(e.target.value) || 0)
-                if (type === "sell") {
-                  val = Math.min(sharesOwned, val)
-                }
-                setShares(val)
-              }}
-              required
-              className="h-10 text-sm font-medium"
-            />
+                <SelectTrigger className="w-full rounded-xl border-border bg-card/60">
+                  <SelectValue>
+                    {selectedHoldingItem
+                      ? `${selectedHoldingItem.symbol} - ${selectedHoldingItem.name} (${selectedHoldingItem.shares} disp.)`
+                      : "Seleccionar de tus tenencias..."}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {holdings.map((h) => (
+                    <SelectItem key={h.symbol} value={h.symbol}>
+                      {h.symbol} - {h.name} ({h.shares} disponibles)
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
 
-          {/* Price per Share Input */}
-          <div className="space-y-1.5">
-            <Label htmlFor="price" className="text-xs font-semibold text-muted-foreground">
-              Precio unitario (USD)
+          <div className="grid grid-cols-2 gap-3 min-w-0">
+            {/* Shares Input */}
+            <div className="min-w-0 space-y-1.5">
+              <div className="flex justify-between items-center">
+                <Label htmlFor="shares" className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  Cantidad
+                </Label>
+                {type === "sell" && sharesOwned > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setShares(sharesOwned)}
+                    className="text-[10px] font-bold text-primary hover:underline cursor-pointer"
+                  >
+                    Usar máx ({sharesOwned})
+                  </button>
+                )}
+              </div>
+              <Input
+                id="shares"
+                type="number"
+                min="0"
+                max={type === "sell" ? sharesOwned : undefined}
+                step="any"
+                placeholder="0.00"
+                value={shares || ""}
+                onChange={(e) => {
+                  let val = Math.max(0, parseFloat(e.target.value) || 0)
+                  if (type === "sell") {
+                    val = Math.min(sharesOwned, val)
+                  }
+                  setShares(val)
+                }}
+                required
+                className="h-10 text-sm font-semibold rounded-xl border-border bg-card/60"
+              />
+            </div>
+
+            {/* Price per Share Input */}
+            <div className="min-w-0 space-y-1.5">
+              <Label htmlFor="price" className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                Precio unitario (USD)
+              </Label>
+              <Input
+                id="price"
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="0.00"
+                value={price || ""}
+                onChange={(e) => setPrice(Math.max(0, parseFloat(e.target.value) || 0))}
+                required
+                className="h-10 text-sm font-semibold rounded-xl border-border bg-card/60"
+              />
+            </div>
+          </div>
+
+          {/* Link to USD account */}
+          <div className="min-w-0 space-y-1.5">
+            <Label htmlFor="accountId" className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              Cuenta de fondos (USD)
+            </Label>
+            {usdAccounts.length === 0 ? (
+              <div className="rounded-xl border border-destructive/20 bg-destructive/10 p-3 text-xs text-destructive flex items-center gap-2">
+                <AlertTriangle className="size-4 shrink-0" />
+                <span>No tenés ninguna cuenta en Dólares (USD). Primero debés crear una cuenta en USD desde Cuentas.</span>
+              </div>
+            ) : (
+              <Select value={accountId} onValueChange={(val) => val && setAccountId(val)}>
+                <SelectTrigger className="w-full rounded-xl border-border bg-card/60">
+                  <SelectValue>
+                    {selectedAccount
+                      ? `${selectedAccount.name} (${formatShort(selectedAccount.balance, "USD")})`
+                      : "Seleccionar cuenta en USD..."}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {usdAccounts.map((acc) => (
+                    <SelectItem key={acc.id} value={acc.id}>
+                      {acc.name} (Saldo: {formatShort(acc.balance, "USD")})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+
+          {/* Date Input */}
+          <div className="min-w-0 space-y-1.5">
+            <Label htmlFor="date" className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              Fecha de operación
             </Label>
             <Input
-              id="price"
-              type="number"
-              min="0"
-              step="0.01"
-              placeholder="0.00"
-              value={price || ""}
-              onChange={(e) => setPrice(Math.max(0, parseFloat(e.target.value) || 0))}
+              id="date"
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
               required
-              className="h-10 text-sm font-medium"
+              className="h-10 text-sm rounded-xl border-border bg-card/60 font-semibold"
             />
           </div>
-        </div>
 
-        {/* Link to USD account */}
-        <div className="space-y-1.5">
-          <Label htmlFor="accountId" className="text-xs font-semibold text-muted-foreground">
-            Cuenta de fondos (USD)
-          </Label>
-          {usdAccounts.length === 0 ? (
-            <div className="rounded-xl border border-destructive/20 bg-destructive/10 p-3 text-xs text-destructive">
-              No tenés ninguna cuenta en Dólares (USD). Primero debés crear una cuenta en USD desde la sección Cuentas.
+          {/* Preview / Warning Box */}
+          {shares > 0 && price > 0 && (
+            <div className="rounded-2xl bg-muted/40 p-4 border border-border/50 min-w-0">
+              <div className="flex items-center justify-between text-xs font-medium">
+                <span className="text-muted-foreground">
+                  {type === "buy" ? "Total a Debitar:" : "Total a Acreditar:"}
+                </span>
+                <span className="text-sm font-bold text-foreground">
+                  {formatShort(totalCost, "USD")}
+                </span>
+              </div>
+
+              {/* Error alerts */}
+              {isBuyInvalid && (
+                <p className="mt-2 text-xs font-semibold text-destructive flex items-center gap-1">
+                  <AlertTriangle className="size-3.5 shrink-0" />
+                  <span>Saldo insuficiente en la cuenta. Falta {formatShort(totalCost - accountBalance, "USD")}.</span>
+                </p>
+              )}
+              {isSellInvalid && (
+                <p className="mt-2 text-xs font-semibold text-destructive flex items-center gap-1">
+                  <AlertTriangle className="size-3.5 shrink-0" />
+                  <span>No podés vender más acciones de las que poseés. Tenés {sharesOwned} acciones.</span>
+                </p>
+              )}
             </div>
-          ) : (
-            <select
-              id="accountId"
-              value={accountId}
-              onChange={(e) => setAccountId(e.target.value)}
-              required
-              className="w-full h-10 rounded-lg border border-input bg-transparent px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              {usdAccounts.map((acc) => (
-                <option key={acc.id} value={acc.id}>
-                  {acc.name} (Saldo: {formatShort(acc.balance, "USD")})
-                </option>
-              ))}
-            </select>
           )}
-        </div>
 
-        {/* Date Input */}
-        <div className="space-y-1.5">
-          <Label htmlFor="date" className="text-xs font-semibold text-muted-foreground">
-            Fecha de operación
-          </Label>
-          <Input
-            id="date"
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            required
-            className="h-10 text-sm font-medium"
-          />
-        </div>
-
-        {/* Preview / Warning Box */}
-        {shares > 0 && price > 0 && (
-          <div className="rounded-xl bg-muted/60 p-4">
-            <div className="flex items-center justify-between text-xs font-medium">
-              <span className="text-muted-foreground">
-                {type === "buy" ? "Total a Debitar:" : "Total a Acreditar:"}
-              </span>
-              <span className="text-sm font-bold text-foreground">
-                {formatShort(totalCost, "USD")}
-              </span>
-            </div>
-
-            {/* Error alerts */}
-            {isBuyInvalid && (
-              <p className="mt-2 text-xs font-semibold text-destructive">
-                ⚠️ Saldo insuficiente en la cuenta. Falta {formatShort(totalCost - accountBalance, "USD")}.
-              </p>
-            )}
-            {isSellInvalid && (
-              <p className="mt-2 text-xs font-semibold text-destructive">
-                ⚠️ No podés vender más acciones de las que poseés. Tenés {sharesOwned} acciones.
-              </p>
-            )}
-          </div>
-        )}
-
-        {/* Submit */}
-        <Button
-          type="submit"
-          disabled={!canSubmit}
-          size="lg"
-          className="mt-2 w-full font-semibold"
-        >
-          {loading ? "Registrando..." : type === "buy" ? "Registrar Compra" : "Registrar Venta"}
-        </Button>
-      </form>
-    </BottomSheet>
+          {/* Submit */}
+          <Button
+            type="submit"
+            disabled={!canSubmit}
+            size="lg"
+            className="mt-2 w-full font-semibold h-11 rounded-xl bg-primary text-primary-foreground shadow-lg shadow-primary/20 cursor-pointer"
+          >
+            {loading ? "Registrando..." : type === "buy" ? "Registrar Compra" : "Registrar Venta"}
+          </Button>
+        </form>
+      </DialogContent>
+    </Dialog>
   )
 }
