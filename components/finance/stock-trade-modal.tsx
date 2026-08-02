@@ -15,7 +15,8 @@ import { toast } from "sonner"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
-import { TrendingUp, AlertTriangle } from "lucide-react"
+import { TrendingUp, AlertTriangle, Loader2 } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 interface StockTradeModalProps {
   open: boolean
@@ -121,6 +122,7 @@ export function StockTradeModal({
       toast.success(
         `${type === "buy" ? "Compra" : "Venta"} de ${shares} acciones de ${targetSymbol} registrada exitosamente.`
       )
+      await new Promise((resolve) => setTimeout(resolve, 350))
       onClose()
     } catch (err: any) {
       console.error(err)
@@ -134,7 +136,7 @@ export function StockTradeModal({
   const selectedHoldingItem = holdings.find((h) => h.symbol === symbol)
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && !loading && onClose()}>
       <DialogContent className="w-full sm:max-w-xl max-w-[calc(100vw-2rem)] h-auto max-h-[90vh] rounded-xl bg-card border border-border p-6 shadow-2xl overflow-y-auto overflow-x-hidden transition-all duration-200">
         <DialogHeader className="text-left pb-1">
           <div className="flex items-center gap-2.5">
@@ -152,7 +154,8 @@ export function StockTradeModal({
           </div>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="mt-2 flex min-w-0 flex-col gap-4">
+        <div className={cn("transition-all duration-200", loading && "pointer-events-none opacity-50 cursor-not-allowed select-none")}>
+          <form onSubmit={handleSubmit} className="mt-2 flex min-w-0 flex-col gap-4">
           {/* Toggle Buy / Sell */}
           <div className="grid grid-cols-2 gap-2 rounded-xl bg-muted/40 p-1 border border-border/50">
             <Button
@@ -393,14 +396,24 @@ export function StockTradeModal({
           {/* Submit */}
           <Button
             type="submit"
-            disabled={!canSubmit}
+            disabled={!canSubmit || loading}
             size="lg"
             className="mt-2 w-full font-semibold h-11 rounded-xl bg-primary text-primary-foreground shadow-lg shadow-primary/20 cursor-pointer"
           >
-            {loading ? "Registrando..." : type === "buy" ? "Registrar Compra" : "Registrar Venta"}
+            {loading ? (
+              <>
+                <Loader2 className="mr-2 size-4 animate-spin" />
+                Registrando...
+              </>
+            ) : type === "buy" ? (
+              "Registrar Compra"
+            ) : (
+              "Registrar Venta"
+            )}
           </Button>
         </form>
-      </DialogContent>
+      </div>
+    </DialogContent>
     </Dialog>
   )
 }

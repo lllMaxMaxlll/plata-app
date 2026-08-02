@@ -16,7 +16,8 @@ import {
 import { useFinance } from "./finance-provider"
 import { formatCurrency, type DueItem } from "@/lib/finance-data"
 import { toast } from "sonner"
-import { CheckCircle2, Wallet } from "lucide-react"
+import { CheckCircle2, Wallet, Loader2 } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 interface PayVencimientoModalProps {
   open: boolean
@@ -80,6 +81,7 @@ export function PayVencimientoModal({ open, onClose, item }: PayVencimientoModal
         await markDueItemAsPaid(item.id)
         toast.success(`Vencimiento "${item.title}" marcado como pagado.`)
       }
+      await new Promise((resolve) => setTimeout(resolve, 350))
       onClose()
     } catch (err: any) {
       toast.error(err?.message || "Error al procesar el pago.")
@@ -91,7 +93,7 @@ export function PayVencimientoModal({ open, onClose, item }: PayVencimientoModal
   const selectedAccount = accounts.find((a) => a.id === selectedAccountId)
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && !submitting && onClose()}>
       <DialogContent className="max-w-lg w-full rounded-xl bg-card border border-border p-6 shadow-2xl overflow-y-auto max-h-[90vh]">
         <DialogHeader className="text-left pb-1">
           <DialogTitle className="text-lg font-semibold tracking-tight text-foreground">
@@ -102,7 +104,7 @@ export function PayVencimientoModal({ open, onClose, item }: PayVencimientoModal
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 pt-1">
+        <div className={cn("space-y-4 pt-1 transition-all duration-200", submitting && "pointer-events-none opacity-50 cursor-not-allowed select-none")}>
           {/* Detail Box */}
           <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 flex items-center justify-between">
             <div>
@@ -210,8 +212,17 @@ export function PayVencimientoModal({ open, onClose, item }: PayVencimientoModal
               disabled={submitting}
               className="rounded-xl flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-lg shadow-emerald-600/20 py-5 cursor-pointer"
             >
-              <CheckCircle2 className="size-4.5 mr-2" />
-              {submitting ? "Procesando..." : "Confirmar Pago"}
+              {submitting ? (
+                <>
+                  <Loader2 className="size-4.5 mr-2 animate-spin" />
+                  Procesando...
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="size-4.5 mr-2" />
+                  Confirmar Pago
+                </>
+              )}
             </Button>
           </div>
         </div>

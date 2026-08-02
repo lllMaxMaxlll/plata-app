@@ -16,7 +16,8 @@ import type { Account, Currency } from "@/lib/finance-data"
 import { useFinance } from "./finance-provider"
 import { AccountIcon } from "./account-icon"
 import { toast } from "sonner"
-import { Trash2, Wallet } from "lucide-react"
+import { Wallet, Trash2, Loader2 } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 const KINDS: { value: Account["kind"]; label: string }[] = [
   { value: "bank", label: "Banco" },
@@ -100,6 +101,7 @@ export function AddAccountSheet({
       setBalance("")
       setCurrency("ARS")
       setKind("bank")
+      await new Promise((resolve) => setTimeout(resolve, 350))
       onClose()
     } catch (err: any) {
       console.error(err)
@@ -120,6 +122,7 @@ export function AddAccountSheet({
     try {
       await deleteAccount(account.id)
       toast.success(`Cuenta "${account.name}" eliminada.`)
+      await new Promise((resolve) => setTimeout(resolve, 350))
       onClose()
     } catch (err: any) {
       console.error(err)
@@ -130,7 +133,7 @@ export function AddAccountSheet({
   }
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && !submitting && onClose()}>
       <DialogContent className="w-full sm:max-w-xl max-w-[calc(100vw-2rem)] h-auto max-h-[90vh] rounded-xl bg-card border border-border p-6 shadow-2xl overflow-y-auto overflow-x-hidden transition-all duration-200">
         <DialogHeader className="text-left pb-1">
           <div className="flex items-center gap-2.5">
@@ -150,7 +153,8 @@ export function AddAccountSheet({
           </div>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="mt-3 flex min-w-0 flex-col gap-4">
+        <div className={cn("transition-all duration-200", submitting && "pointer-events-none opacity-50 cursor-not-allowed select-none")}>
+          <form onSubmit={handleSubmit} className="mt-3 flex min-w-0 flex-col gap-4">
           {/* Nombre de la Cuenta */}
           <div className="min-w-0 space-y-1.5">
             <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
@@ -295,7 +299,8 @@ export function AddAccountSheet({
             </Button>
           </div>
         </form>
-      </DialogContent>
+      </div>
+    </DialogContent>
     </Dialog>
   )
 }

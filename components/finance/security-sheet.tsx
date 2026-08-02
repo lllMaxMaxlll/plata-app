@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { ShieldAlert, KeyRound, Mail, RefreshCw, Lock, Eye, EyeOff, CheckCircle2 } from "lucide-react"
+import { ShieldAlert, KeyRound, Mail, RefreshCw, Lock, Eye, EyeOff, CheckCircle2, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dialog"
 import { useFinance } from "./finance-provider"
 import { toast } from "sonner"
+import { cn } from "@/lib/utils"
 
 export function SecuritySheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { user, changePassword, sendEmailVerificationLink, reloadUser } = useFinance()
@@ -108,6 +109,7 @@ export function SecuritySheet({ open, onClose }: { open: boolean; onClose: () =>
       setCurrentPassword("")
       setNewPassword("")
       setConfirmPassword("")
+      await new Promise((resolve) => setTimeout(resolve, 350))
     } catch (err: any) {
       console.error(err)
       let message = "No se pudo actualizar la contraseña."
@@ -126,7 +128,7 @@ export function SecuritySheet({ open, onClose }: { open: boolean; onClose: () =>
   }
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && !submitting && onClose()}>
       <DialogContent className="w-full sm:max-w-xl max-w-[calc(100vw-2rem)] h-auto max-h-[90vh] rounded-xl bg-card border border-border p-6 shadow-2xl overflow-y-auto overflow-x-hidden transition-all duration-200">
         <DialogHeader className="text-left pb-1">
           <div className="flex items-center gap-2.5">
@@ -144,7 +146,7 @@ export function SecuritySheet({ open, onClose }: { open: boolean; onClose: () =>
           </div>
         </DialogHeader>
 
-        <div className="mt-2 flex min-w-0 flex-col gap-5">
+        <div className={cn("mt-2 flex min-w-0 flex-col gap-5 transition-all duration-200", submitting && "pointer-events-none opacity-50 cursor-not-allowed select-none")}>
           {/* User Profile Summary Header */}
           <Card className="p-3.5 border-border/60 bg-card/60 rounded-2xl min-w-0">
             <div className="flex items-center gap-3 min-w-0">
@@ -314,7 +316,10 @@ export function SecuritySheet({ open, onClose }: { open: boolean; onClose: () =>
                   className="h-11 w-full text-sm font-semibold rounded-xl bg-primary text-primary-foreground shadow-lg shadow-primary/20 cursor-pointer mt-1"
                 >
                   {submitting ? (
-                    <span className="size-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
+                    <>
+                      <Loader2 className="mr-2 size-4 animate-spin" />
+                      Actualizando...
+                    </>
                   ) : (
                     "Actualizar contraseña"
                   )}

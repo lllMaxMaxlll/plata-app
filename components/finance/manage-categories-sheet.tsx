@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Plus, Pencil, Trash2, Tag } from "lucide-react"
+import { Plus, Pencil, Trash2, Tag, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -16,6 +16,7 @@ import {
 import { useFinance } from "./finance-provider"
 import { DEFAULT_COLORS, type Category } from "@/lib/finance-data"
 import { toast } from "sonner"
+import { cn } from "@/lib/utils"
 
 export function ManageCategoriesSheet({
   open,
@@ -63,6 +64,7 @@ export function ManageCategoriesSheet({
       }
       setName("")
       setSelectedColor(DEFAULT_COLORS[0])
+      await new Promise((resolve) => setTimeout(resolve, 350))
     } catch (err: any) {
       console.error(err)
       toast.error(err.message || "Error al guardar la categoría.")
@@ -84,6 +86,7 @@ export function ManageCategoriesSheet({
       if (editingCategory?.id === cat.id) {
         setEditingCategory(null)
       }
+      await new Promise((resolve) => setTimeout(resolve, 350))
     } catch (err: any) {
       console.error(err)
       toast.error(err.message || "Error al eliminar la categoría.")
@@ -93,7 +96,7 @@ export function ManageCategoriesSheet({
   }
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && !submitting && onClose()}>
       <DialogContent className="w-full sm:max-w-xl max-w-[calc(100vw-2rem)] h-auto max-h-[90vh] rounded-xl bg-card border border-border p-6 shadow-2xl overflow-y-auto overflow-x-hidden transition-all duration-200">
         <DialogHeader className="text-left pb-1">
           <div className="flex items-center gap-2.5">
@@ -111,7 +114,7 @@ export function ManageCategoriesSheet({
           </div>
         </DialogHeader>
 
-        <div className="mt-2 flex min-w-0 flex-col gap-4">
+        <div className={cn("mt-2 flex min-w-0 flex-col gap-4 transition-all duration-200", submitting && "pointer-events-none opacity-50 cursor-not-allowed select-none")}>
           {/* Type Tabs */}
           <Tabs
             value={tab}

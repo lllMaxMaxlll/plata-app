@@ -1,7 +1,8 @@
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from "react"
-import { Upload, Check, Calendar as CalendarIcon } from "lucide-react"
+import { Upload, Check, Calendar as CalendarIcon, Loader2 } from "lucide-react"
+import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -174,6 +175,7 @@ export function TransactionSheet({
         await addTransaction(input)
         toast.success("Movimiento registrado con éxito.")
       }
+      await new Promise((resolve) => setTimeout(resolve, 350))
       onClose()
     } catch (err: any) {
       console.error(err)
@@ -189,6 +191,7 @@ export function TransactionSheet({
     try {
       await deleteTransaction(transaction.id)
       toast.success("Movimiento eliminado correctamente.")
+      await new Promise((resolve) => setTimeout(resolve, 350))
       setDeleteConfirmOpen(false)
       onClose()
     } catch (err: any) {
@@ -201,7 +204,7 @@ export function TransactionSheet({
 
   return (
     <>
-      <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+      <Dialog open={open} onOpenChange={(isOpen) => !isOpen && !submitting && onClose()}>
         <DialogContent className="max-w-lg w-full rounded-xl bg-card border border-border p-6 shadow-2xl overflow-y-auto max-h-[90vh]">
           <DialogHeader className="text-left pb-1">
             <DialogTitle className="text-lg font-semibold tracking-tight text-foreground">
@@ -212,24 +215,25 @@ export function TransactionSheet({
             </DialogDescription>
           </DialogHeader>
 
-          <Tabs value={type} onValueChange={(val) => handleTab(val as TransactionType)} className="w-full mt-2">
-            <TabsList className="grid w-full grid-cols-3 rounded-xl">
-              {TABS.map((t) => (
-                <TabsTrigger key={t.value} value={t.value} disabled={submitting} className="rounded-lg text-xs font-semibold">
-                  {t.label}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </Tabs>
+          <div className={cn("transition-all duration-200", submitting && "pointer-events-none opacity-50 cursor-not-allowed select-none")}>
+            <Tabs value={type} onValueChange={(val) => handleTab(val as TransactionType)} className="w-full mt-2">
+              <TabsList className="grid w-full grid-cols-3 rounded-xl">
+                {TABS.map((t) => (
+                  <TabsTrigger key={t.value} value={t.value} disabled={submitting} className="rounded-lg text-xs font-semibold">
+                    {t.label}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </Tabs>
 
-          <form onSubmit={handleSubmit} className="mt-5 flex flex-col gap-4">
+            <form onSubmit={handleSubmit} className="mt-5 flex flex-col gap-4">
             {/* Amount */}
             <div className="flex flex-col items-center gap-1 py-2">
               <span className="text-xs font-medium text-muted-foreground">
                 Monto ({fromAccount?.currency ?? "ARS"})
               </span>
               <div className="flex items-center gap-1.5">
-                <span className="text-2xl font-medium text-muted-foreground">$</span>
+                <span className="text-3xl font-medium text-muted-foreground">$</span>
                 <Input
                   autoFocus
                   inputMode="decimal"
@@ -237,7 +241,7 @@ export function TransactionSheet({
                   value={amount}
                   onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, ""))}
                   placeholder="0"
-                  className="h-14 w-44 bg-transparent text-center text-4xl font-semibold tracking-tight tabular-nums border-none shadow-none focus-visible:ring-0 placeholder:text-muted-foreground/40"
+                  className="h-16 w-56 bg-transparent text-center text-xl md:text-5xl font-bold tracking-tight tabular-nums border-none shadow-none focus-visible:ring-0 placeholder:text-muted-foreground/40"
                 />
               </div>
             </div>
@@ -395,7 +399,8 @@ export function TransactionSheet({
               )}
             </div>
           </form>
-        </DialogContent>
+        </div>
+      </DialogContent>
       </Dialog>
 
       <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>

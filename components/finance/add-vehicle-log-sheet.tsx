@@ -15,7 +15,8 @@ import {
 import type { Vehicle, VehicleLog, VehicleLogType } from "@/lib/finance-data"
 import { useFinance } from "./finance-provider"
 import { toast } from "sonner"
-import { Fuel, Wrench, Settings, ShieldAlert, Sparkles, ShoppingBag } from "lucide-react"
+import { Fuel, Wrench, Settings, ShieldAlert, Sparkles, ShoppingBag, Loader2 } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 const LOG_TYPES: { value: VehicleLogType; label: string; Icon: any; color: string }[] = [
   { value: "fuel", label: "Combustible", Icon: Fuel, color: "bg-orange-500/10 text-orange-500 border-orange-500/20" },
@@ -167,6 +168,7 @@ export function AddVehicleLogSheet({
         await addVehicleLog(data)
         toast.success("Registro guardado con éxito.")
       }
+      await new Promise((resolve) => setTimeout(resolve, 350))
       onClose()
     } catch (err: any) {
       console.error(err)
@@ -187,6 +189,7 @@ export function AddVehicleLogSheet({
     try {
       await deleteVehicleLog(log.id)
       toast.success("Registro eliminado correctamente.")
+      await new Promise((resolve) => setTimeout(resolve, 350))
       onClose()
     } catch (err: any) {
       console.error(err)
@@ -197,7 +200,7 @@ export function AddVehicleLogSheet({
   }
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && !submitting && onClose()}>
       <DialogContent className="max-w-lg w-full rounded-xl bg-card border border-border p-6 shadow-2xl overflow-y-auto max-h-[90vh]">
         <DialogHeader className="text-left pb-1">
           <DialogTitle className="text-lg font-semibold tracking-tight text-foreground">
@@ -208,7 +211,8 @@ export function AddVehicleLogSheet({
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="mt-2 flex flex-col gap-4">
+        <div className={cn("transition-all duration-200", submitting && "pointer-events-none opacity-50 cursor-not-allowed select-none")}>
+          <form onSubmit={handleSubmit} className="mt-2 flex flex-col gap-4">
           {/* Selector de Tipo de Gasto */}
           <div className="space-y-1.5">
             <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
@@ -457,7 +461,16 @@ export function AddVehicleLogSheet({
               className="w-full rounded-xl h-11 font-semibold bg-primary text-primary-foreground shadow-lg shadow-primary/20 cursor-pointer"
               disabled={submitting}
             >
-              {log ? "Guardar cambios" : "Registrar evento"}
+              {submitting ? (
+                <>
+                  <Loader2 className="mr-2 size-4 animate-spin" />
+                  {log ? "Guardando..." : "Guardando..."}
+                </>
+              ) : log ? (
+                "Guardar cambios"
+              ) : (
+                "Registrar evento"
+              )}
             </Button>
 
             {log && (
@@ -469,12 +482,20 @@ export function AddVehicleLogSheet({
                 onClick={handleDelete}
                 disabled={submitting}
               >
-                Eliminar registro
+                {submitting ? (
+                  <>
+                    <Loader2 className="mr-2 size-4 animate-spin" />
+                    Eliminando...
+                  </>
+                ) : (
+                  "Eliminar registro"
+                )}
               </Button>
             )}
           </div>
         </form>
-      </DialogContent>
+      </div>
+    </DialogContent>
     </Dialog>
   )
 }

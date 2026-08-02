@@ -1,7 +1,8 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { ArrowLeftRight, Calendar as CalendarIcon, AlertCircle, RefreshCw } from "lucide-react"
+import { ArrowLeftRight, Calendar as CalendarIcon, AlertCircle, RefreshCw, Loader2 } from "lucide-react"
+import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -192,6 +193,7 @@ export function CurrencyExchangeSheet({ open, onClose }: CurrencyExchangeSheetPr
 
       await addTransaction(payload)
       toast.success("Operación de cambio registrada con éxito.")
+      await new Promise((resolve) => setTimeout(resolve, 350))
       onClose()
     } catch (err: any) {
       console.error(err)
@@ -206,7 +208,7 @@ export function CurrencyExchangeSheet({ open, onClose }: CurrencyExchangeSheetPr
   const targetCurrency = isBuy ? "USD" : "ARS"
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && !submitting && onClose()}>
       <DialogContent className="w-full sm:max-w-xl max-w-[calc(100vw-2rem)] h-auto max-h-[90vh] rounded-xl bg-card border border-border p-6 shadow-2xl overflow-y-auto overflow-x-hidden transition-all duration-200">
         <DialogHeader className="text-left pb-1">
           <DialogTitle className="text-lg font-semibold tracking-tight text-foreground">
@@ -219,11 +221,12 @@ export function CurrencyExchangeSheet({ open, onClose }: CurrencyExchangeSheetPr
           </DialogDescription>
         </DialogHeader>
 
-        <Tabs
-          value={direction}
-          onValueChange={(val) => handleDirectionChange(val as ExchangeDirection)}
-          className="w-full min-w-0 mt-2"
-        >
+        <div className={cn("transition-all duration-200", submitting && "pointer-events-none opacity-50 cursor-not-allowed select-none")}>
+          <Tabs
+            value={direction}
+            onValueChange={(val) => handleDirectionChange(val as ExchangeDirection)}
+            className="w-full min-w-0 mt-2"
+          >
           <TabsList className="grid w-full grid-cols-2 rounded-xl bg-muted/40 border border-border/50">
             <TabsTrigger
               value="ARS_TO_USD"
@@ -510,7 +513,8 @@ export function CurrencyExchangeSheet({ open, onClose }: CurrencyExchangeSheetPr
             </>
           )}
         </form>
-      </DialogContent>
+      </div>
+    </DialogContent>
     </Dialog>
   )
 }

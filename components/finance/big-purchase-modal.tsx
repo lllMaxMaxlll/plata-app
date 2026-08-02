@@ -14,8 +14,10 @@ import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { Slider } from "@/components/ui/slider"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Target, Sparkles, Trash2, Check } from "lucide-react"
+import { Target, Sparkles, Trash2, Check, Loader2 } from "lucide-react"
 import { type BigPurchaseGoal, type Currency } from "@/lib/simulation-engine"
+import { toast } from "sonner"
+import { cn } from "@/lib/utils"
 
 export interface BigPurchaseModalProps {
   open: boolean
@@ -38,6 +40,7 @@ export function BigPurchaseModal({
   const [amount, setAmount] = useState<number>(15000)
   const [currency, setCurrency] = useState<Currency>("USD")
   const [targetMonth, setTargetMonth] = useState<number>(24)
+  const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
     if (currentGoal) {
@@ -52,27 +55,45 @@ export function BigPurchaseModal({
     }
   }, [currentGoal, open, horizonMonths])
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!name.trim() || amount <= 0) return
 
-    onSaveGoal({
-      id: currentGoal?.id || String(Date.now()),
-      name: name.trim(),
-      amount,
-      currency,
-      targetMonth,
-    })
-    onOpenChange(false)
+    setSubmitting(true)
+    try {
+      onSaveGoal({
+        id: currentGoal?.id || String(Date.now()),
+        name: name.trim(),
+        amount,
+        currency,
+        targetMonth,
+      })
+      toast.success(currentGoal ? "Meta de compra actualizada." : "Nueva meta de compra agregada.")
+      await new Promise((resolve) => setTimeout(resolve, 350))
+      onOpenChange(false)
+    } catch (err: any) {
+      toast.error("Error al guardar la meta.")
+    } finally {
+      setSubmitting(false)
+    }
   }
 
-  const handleRemove = () => {
-    onRemoveGoal()
-    onOpenChange(false)
+  const handleRemove = async () => {
+    setSubmitting(true)
+    try {
+      onRemoveGoal()
+      toast.success("Meta de compra eliminada.")
+      await new Promise((resolve) => setTimeout(resolve, 350))
+      onOpenChange(false)
+    } catch (err: any) {
+      toast.error("Error al eliminar la meta.")
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && !submitting && onOpenChange(false)}>
       <DialogContent className="sm:max-w-[440px] border-border/50 bg-card/95 backdrop-blur-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-base font-semibold">
@@ -84,7 +105,8 @@ export function BigPurchaseModal({
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSave} className="space-y-4 py-2">
+        <div className={cn("transition-all duration-200", submitting && "pointer-events-none opacity-50 cursor-not-allowed select-none")}>
+          <form onSubmit={handleSave} className="space-y-4 py-2">
           {/* Goal Name */}
           <div className="space-y-1.5">
             <Label htmlFor="goal-name" className="text-xs font-medium">
@@ -162,10 +184,11 @@ export function BigPurchaseModal({
                 type="button"
                 variant="destructive"
                 size="sm"
+                disabled={submitting}
                 onClick={handleRemove}
                 className="h-9 text-xs gap-1.5 cursor-pointer"
               >
-                <Trash2 className="size-3.5" /> Quitar Meta
+                {submitting ? <Loader2 className="size-3.5 animate-spin" /> : <Trash2 className="size-3.5" />} Quitar Meta
               </Button>
             ) : (
               <div />
@@ -176,6 +199,7 @@ export function BigPurchaseModal({
                 type="button"
                 variant="outline"
                 size="sm"
+                disabled={submitting}
                 onClick={() => onOpenChange(false)}
                 className="h-9 text-xs cursor-pointer"
               >
@@ -184,14 +208,16 @@ export function BigPurchaseModal({
               <Button
                 type="submit"
                 size="sm"
+                disabled={submitting}
                 className="h-9 text-xs gap-1.5 font-semibold bg-primary hover:bg-primary/90 text-primary-foreground cursor-pointer"
               >
-                <Check className="size-3.5" /> Guardar Meta
+                {submitting ? <Loader2 className="size-3.5 animate-spin" /> : <Check className="size-3.5" />} Guardar Meta
               </Button>
             </div>
           </DialogFooter>
         </form>
-      </DialogContent>
+      </div>
+    </DialogContent>
     </Dialog>
   )
 }

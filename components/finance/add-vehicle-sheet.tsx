@@ -14,7 +14,8 @@ import {
 import type { Vehicle, VehicleType } from "@/lib/finance-data"
 import { useFinance } from "./finance-provider"
 import { toast } from "sonner"
-import { Bike, Car, Truck, Milestone } from "lucide-react"
+import { Bike, Car, Truck, Milestone, Loader2 } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 const TYPES: { value: VehicleType; label: string; Icon: any }[] = [
   { value: "motorcycle", label: "Moto", Icon: Bike },
@@ -34,7 +35,7 @@ export function AddVehicleSheet({
 }) {
   const { addVehicle, updateVehicle, deleteVehicle } = useFinance()
   const [name, setName] = useState("")
-  const [type, setType] = useState<VehicleType>("motorcycle")
+  const [type, setType] = useState<VehicleType>("car")
   const [brand, setBrand] = useState("")
   const [model, setModel] = useState("")
   const [year, setYear] = useState("")
@@ -48,15 +49,15 @@ export function AddVehicleSheet({
       if (vehicle) {
         setName(vehicle.name)
         setType(vehicle.type)
-        setBrand(vehicle.brand || "")
-        setModel(vehicle.model || "")
+        setBrand(vehicle.brand ?? "")
+        setModel(vehicle.model ?? "")
         setYear(vehicle.year ? String(vehicle.year) : "")
-        setPlate(vehicle.plate || "")
-        setOdometer(String(vehicle.odometer))
+        setPlate(vehicle.plate ?? "")
+        setOdometer(String(vehicle.odometer ?? 0))
         setFuelCapacity(vehicle.fuelCapacity ? String(vehicle.fuelCapacity) : "")
       } else {
         setName("")
-        setType("motorcycle")
+        setType("car")
         setBrand("")
         setModel("")
         setYear("")
@@ -65,7 +66,7 @@ export function AddVehicleSheet({
         setFuelCapacity("")
       }
     }
-  }, [vehicle, open])
+  }, [open, vehicle])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -98,6 +99,7 @@ export function AddVehicleSheet({
         await addVehicle(data)
         toast.success(`Vehículo "${name.trim()}" agregado con éxito.`)
       }
+      await new Promise((resolve) => setTimeout(resolve, 350))
       onClose()
     } catch (err: any) {
       console.error(err)
@@ -118,6 +120,7 @@ export function AddVehicleSheet({
     try {
       await deleteVehicle(vehicle.id)
       toast.success(`Vehículo "${vehicle.name}" eliminado correctamente.`)
+      await new Promise((resolve) => setTimeout(resolve, 350))
       onClose()
     } catch (err: any) {
       console.error(err)
@@ -128,7 +131,7 @@ export function AddVehicleSheet({
   }
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && !submitting && onClose()}>
       <DialogContent className="w-full sm:max-w-xl max-w-[calc(100%-2rem)] h-auto rounded-xl bg-card border border-border p-6 shadow-2xl overflow-y-auto max-h-[90vh] transition-all duration-200">
         <DialogHeader className="text-left pb-1">
           <DialogTitle className="text-lg font-semibold tracking-tight text-foreground">
@@ -139,15 +142,16 @@ export function AddVehicleSheet({
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="mt-2 flex flex-col gap-4">
-          {/* Nombre */}
-          <div className="space-y-1.5">
-            <Label htmlFor="veh-name" className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-              Nombre / Apodo
-            </Label>
-            <Input
-              id="veh-name"
-              type="text"
+        <div className={cn("transition-all duration-200", submitting && "pointer-events-none opacity-50 cursor-not-allowed select-none")}>
+          <form onSubmit={handleSubmit} className="mt-2 flex flex-col gap-4">
+            {/* Nombre */}
+            <div className="space-y-1.5">
+              <Label htmlFor="veh-name" className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                Nombre / Apodo
+              </Label>
+              <Input
+                id="veh-name"
+                type="text"
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -287,7 +291,16 @@ export function AddVehicleSheet({
               className="w-full rounded-xl h-11 font-semibold bg-primary text-primary-foreground shadow-lg shadow-primary/20 cursor-pointer"
               disabled={submitting}
             >
-              {vehicle ? "Guardar cambios" : "Agregar vehículo"}
+              {submitting ? (
+                <>
+                  <Loader2 className="mr-2 size-4 animate-spin" />
+                  {vehicle ? "Guardando..." : "Guardando..."}
+                </>
+              ) : vehicle ? (
+                "Guardar cambios"
+              ) : (
+                "Agregar vehículo"
+              )}
             </Button>
 
             {vehicle && (
@@ -299,12 +312,20 @@ export function AddVehicleSheet({
                 onClick={handleDelete}
                 disabled={submitting}
               >
-                Eliminar vehículo
+                {submitting ? (
+                  <>
+                    <Loader2 className="mr-2 size-4 animate-spin" />
+                    Eliminando...
+                  </>
+                ) : (
+                  "Eliminar vehículo"
+                )}
               </Button>
             )}
           </div>
         </form>
-      </DialogContent>
+      </div>
+    </DialogContent>
     </Dialog>
   )
 }

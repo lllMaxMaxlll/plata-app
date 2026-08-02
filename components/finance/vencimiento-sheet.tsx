@@ -18,7 +18,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { useFinance } from "./finance-provider"
 import { DUE_CATEGORIES, type DueItem, type DueFrequency, type Currency } from "@/lib/finance-data"
 import { toast } from "sonner"
-import { Trash2, Calendar as CalendarIcon } from "lucide-react"
+import { Trash2, Calendar as CalendarIcon, Loader2 } from "lucide-react"
 import { format, parseISO } from "date-fns"
 import { es } from "date-fns/locale"
 import { cn } from "@/lib/utils"
@@ -141,6 +141,7 @@ export function VencimientoSheet({ open, onClose, item }: VencimientoSheetProps)
         })
         toast.success(`Vencimiento "${title.trim()}" creado correctamente.`)
       }
+      await new Promise((resolve) => setTimeout(resolve, 350))
       onClose()
     } catch (err: any) {
       toast.error(err?.message || "Error al guardar el vencimiento.")
@@ -155,6 +156,7 @@ export function VencimientoSheet({ open, onClose, item }: VencimientoSheetProps)
     try {
       await deleteDueItem(item.id)
       toast.success(`Vencimiento "${item.title}" eliminado.`)
+      await new Promise((resolve) => setTimeout(resolve, 350))
       onClose()
     } catch (err: any) {
       toast.error("Error al eliminar vencimiento.")
@@ -164,7 +166,7 @@ export function VencimientoSheet({ open, onClose, item }: VencimientoSheetProps)
   }
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && !submitting && onClose()}>
       <DialogContent className="w-full sm:max-w-xl max-w-[calc(100%-2rem)] h-auto rounded-xl bg-card border border-border p-6 shadow-2xl overflow-y-auto max-h-[90vh] transition-all duration-200">
         <DialogHeader className="text-left pb-2">
           <DialogTitle className="text-lg font-semibold tracking-tight text-foreground">
@@ -175,7 +177,8 @@ export function VencimientoSheet({ open, onClose, item }: VencimientoSheetProps)
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4 pt-1">
+        <div className={cn("transition-all duration-200", submitting && "pointer-events-none opacity-50 cursor-not-allowed select-none")}>
+          <form onSubmit={handleSubmit} className="space-y-4 pt-1">
           {/* Título */}
           <div className="space-y-1.5">
             <Label htmlFor="due-title" className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
@@ -386,11 +389,21 @@ export function VencimientoSheet({ open, onClose, item }: VencimientoSheetProps)
               disabled={submitting}
               className="flex-1 rounded-xl bg-primary text-primary-foreground font-semibold py-5 shadow-lg shadow-primary/20 cursor-pointer"
             >
-              {submitting ? "Guardando..." : item ? "Actualizar Vencimiento" : "Guardar Vencimiento"}
+              {submitting ? (
+                <>
+                  <Loader2 className="mr-2 size-4 animate-spin" />
+                  Guardando...
+                </>
+              ) : item ? (
+                "Actualizar Vencimiento"
+              ) : (
+                "Guardar Vencimiento"
+              )}
             </Button>
           </div>
         </form>
-      </DialogContent>
+      </div>
+    </DialogContent>
     </Dialog>
   )
 }

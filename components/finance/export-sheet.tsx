@@ -23,6 +23,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
+import { cn } from "@/lib/utils"
 import { Card } from "@/components/ui/card"
 import {
   getAvailableMonths,
@@ -125,6 +126,7 @@ export function ExportSheet({ open, onClose }: { open: boolean; onClose: () => v
         exportToMarkdown(payload)
         toast.success(`Reporte Markdown de ${selectedMonthObj.label} descargado correctamente`)
       }
+      await new Promise((resolve) => setTimeout(resolve, 350))
     } catch (err) {
       console.error("Error al exportar:", err)
       toast.error("Ocurrió un error al generar el archivo de exportación")
@@ -134,7 +136,7 @@ export function ExportSheet({ open, onClose }: { open: boolean; onClose: () => v
   }
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && !exportingFormat && onClose()}>
       <DialogContent className="w-full sm:max-w-xl max-w-[calc(100vw-2rem)] h-auto max-h-[90vh] rounded-xl bg-card border border-border p-6 shadow-2xl overflow-y-auto overflow-x-hidden transition-all duration-200">
         <DialogHeader className="text-left pb-1">
           <div className="flex items-center gap-2.5">
@@ -152,7 +154,7 @@ export function ExportSheet({ open, onClose }: { open: boolean; onClose: () => v
           </div>
         </DialogHeader>
 
-        <div className="mt-2 flex min-w-0 flex-col gap-5">
+        <div className={cn("mt-2 flex min-w-0 flex-col gap-5 transition-all duration-200", exportingFormat !== null && "pointer-events-none opacity-50 cursor-not-allowed select-none")}>
           {/* 1. Month Selector & Quick Action Pills */}
           <div className="min-w-0 space-y-1.5">
             <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
