@@ -14,6 +14,8 @@ import { ManageCategoriesSheet } from "@/components/finance/manage-categories-sh
 import { SecuritySheet } from "@/components/finance/security-sheet"
 import { CurrencyExchangeSheet } from "@/components/finance/currency-exchange-sheet"
 import { ExportSheet } from "@/components/finance/export-sheet"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import {
   Wallet,
   Home,
@@ -30,20 +32,44 @@ import {
   Bike,
   CalendarClock,
   Target,
+  Globe,
+  ChevronRight,
+  Shield,
+  Activity,
 } from "lucide-react"
 import { formatShort } from "@/lib/finance-data"
 
-const NAV_ITEMS = [
-  { href: "/", label: "Inicio", Icon: Home },
-  { href: "/accounts", label: "Cuentas", Icon: Wallet },
-  { href: "/dashboard/proyecciones", label: "Proyecciones", Icon: Target },
-  { href: "/dashboard/vencimientos", label: "Vencimientos", Icon: CalendarClock },
-  { href: "/vehicles", label: "Vehículos", Icon: Bike },
-  { href: "/advisor", label: "PLATA AI", Icon: Sparkles },
-  { href: "/stocks", label: "Portafolio", Icon: LineChart },
-  { href: "/analytics", label: "Análisis", Icon: TrendingUp },
-  { href: "/activity", label: "Actividad", Icon: ReceiptText },
-  { href: "/profile", label: "Perfil", Icon: User },
+const NAV_GROUPS = [
+  {
+    title: "CORE SERVICES",
+    items: [
+      { href: "/", label: "Inicio", Icon: Home },
+      { href: "/accounts", label: "Cuentas", Icon: Wallet },
+      { href: "/activity", label: "Actividad", Icon: ReceiptText },
+    ],
+  },
+  {
+    title: "ANALYTICS & AI",
+    items: [
+      { href: "/analytics", label: "Análisis", Icon: TrendingUp },
+      { href: "/advisor", label: "PLATA AI", Icon: Sparkles, badge: "AI" },
+      { href: "/dashboard/proyecciones", label: "Proyecciones", Icon: Target },
+    ],
+  },
+  {
+    title: "ASSETS & TRACKING",
+    items: [
+      { href: "/stocks", label: "Portafolio", Icon: LineChart },
+      { href: "/vehicles", label: "Vehículos", Icon: Bike },
+      { href: "/dashboard/vencimientos", label: "Vencimientos", Icon: CalendarClock },
+    ],
+  },
+  {
+    title: "ACCOUNT & SETTINGS",
+    items: [
+      { href: "/profile", label: "Perfil", Icon: User },
+    ],
+  },
 ]
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -65,9 +91,9 @@ export function AppShell({ children }: { children: ReactNode }) {
   const getPageTitle = (path: string) => {
     switch (path) {
       case "/":
-        return "Panel de Control"
+        return "Overview Dashboard"
       case "/accounts":
-        return "Mis Cuentas"
+        return "Cuentas & Activos"
       case "/dashboard/proyecciones":
       case "/proyecciones":
         return "Proyección Financiera & Escenarios"
@@ -75,21 +101,21 @@ export function AppShell({ children }: { children: ReactNode }) {
       case "/vencimientos":
         return "Calendario de Vencimientos"
       case "/vehicles":
-        return "Mis Vehículos"
+        return "Vehículos & Mantenimiento"
       case "/advisor":
-        return "Asistente AI"
+        return "Workers AI Advisor"
       case "/stocks":
-        return "Mi Portafolio"
+        return "Portafolio de Inversiones"
       case "/activity":
-        return "Historial de Actividad"
+        return "Historial de Eventos"
       case "/profile":
-        return "Configuración de Perfil"
+        return "Configuración de Cuenta"
       case "/analytics":
-        return "Análisis de Gastos"
+        return "Análisis & Métricas"
       case "/more":
         return "Explorar"
       default:
-        return "PLATA"
+        return "Cloudflare Dashboard"
     }
   }
 
@@ -101,139 +127,163 @@ export function AppShell({ children }: { children: ReactNode }) {
         <BottomNav onAdd={ui.handleAddTransaction} />
       </div>
 
-      {/* Desktop View Shell */}
+      {/* Desktop View Shell (Cloudflare Dashboard Clone) */}
       <div className="hidden md:flex h-screen w-full overflow-hidden bg-background text-foreground">
-        {/* Sidebar Navigation */}
-        <aside className="w-72 shrink-0 h-full border-r border-border/40 bg-card/25 backdrop-blur-xl flex flex-col justify-between p-6 overflow-y-auto">
-          <div className="flex flex-col gap-8">
-            {/* Logo */}
-            <div className="flex items-center gap-3 px-2">
-              <span className="flex size-10 items-center justify-center rounded-2xl bg-gradient-to-tr from-primary/80 to-primary text-primary-foreground shadow-lg shadow-primary/20">
-                <Wallet className="size-5" />
+        {/* Cloudflare Sidebar Navigation */}
+        <aside className="w-64 shrink-0 h-full border-r border-border/80 bg-sidebar flex flex-col justify-between p-4 overflow-y-auto">
+          <div className="flex flex-col gap-6">
+            {/* Cloudflare Logo Branding */}
+            <div className="flex items-center gap-3 px-2 py-1">
+              <span className="flex size-8 items-center justify-center rounded-md bg-primary text-primary-foreground font-bold shadow-sm">
+                <Wallet className="size-4.5" />
               </span>
               <div className="flex flex-col">
-                <span className="text-lg font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text">
-                  PLATA
-                </span>
-                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                  Finanzas Personales
-                </span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-sm font-bold tracking-tight text-foreground">
+                    PLATA
+                  </span>
+                </div>
               </div>
             </div>
 
-            {/* Action Buttons */}
-            <button
-              onClick={ui.handleAddTransaction}
-              className="w-full flex items-center justify-center gap-2 rounded-2xl bg-primary py-3.5 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/10 hover:shadow-primary/20 hover:scale-[1.01] active:scale-[0.99] transition-all cursor-pointer"
-            >
-              <Plus className="size-4.5" />
-              Nuevo movimiento
-            </button>
+            {/* Quick Action Buttons */}
+            <div className="flex flex-col gap-2">
+              <Button
+                onClick={ui.handleAddTransaction}
+                className="w-full justify-start gap-2 bg-primary hover:bg-primary/90 text-primary-foreground font-medium text-xs h-9 shadow-sm cursor-pointer"
+              >
+                <Plus data-icon="inline-start" className="size-3.5" />
+                Nuevo Movimiento
+              </Button>
 
-            <button
-              onClick={ui.handleOpenExchange}
-              className="w-full flex items-center justify-center gap-2 rounded-2xl border border-border bg-card py-3 text-sm font-semibold text-foreground hover:bg-muted/50 hover:scale-[1.01] active:scale-[0.99] transition-all cursor-pointer"
-            >
-              <ArrowLeftRight className="size-4" />
-              Cambio de moneda
-            </button>
+              <Button
+                onClick={ui.handleOpenExchange}
+                variant="outline"
+                className="w-full justify-start gap-2 border-border bg-card/60 hover:bg-accent text-foreground font-medium text-xs h-9 cursor-pointer"
+              >
+                <ArrowLeftRight data-icon="inline-start" className="size-3.5 text-muted-foreground" />
+                Cambio de Moneda
+              </Button>
+            </div>
 
-            {/* Navigation Links */}
-            <nav className="flex flex-col gap-1.5">
-              {NAV_ITEMS.map((item) => {
-                const active = pathname === item.href
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={`flex items-center gap-3.5 rounded-2xl px-4 py-3.5 text-sm font-medium transition-all duration-200 group text-left ${
-                      active
-                        ? "bg-primary/10 text-primary"
-                        : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
-                    }`}
-                  >
-                    <item.Icon
-                      className={`size-5 transition-transform group-hover:scale-105 ${
-                        active ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
-                      }`}
-                    />
-                    {item.label}
-                  </Link>
-                )
-              })}
+            {/* Nav Groups */}
+            <nav className="flex flex-col gap-5 pt-1">
+              {NAV_GROUPS.map((group) => (
+                <div key={group.title} className="flex flex-col gap-1">
+                  <h3 className="px-2 text-[10px] font-mono font-semibold uppercase tracking-wider text-muted-foreground/80">
+                    {group.title}
+                  </h3>
+                  <div className="flex flex-col gap-0.5 mt-0.5">
+                    {group.items.map((item) => {
+                      const active = pathname === item.href
+                      return (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          className={`flex items-center justify-between rounded-md px-2.5 py-2 text-xs font-medium transition-all ${active
+                            ? "bg-primary/10 text-primary border-l-2 border-primary font-semibold pl-2"
+                            : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                            }`}
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <item.Icon
+                              className={`size-4 shrink-0 ${active ? "text-primary" : "text-muted-foreground"
+                                }`}
+                            />
+                            <span className="truncate">{item.label}</span>
+                          </div>
+                          {item.badge && (
+                            <Badge variant="secondary" className="text-[9px] px-1 py-0 h-4 font-mono bg-primary/20 text-primary">
+                              {item.badge}
+                            </Badge>
+                          )}
+                        </Link>
+                      )
+                    })}
+                  </div>
+                </div>
+              ))}
             </nav>
           </div>
 
-          {/* User Card at bottom */}
-          <div className="flex flex-col gap-4 border-t border-border/40 pt-6">
-            <div className="flex items-center gap-3.5 px-2">
-              <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 text-primary text-base font-bold shadow-inner">
+          {/* User Profile & System Status Panel */}
+          <div className="flex flex-col gap-3 border-t border-border/70 pt-4 mt-4">
+            <div className="flex items-center gap-2.5 px-2 py-1 rounded-md bg-muted/40 border border-border/50">
+              <span className="flex size-7 shrink-0 items-center justify-center rounded bg-primary/20 text-primary text-xs font-mono font-bold">
                 {user?.name?.charAt(0) ?? "U"}
               </span>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold">{user?.name}</p>
-                <p className="truncate text-xs text-muted-foreground">{user?.email}</p>
+                <p className="truncate text-xs font-medium text-foreground">{user?.name}</p>
+                <p className="truncate text-[10px] font-mono text-muted-foreground">{user?.email}</p>
               </div>
             </div>
-            <button
+
+            <Button
               onClick={logout}
-              className="flex w-full items-center gap-2 rounded-xl px-2 py-2 text-xs font-semibold text-destructive/80 hover:text-destructive hover:bg-destructive/10 transition-colors"
+              variant="ghost"
+              size="sm"
+              className="w-full justify-start gap-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10 h-8 px-2 cursor-pointer"
             >
-              <LogOut className="size-4" />
-              Cerrar sesión
-            </button>
+              <LogOut data-icon="inline-start" className="size-3.5" />
+              Cerrar Sesión
+            </Button>
           </div>
         </aside>
 
         {/* Main Content Area */}
-        <main className="flex-1 flex flex-col min-w-0 overflow-y-auto">
-          {/* Top Header Bar */}
-          <header className="border-b border-border/30 bg-card/10 px-8 py-5 flex items-center justify-between gap-6 shrink-0">
-            <div>
-              <h1 className="text-xl font-bold tracking-tight text-foreground">
-                {getPageTitle(pathname)}
-              </h1>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Hola, <span className="font-medium text-foreground">{user?.name}</span>. Gestioná tus finanzas.
-              </p>
+        <main className="flex-1 flex flex-col min-w-0 overflow-y-auto bg-background">
+          {/* Cloudflare Top Header Bar */}
+          <header className="border-b border-border bg-card/80 backdrop-blur-md px-6 py-3.5 flex items-center justify-between gap-4 shrink-0">
+            <div className="flex items-center gap-3">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h1 className="text-base font-bold tracking-tight text-foreground">
+                    {getPageTitle(pathname)}
+                  </h1>
+                </div>
+              </div>
             </div>
 
-            <div className="flex items-center gap-6">
-              {/* Consolidated Balance Card */}
-              <div className="flex items-center gap-4 border border-border/40 bg-card/45 backdrop-blur-md rounded-2xl px-5 py-2.5 shadow-sm">
-                <div className="flex items-center gap-2 border-r border-border/40 pr-4">
+            <div className="flex items-center gap-4">
+              {/* Consolidated Cloudflare Metric Pill */}
+              <div className="flex items-center gap-3 border border-border bg-muted/30 rounded-md px-3.5 py-1.5 font-mono">
+                <div className="flex items-center gap-2 border-r border-border pr-3">
                   <div>
-                    <p className="text-[10px] text-muted-foreground uppercase font-semibold tracking-wider">
-                      Total ARS
+                    <p className="text-[9px] text-muted-foreground uppercase font-semibold tracking-wider">
+                      TOTAL ARS
                     </p>
-                    <p className="text-sm font-bold tabular-nums">
+                    <p className="text-xs font-bold text-foreground tabular-nums">
                       {mask(formatShort(totalsByCurrency.ARS, "ARS"))}
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-4">
+
+                <div className="flex items-center gap-3">
                   <div>
-                    <p className="text-[10px] text-muted-foreground uppercase font-semibold tracking-wider">
-                      Total USD
+                    <p className="text-[9px] text-muted-foreground uppercase font-semibold tracking-wider">
+                      TOTAL USD
                     </p>
-                    <p className="text-sm font-bold tabular-nums text-primary">
+                    <p className="text-xs font-bold text-primary tabular-nums">
                       {mask(formatShort(totalsByCurrency.USD, "USD"))}
                     </p>
                   </div>
-                  <button
+
+                  <Button
                     onClick={() => setHidden((h) => !h)}
-                    className="flex size-8 items-center justify-center rounded-xl bg-muted/60 text-muted-foreground hover:text-foreground transition-colors pointer-events-auto cursor-pointer"
+                    variant="ghost"
+                    size="icon"
+                    className="size-7 rounded text-muted-foreground hover:text-foreground hover:bg-muted cursor-pointer"
                     title={hidden ? "Mostrar saldos" : "Ocultar saldos"}
                   >
-                    {hidden ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                  </button>
+                    {hidden ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
+                  </Button>
                 </div>
               </div>
             </div>
           </header>
 
           {/* Page Content */}
-          <div className="flex-1 p-8">{children}</div>
+          <div className="flex-1 p-6">{children}</div>
         </main>
       </div>
 
@@ -267,3 +317,4 @@ export function AppShell({ children }: { children: ReactNode }) {
     </>
   )
 }
+

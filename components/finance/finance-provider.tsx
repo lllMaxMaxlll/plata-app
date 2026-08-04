@@ -64,6 +64,20 @@ export interface NewTransactionInput {
   date?: string
 }
 
+export interface MacroSettings {
+  exchangeRate: number
+  annualInflation: number
+  annualDevaluation: number
+  annualReturn: number
+  lastUpdated: string
+  rates?: {
+    blue: number
+    oficial: number
+    mep: number
+    ccl: number
+  }
+}
+
 interface FinanceContextValue {
   user: User | null
   loading: boolean
@@ -120,6 +134,7 @@ interface FinanceContextValue {
   updateVehicleLog: (id: string, input: Omit<VehicleLog, "id">) => Promise<void>
   deleteVehicleLog: (id: string) => Promise<void>
 
+
   dueItems: DueItem[]
   addDueItem: (input: Omit<DueItem, "id" | "createdAt">) => Promise<void>
   updateDueItem: (id: string, input: Partial<Omit<DueItem, "id">>) => Promise<void>
@@ -130,6 +145,10 @@ interface FinanceContextValue {
   ) => Promise<void>
   markDueItemAsPending: (id: string) => Promise<void>
   saveFCMToken: (token: string) => Promise<void>
+
+  macroSettings: MacroSettings
+  updateMacroSettings: (settings: Partial<MacroSettings>) => Promise<void>
+  syncMacroFromApi: () => Promise<MacroSettings>
 }
 
 const FinanceContext = createContext<FinanceContextValue | null>(null)
@@ -148,6 +167,17 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const [vehicles, setVehicles] = useState<Vehicle[]>([])
   const [vehicleLogs, setVehicleLogs] = useState<VehicleLog[]>([])
   const [dueItems, setDueItems] = useState<DueItem[]>([])
+
+  const DEFAULT_MACRO_SETTINGS: MacroSettings = {
+    exchangeRate: 1250,
+    annualInflation: 45,
+    annualDevaluation: 40,
+    annualReturn: 12,
+    lastUpdated: "",
+    rates: { blue: 1250, oficial: 980, mep: 1240, ccl: 1255 },
+  }
+
+  const [macroSettings, setMacroSettings] = useState<MacroSettings>(DEFAULT_MACRO_SETTINGS)
 
   // 1. Listen to Auth State Changes
   useEffect(() => {
@@ -313,6 +343,14 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       setDueItems(dList)
     })
 
+    // Sync macro settings document
+    const macroRef = doc(db, "users", user.uid, "settings", "macro")
+    const unsubscribeMacro = onSnapshot(macroRef, (docSnap) => {
+      if (docSnap.exists()) {
+        setMacroSettings((prev) => ({ ...prev, ...docSnap.data() }))
+      }
+    })
+
     return () => {
       unsubscribeAccounts()
       unsubscribeTransactions()
@@ -322,6 +360,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       unsubscribeVehicles()
       unsubscribeVehicleLogs()
       unsubscribeDueItems()
+      unsubscribeMacro()
     }
   }, [user])
 
@@ -1458,6 +1497,41 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     })
   }
 
+  async function updateMacroSettings(settings: Partial<MacroSettings>) {
+    const updated = {
+      ...macroSettings,
+      ...settings,
+      lastUpdated: new Date().toISOString(),
+    }
+    setMacroSettings(updated)
+    if (user) {
+      const macroRef = doc(db, "users", user.uid, "settings", "macro")
+      await setDoc(macroRef, updated, { merge: true })
+    }
+  }
+
+  async function syncMacroFromApi(): Promise<MacroSettings> {
+    try {
+      const res = await fetch("/api/macro")
+      if (res.ok) {
+        const data = await res.json()
+        const newSettings: MacroSettings = {
+          exchangeRate: data.recommendedExchangeRate ?? 1250,
+          annualInflation: data.annualInflation ?? 45,
+          annualDevaluation: data.annualDevaluation ?? 40,
+          annualReturn: data.annualReturn ?? 12,
+          lastUpdated: data.lastUpdated || new Date().toISOString(),
+          rates: data.rates,
+        }
+        await updateMacroSettings(newSettings)
+        return newSettings
+      }
+    } catch (e) {
+      console.error("Error syncing macro data from API:", e)
+    }
+    return macroSettings
+  }
+
   const totalsByCurrency = useMemo(() => {
     return accounts.reduce(
       (acc, a) => {
@@ -1517,6 +1591,9 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     markDueItemAsPaid,
     markDueItemAsPending,
     saveFCMToken,
+    macroSettings,
+    updateMacroSettings,
+    syncMacroFromApi,
   }
 
   return <FinanceContext.Provider value={value}>{children}</FinanceContext.Provider>

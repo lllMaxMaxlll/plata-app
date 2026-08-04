@@ -502,7 +502,7 @@ export function AdvisorView({ isDesktop = false }: { isDesktop?: boolean }) {
   ]
 
   const containerClasses = isDesktop
-    ? "h-[calc(100vh-13rem)] w-full max-w-4xl mx-auto flex flex-col bg-card border border-border rounded-xl shadow-xl overflow-hidden animate-in fade-in duration-200"
+    ? "h-[calc(100vh-10rem)] w-full max-w-7xl mx-auto flex flex-col bg-card border border-border/60 rounded-xl shadow-xl overflow-hidden animate-in fade-in duration-200"
     : "fixed inset-x-0 bottom-0 top-0 max-w-md mx-auto z-30 flex flex-col bg-background pt-[calc(env(safe-area-inset-top)+1.25rem)] pb-[calc(env(safe-area-inset-bottom)+4.5rem)]"
 
   return (

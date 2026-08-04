@@ -3,6 +3,7 @@
 import { ArrowDownLeft, ArrowUpRight, ArrowLeftRight, Paperclip } from "lucide-react"
 import { formatShort, type Transaction } from "@/lib/finance-data"
 import { useFinance } from "./finance-provider"
+import { Badge } from "@/components/ui/badge"
 
 function relativeDate(iso: string) {
   const d = new Date(iso)
@@ -28,24 +29,24 @@ function TransactionRow({
   const config = {
     income: {
       Icon: ArrowDownLeft,
-      tone: "text-primary",
-      bg: "bg-primary/10",
+      tone: "text-emerald-400",
+      bg: "bg-emerald-500/10 border-emerald-500/20",
       sign: "+",
-      amountClass: "text-primary",
+      amountClass: "text-emerald-400 font-mono font-bold",
     },
     expense: {
       Icon: ArrowUpRight,
-      tone: "text-destructive",
-      bg: "bg-destructive/10",
+      tone: "text-red-400",
+      bg: "bg-red-500/10 border-red-500/20",
       sign: "-",
-      amountClass: "text-destructive",
+      amountClass: "text-red-400 font-mono font-bold",
     },
     transfer: {
       Icon: ArrowLeftRight,
-      tone: "text-muted-foreground",
-      bg: "bg-muted",
+      tone: "text-primary",
+      bg: "bg-primary/10 border-primary/20",
       sign: "",
-      amountClass: "text-foreground",
+      amountClass: "text-foreground font-mono font-bold",
     },
   }[tx.type]
 
@@ -59,24 +60,24 @@ function TransactionRow({
   return (
     <li
       onClick={() => onEditTransaction?.(tx)}
-      className="flex cursor-pointer items-center gap-3 py-3 transition-colors hover:bg-muted/10 rounded-xl px-2.5 -mx-2.5"
+      className="flex cursor-pointer items-center gap-3 py-2.5 px-3 transition-colors hover:bg-muted/40 rounded-md border border-transparent hover:border-border -mx-1"
     >
-      <span className={`flex size-10 shrink-0 items-center justify-center rounded-full ${config.bg} ${config.tone}`}>
-        <config.Icon className="size-4.5" />
+      <span className={`flex size-8 shrink-0 items-center justify-center rounded-md border ${config.bg} ${config.tone}`}>
+        <config.Icon className="size-4" />
       </span>
       <div className="min-w-0 flex-1">
-        <p className="flex items-center gap-1.5 truncate text-sm font-medium">
+        <p className="flex items-center gap-1.5 truncate text-xs font-semibold text-foreground">
           {tx.note || tx.category}
           {tx.receiptName && <Paperclip className="size-3 shrink-0 text-muted-foreground" />}
         </p>
-        <p className="truncate text-xs text-muted-foreground">{subtitle}</p>
+        <p className="truncate text-[11px] font-mono text-muted-foreground">{subtitle}</p>
       </div>
-      <div className="text-right">
-        <p className={`text-sm font-semibold tabular-nums ${config.amountClass}`}>
+      <div className="text-right font-mono">
+        <p className={`text-xs ${config.amountClass}`}>
           {config.sign}
           {formatShort(tx.amount, account?.currency ?? "ARS")}
         </p>
-        <p className="text-xs text-muted-foreground">{relativeDate(tx.date)}</p>
+        <p className="text-[10px] text-muted-foreground">{relativeDate(tx.date)}</p>
       </div>
     </li>
   )
@@ -91,16 +92,17 @@ export function TransactionList({
 }) {
   if (transactions.length === 0) {
     return (
-      <p className="py-8 text-center text-sm text-muted-foreground">
-        No hay movimientos para este filtro.
-      </p>
+      <div className="py-8 text-center text-xs font-mono text-muted-foreground border border-dashed border-border rounded-md">
+        No hay eventos para este filtro.
+      </div>
     )
   }
   return (
-    <ul className="divide-y divide-border">
+    <ul className="flex flex-col gap-1 mt-1">
       {transactions.map((tx) => (
         <TransactionRow key={tx.id} tx={tx} onEditTransaction={onEditTransaction} />
       ))}
     </ul>
   )
 }
+

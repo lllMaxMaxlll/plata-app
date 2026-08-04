@@ -12,6 +12,26 @@ export interface BigPurchaseGoal {
   targetMonth: number // 1 to 60
 }
 
+export interface SequentialGoal {
+  id: string
+  name: string
+  amount: number
+  currency: Currency
+  type: "reserve" | "purchase" // 'reserve' (reserva de capital) | 'purchase' (gasto/compra)
+  priority: number
+}
+
+export interface SequentialGoalResult {
+  goal: SequentialGoal
+  estimatedMonthNeutral?: number
+  estimatedMonthPessimistic?: number
+  estimatedMonthOptimistic?: number
+  estimatedDateLabel?: string // e.g. "Marzo 2027 (en 7 meses)"
+  isAchievedInHorizon: boolean
+  coveragePercent: number
+  costInDisplayCurrency: number
+}
+
 export interface SimulationParams {
   initialNetWorth: {
     ARS: number
@@ -28,6 +48,7 @@ export interface SimulationParams {
   displayCurrency: Currency
   initialExchangeRate: number // ARS per USD, e.g. 1250
   bigPurchaseGoal?: BigPurchaseGoal | null
+  sequentialGoals?: SequentialGoal[]
   isRealTerms?: boolean // If true, adjusts by inflation discount factor
 }
 
@@ -48,6 +69,7 @@ export interface ScenarioPoint {
 
   // Goal cost at this month in display currency
   goalCostInDisplayCurrency?: number
+  achievedGoalNames?: string[]
 }
 
 export interface ScenarioResultSummary {
@@ -76,6 +98,8 @@ export interface GoalViability {
 export interface SimulationResult {
   timeline: ScenarioPoint[]
   goalViability: GoalViability | null
+  sequentialGoalResults: SequentialGoalResult[]
+  nextGoal: SequentialGoalResult | null
   finalNetWorth: {
     pessimistic: ScenarioResultSummary
     neutral: ScenarioResultSummary
@@ -101,8 +125,17 @@ function getMonthlyRate(annualPercent: number): number {
   return Math.pow(1 + annualDecimal, 1 / 12) - 1
 }
 
+function getFutureMonthLabel(monthIndex: number): string {
+  const now = new Date()
+  const futureDate = new Date(now.getFullYear(), now.getMonth() + monthIndex, 1)
+  const monthName = futureDate.toLocaleString("es-AR", { month: "long" })
+  const year = futureDate.getFullYear()
+  const capitalizedMonth = monthName.charAt(0).toUpperCase() + monthName.slice(1)
+  return `${capitalizedMonth} ${year} (en ${monthIndex} ${monthIndex === 1 ? "mes" : "meses"})`
+}
+
 /**
- * Generates monthly projection for a given scenario
+ * Generates monthly projection for a given scenario with sequential cascading goals
  */
 function calculateScenarioTimeline(
   params: SimulationParams,
@@ -115,6 +148,7 @@ function calculateScenarioTimeline(
     displayCurrency,
     initialExchangeRate,
     bigPurchaseGoal,
+    sequentialGoals = [],
   } = params
 
   const iMonthly = getMonthlyRate(config.inflationRate)
@@ -127,6 +161,14 @@ function calculateScenarioTimeline(
   let fxRate = Math.max(1, initialExchangeRate)
   let totalSavedInDisplayCurrency = 0
 
+  // Track sequential goals state
+  const sortedGoals = [...sequentialGoals].sort((a, b) => a.priority - b.priority)
+  let currentGoalIdx = 0
+  let lockedReserveUSD = 0
+
+  const goalAchievementMonths = new Map<string, number>()
+  const goalAchievementNamesPerMonth = new Map<number, string[]>()
+
   const points: {
     month: number
     label: string
@@ -136,6 +178,7 @@ function calculateScenarioTimeline(
     netWorthWithGoalReal: number
     netWorthWithoutGoalReal: number
     goalCostInDisplay: number
+    achievedGoalNames: string[]
   }[] = []
 
   // Month 0 (Initial state)
@@ -153,6 +196,7 @@ function calculateScenarioTimeline(
     netWorthWithGoalReal: initNominal,
     netWorthWithoutGoalReal: initNominal,
     goalCostInDisplay: 0,
+    achievedGoalNames: [],
   })
 
   let balanceARSNoGoal = balanceARS
@@ -183,22 +227,95 @@ function calculateScenarioTimeline(
     balanceARSNoGoal = balanceARSNoGoal * (1 + rMonthly)
     balanceUSDNoGoal = balanceUSDNoGoal * (1 + rMonthly)
 
-    // Big purchase goal deduction at target month
     let goalCostInDisplay = 0
+    const achievedNames: string[] = []
+
+    // 1. Single Legacy Big Purchase Goal
     if (bigPurchaseGoal && m === bigPurchaseGoal.targetMonth) {
       if (bigPurchaseGoal.currency === "ARS") {
         goalCostInDisplay =
           displayCurrency === "ARS"
             ? bigPurchaseGoal.amount
             : bigPurchaseGoal.amount / fxRate
-        balanceARS -= bigPurchaseGoal.amount
+        if (balanceARS >= bigPurchaseGoal.amount) {
+          balanceARS -= bigPurchaseGoal.amount
+        } else {
+          const deficit = bigPurchaseGoal.amount - balanceARS
+          balanceARS = 0
+          balanceUSD = Math.max(0, balanceUSD - deficit / fxRate)
+        }
       } else {
         goalCostInDisplay =
           displayCurrency === "USD"
             ? bigPurchaseGoal.amount
             : bigPurchaseGoal.amount * fxRate
-        balanceUSD -= bigPurchaseGoal.amount
+        if (balanceUSD >= bigPurchaseGoal.amount) {
+          balanceUSD -= bigPurchaseGoal.amount
+        } else {
+          const deficit = bigPurchaseGoal.amount - balanceUSD
+          balanceUSD = 0
+          balanceARS = Math.max(0, balanceARS - deficit * fxRate)
+        }
       }
+      achievedNames.push(bigPurchaseGoal.name)
+    }
+
+    // 2. Sequential Cascading Goals Check
+    while (currentGoalIdx < sortedGoals.length) {
+      const activeGoal = sortedGoals[currentGoalIdx]
+      const goalCostUSD =
+        activeGoal.currency === "USD"
+          ? activeGoal.amount
+          : activeGoal.amount / fxRate
+
+      // Total net worth available in USD equivalent
+      const netWorthUSD = balanceUSD + balanceARS / fxRate
+      const availableNetWorthUSD = Math.max(0, netWorthUSD - lockedReserveUSD)
+
+      if (availableNetWorthUSD < goalCostUSD) {
+        break // Not enough free capital for this goal yet
+      }
+
+      // Goal achieved!
+      goalAchievementMonths.set(activeGoal.id, m)
+      achievedNames.push(activeGoal.name)
+
+      if (!goalAchievementNamesPerMonth.has(m)) {
+        goalAchievementNamesPerMonth.set(m, [])
+      }
+      goalAchievementNamesPerMonth.get(m)?.push(activeGoal.name)
+
+      // Handle goal completion type:
+      if (activeGoal.type === "purchase") {
+        // Deduct purchase cost from liquid balances (ARS then USD, or USD then ARS)
+        if (activeGoal.currency === "ARS") {
+          const costARS = activeGoal.amount
+          if (balanceARS >= costARS) {
+            balanceARS -= costARS
+          } else {
+            const deficitARS = costARS - balanceARS
+            balanceARS = 0
+            const deficitUSD = deficitARS / fxRate
+            balanceUSD = Math.max(0, balanceUSD - deficitUSD)
+          }
+        } else {
+          const costUSD = activeGoal.amount
+          if (balanceUSD >= costUSD) {
+            balanceUSD -= costUSD
+          } else {
+            const deficitUSD = costUSD - balanceUSD
+            balanceUSD = 0
+            const deficitARS = deficitUSD * fxRate
+            balanceARS = Math.max(0, balanceARS - deficitARS)
+          }
+        }
+      } else if (activeGoal.type === "reserve") {
+        // Lock reserve capital so future goals accumulate on top of it
+        lockedReserveUSD += goalCostUSD
+      }
+
+      // Advance to next sequential goal
+      currentGoalIdx++
     }
 
     // Nominal Net Worth
@@ -218,7 +335,6 @@ function calculateScenarioTimeline(
     const realWithGoal = nominalWithGoal * discountFactor
     const realNoGoal = nominalNoGoal * discountFactor
 
-    // Label format: "Mes 1", "Mes 6", "1 año", etc.
     let label = `M${m}`
     if (m % 12 === 0) {
       const years = m / 12
@@ -234,10 +350,11 @@ function calculateScenarioTimeline(
       netWorthWithGoalReal: Math.max(0, realWithGoal),
       netWorthWithoutGoalReal: Math.max(0, realNoGoal),
       goalCostInDisplay,
+      achievedGoalNames: achievedNames,
     })
   }
 
-  return { points, totalSavedInDisplayCurrency }
+  return { points, totalSavedInDisplayCurrency, goalAchievementMonths }
 }
 
 /**
@@ -249,12 +366,12 @@ export function runSimulation(params: SimulationParams): SimulationResult {
     annualDevaluationRate,
     annualInvestmentReturnRate,
     bigPurchaseGoal,
+    sequentialGoals = [],
     isRealTerms = false,
     displayCurrency,
   } = params
 
   // 1. Configure 3 Scenarios
-  // Pessimistic: Inflation/Devaluation +20%, Returns -30%
   const pessimisticConfig: ScenarioConfig = {
     inflationRate: Math.max(0, annualInflationRate * 1.2),
     devaluationRate: Math.max(0, annualDevaluationRate * 1.2),
@@ -264,14 +381,12 @@ export function runSimulation(params: SimulationParams): SimulationResult {
         : annualInvestmentReturnRate * 1.3,
   }
 
-  // Neutral: Base rates
   const neutralConfig: ScenarioConfig = {
     inflationRate: Math.max(0, annualInflationRate),
     devaluationRate: Math.max(0, annualDevaluationRate),
     returnRate: annualInvestmentReturnRate,
   }
 
-  // Optimistic: Inflation/Devaluation -15%, Returns +25%
   const optimisticConfig: ScenarioConfig = {
     inflationRate: Math.max(0, annualInflationRate * 0.85),
     devaluationRate: Math.max(0, annualDevaluationRate * 0.85),
@@ -331,6 +446,7 @@ export function runSimulation(params: SimulationParams): SimulationResult {
         : oPoint.netWorthWithoutGoal,
 
       goalCostInDisplayCurrency,
+      achievedGoalNames: nPoint.achievedGoalNames,
     })
   }
 
@@ -375,18 +491,57 @@ export function runSimulation(params: SimulationParams): SimulationResult {
     },
   }
 
-  // 4. Calculate Goal Viability if a big purchase goal exists
+  // 4. Sequential Goals Results Processing
+  const sortedGoals = [...sequentialGoals].sort((a, b) => a.priority - b.priority)
+  const sequentialGoalResults: SequentialGoalResult[] = sortedGoals.map((g) => {
+    const monthNeutral = nSim.goalAchievementMonths.get(g.id)
+    const monthPessimistic = pSim.goalAchievementMonths.get(g.id)
+    const monthOptimistic = oSim.goalAchievementMonths.get(g.id)
+
+    const isAchievedInHorizon = monthNeutral !== undefined
+
+    // Calculate cost in display currency at current FX
+    const initFx = params.initialExchangeRate || 1250
+    const costInDisplay =
+      g.currency === displayCurrency
+        ? g.amount
+        : displayCurrency === "ARS"
+        ? g.amount * initFx
+        : g.amount / initFx
+
+    // Coverage percent at end of horizon or at target
+    const currentNWDisplay = nSim.points[0].netWorthWithoutGoal
+    const coveragePercent = Math.min(100, Math.round((currentNWDisplay / (costInDisplay || 1)) * 100))
+
+    let estimatedDateLabel = "Más de 5 años"
+    if (monthNeutral !== undefined) {
+      estimatedDateLabel = getFutureMonthLabel(monthNeutral)
+    }
+
+    return {
+      goal: g,
+      estimatedMonthNeutral: monthNeutral,
+      estimatedMonthPessimistic: monthPessimistic,
+      estimatedMonthOptimistic: monthOptimistic,
+      estimatedDateLabel,
+      isAchievedInHorizon,
+      coveragePercent,
+      costInDisplayCurrency: costInDisplay,
+    }
+  })
+
+  const nextGoal = sequentialGoalResults.find((r) => !r.isAchievedInHorizon) || sequentialGoalResults[sequentialGoalResults.length - 1] || null
+
+  // 5. Calculate Goal Viability if a single legacy big purchase goal exists
   let goalViability: GoalViability | null = null
 
   if (bigPurchaseGoal) {
     const tMonth = Math.min(bigPurchaseGoal.targetMonth, timeline.length - 1)
 
-    // Pre-goal accumulated wealth at target month in neutral scenario
     const pPreAtTarget = pSim.points[tMonth]?.netWorthWithoutGoal ?? 0
     const nPreAtTarget = nSim.points[tMonth]?.netWorthWithoutGoal ?? 0
     const oPreAtTarget = oSim.points[tMonth]?.netWorthWithoutGoal ?? 0
 
-    // Goal cost in display currency at target month
     const targetFx = nSim.points[tMonth]?.exchangeRate ?? params.initialExchangeRate
     const goalCostInDisplay =
       bigPurchaseGoal.currency === displayCurrency
@@ -406,7 +561,6 @@ export function runSimulation(params: SimulationParams): SimulationResult {
     const isViableNeutral = covNeutral >= 100
     const isViableOptimistic = covOptimistic >= 100
 
-    // Find estimated month to achieve in each scenario
     const findAchieveMonth = (simPoints: typeof nSim.points) => {
       const idx = simPoints.findIndex((pt) => {
         if (pt.month === 0) return false
@@ -462,7 +616,10 @@ export function runSimulation(params: SimulationParams): SimulationResult {
   return {
     timeline,
     goalViability,
+    sequentialGoalResults,
+    nextGoal,
     finalNetWorth,
     displayCurrency,
   }
 }
+

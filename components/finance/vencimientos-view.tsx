@@ -301,7 +301,7 @@ export function VencimientosView({ isDesktop = false }: { isDesktop?: boolean })
   }, [selectedCalendarDateIso, itemsWithComputedStatus])
 
   return (
-    <div className={`space-y-6 pb-20 ${isDesktop ? "max-w-6xl mx-auto" : "px-4 pt-4"}`}>
+    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 pt-4 pb-20 space-y-6">
       {/* Header Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>

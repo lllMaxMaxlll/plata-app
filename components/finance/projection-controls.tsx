@@ -64,6 +64,12 @@ export interface ProjectionControlsProps {
   bigPurchaseGoal?: BigPurchaseGoal | null
   onOpenGoalModal: () => void
   onRemoveGoal: () => void
+
+  // AI & Live Sync
+  onSyncMacro?: () => void
+  isSyncingMacro?: boolean
+  lastMacroSyncDate?: string
+  dollarRates?: { blue: number; oficial: number; mep: number; ccl: number }
 }
 
 export function ProjectionControls({
@@ -94,7 +100,13 @@ export function ProjectionControls({
   bigPurchaseGoal,
   onOpenGoalModal,
   onRemoveGoal,
+  onSyncMacro,
+  isSyncingMacro,
+  lastMacroSyncDate,
+  dollarRates,
 }: ProjectionControlsProps) {
+  const [showAdvanced, setShowAdvanced] = React.useState(false)
+
   return (
     <div className="flex flex-col gap-6">
       {/* 1. Global View Options: Currency, Horizon, Real vs Nominal */}
@@ -252,111 +264,157 @@ export function ProjectionControls({
             </div>
           </div>
 
-          {/* Initial Exchange Rate */}
-          <div>
-            <div className="flex items-center justify-between mb-1">
+          {/* Initial Exchange Rate & AI Sync */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
               <Label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                <ArrowRightLeft className="size-3 text-muted-foreground" /> Tipo de Cambio Inicial (USD/ARS)
+                <ArrowRightLeft className="size-3 text-muted-foreground" /> Tipo de Cambio (USD/ARS)
               </Label>
+
+              {onSyncMacro && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={onSyncMacro}
+                  disabled={isSyncingMacro}
+                  className="h-7 text-[11px] gap-1.5 border-primary/30 text-primary hover:bg-primary/10 cursor-pointer shadow-xs"
+                >
+                  <Sparkles className={`size-3 text-amber-400 ${isSyncingMacro ? "animate-spin" : ""}`} />
+                  {isSyncingMacro ? "Sincronizando..." : "Sincronizar Cotización e Indicadores con IA"}
+                </Button>
+              )}
             </div>
-            <Input
-              type="number"
-              value={exchangeRate || ""}
-              onChange={(e) => onExchangeRateChange(Number(e.target.value))}
-              className="h-9 text-xs font-semibold tabular-nums"
-            />
+
+            <div className="flex items-center gap-2">
+              <Input
+                type="number"
+                value={exchangeRate || ""}
+                onChange={(e) => onExchangeRateChange(Number(e.target.value))}
+                className="h-9 text-xs font-bold tabular-nums"
+              />
+            </div>
+
+            {/* Live Dollar Badges */}
+            {dollarRates && (
+              <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                <Badge variant="secondary" className="text-[10px] font-mono font-semibold bg-emerald-500/10 text-emerald-400 border-emerald-500/20">
+                  Blue: ${dollarRates.blue}
+                </Badge>
+                <Badge variant="secondary" className="text-[10px] font-mono font-semibold bg-primary/10 text-primary border-primary/20">
+                  MEP: ${dollarRates.mep}
+                </Badge>
+                <Badge variant="secondary" className="text-[10px] font-mono font-semibold bg-muted text-muted-foreground">
+                  Oficial: ${dollarRates.oficial}
+                </Badge>
+              </div>
+            )}
+
+            {lastMacroSyncDate && (
+              <p className="text-[10px] text-muted-foreground font-mono">
+                Última actualización guardada: {new Date(lastMacroSyncDate).toLocaleString("es-AR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+              </p>
+            )}
           </div>
         </CardContent>
       </Card>
 
-      {/* 3. Economic Indicators (Inflation, Devaluation, Return Sliders) */}
-      <Card className="border-border/50 bg-card/40 backdrop-blur-xl shadow-lg">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-semibold flex items-center gap-2">
-            <Percent className="size-4 text-cyan-400" />
-            Variables Económicas Locales & Rendimientos
-          </CardTitle>
+      {/* 3. Advanced Economic Indicators (Collapsible) */}
+      <Card className="border-border/50 bg-card/40 backdrop-blur-xl shadow-lg overflow-hidden">
+        <CardHeader className="pb-3 cursor-pointer select-none" onClick={() => setShowAdvanced(!showAdvanced)}>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+              <Percent className="size-4 text-cyan-400" />
+              Ajustes Macroeconómicos Avanzados
+            </CardTitle>
+            <Button variant="ghost" size="sm" className="h-7 text-xs font-mono text-muted-foreground">
+              {showAdvanced ? "Ocultar" : "Personalizar"}
+            </Button>
+          </div>
           <CardDescription className="text-[11px]">
-            Ajusta los porcentajes anuales para el escenario Neutro. El motor calculará automáticamente los del escenario Pesimista y Optimista.
+            {showAdvanced
+              ? "Ajusta inflación, devaluación y retorno de inversión para afinar escenarios."
+              : "Valores predeterminados estándar de Argentina (Inflación 50%, Devaluación 45%, Retorno 12%)."}
           </CardDescription>
         </CardHeader>
 
-        <CardContent className="space-y-5">
-          {/* Annual Inflation Slider */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label className="text-xs font-medium flex items-center gap-1.5">
-                <Flame className="size-3.5 text-rose-400" /> Inflación Anual Esperada
-              </Label>
-              <div className="flex items-center gap-1">
-                <Input
-                  type="number"
-                  value={annualInflation}
-                  onChange={(e) => onAnnualInflationChange(Number(e.target.value))}
-                  className="h-7 w-16 text-right text-xs font-bold tabular-nums px-2"
-                />
-                <span className="text-xs font-bold text-muted-foreground">%</span>
+        {showAdvanced && (
+          <CardContent className="space-y-5 border-t border-border/40 pt-4 animate-in fade-in slide-in-from-top-2 duration-200">
+            {/* Annual Inflation Slider */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs font-medium flex items-center gap-1.5">
+                  <Flame className="size-3.5 text-rose-400" /> Inflación Anual Esperada
+                </Label>
+                <div className="flex items-center gap-1">
+                  <Input
+                    type="number"
+                    value={annualInflation}
+                    onChange={(e) => onAnnualInflationChange(Number(e.target.value))}
+                    className="h-7 w-16 text-right text-xs font-bold tabular-nums px-2"
+                  />
+                  <span className="text-xs font-bold text-muted-foreground">%</span>
+                </div>
               </div>
+              <Slider
+                value={annualInflation}
+                onValueChange={onAnnualInflationChange}
+                min={0}
+                max={200}
+                step={1}
+              />
             </div>
-            <Slider
-              value={annualInflation}
-              onValueChange={onAnnualInflationChange}
-              min={0}
-              max={200}
-              step={1}
-            />
-          </div>
 
-          {/* Annual Devaluation Slider */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label className="text-xs font-medium flex items-center gap-1.5">
-                <ArrowRightLeft className="size-3.5 text-amber-400" /> Devaluación Anual Esperada (Peso/USD)
-              </Label>
-              <div className="flex items-center gap-1">
-                <Input
-                  type="number"
-                  value={annualDevaluation}
-                  onChange={(e) => onAnnualDevaluationChange(Number(e.target.value))}
-                  className="h-7 w-16 text-right text-xs font-bold tabular-nums px-2"
-                />
-                <span className="text-xs font-bold text-muted-foreground">%</span>
+            {/* Annual Devaluation Slider */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs font-medium flex items-center gap-1.5">
+                  <ArrowRightLeft className="size-3.5 text-amber-400" /> Devaluación Anual Esperada (Peso/USD)
+                </Label>
+                <div className="flex items-center gap-1">
+                  <Input
+                    type="number"
+                    value={annualDevaluation}
+                    onChange={(e) => onAnnualDevaluationChange(Number(e.target.value))}
+                    className="h-7 w-16 text-right text-xs font-bold tabular-nums px-2"
+                  />
+                  <span className="text-xs font-bold text-muted-foreground">%</span>
+                </div>
               </div>
+              <Slider
+                value={annualDevaluation}
+                onValueChange={onAnnualDevaluationChange}
+                min={0}
+                max={200}
+                step={1}
+              />
             </div>
-            <Slider
-              value={annualDevaluation}
-              onValueChange={onAnnualDevaluationChange}
-              min={0}
-              max={200}
-              step={1}
-            />
-          </div>
 
-          {/* Investment Return Slider */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label className="text-xs font-medium flex items-center gap-1.5">
-                <TrendingUp className="size-3.5 text-emerald-400" /> Rendimiento de Inversiones Anual
-              </Label>
-              <div className="flex items-center gap-1">
-                <Input
-                  type="number"
-                  value={annualReturn}
-                  onChange={(e) => onAnnualReturnChange(Number(e.target.value))}
-                  className="h-7 w-16 text-right text-xs font-bold tabular-nums px-2"
-                />
-                <span className="text-xs font-bold text-muted-foreground">%</span>
+            {/* Investment Return Slider */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs font-medium flex items-center gap-1.5">
+                  <TrendingUp className="size-3.5 text-emerald-400" /> Rendimiento de Inversiones Anual
+                </Label>
+                <div className="flex items-center gap-1">
+                  <Input
+                    type="number"
+                    value={annualReturn}
+                    onChange={(e) => onAnnualReturnChange(Number(e.target.value))}
+                    className="h-7 w-16 text-right text-xs font-bold tabular-nums px-2"
+                  />
+                  <span className="text-xs font-bold text-muted-foreground">%</span>
+                </div>
               </div>
+              <Slider
+                value={annualReturn}
+                onValueChange={onAnnualReturnChange}
+                min={-20}
+                max={100}
+                step={1}
+              />
             </div>
-            <Slider
-              value={annualReturn}
-              onValueChange={onAnnualReturnChange}
-              min={-20}
-              max={100}
-              step={1}
-            />
-          </div>
-        </CardContent>
+          </CardContent>
+        )}
       </Card>
 
       {/* 4. Big Purchase Target Goal Card */}

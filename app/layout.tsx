@@ -1,21 +1,21 @@
 import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
-import { Geist, Geist_Mono } from 'next/font/google'
+import { Inter, Roboto_Mono } from 'next/font/google'
 import './globals.css'
 import { Toaster } from 'sonner'
 import { Providers } from './providers'
 import { AppShell } from './shell'
 
-const geistSans = Geist({ variable: '--font-geist-sans', subsets: ['latin'] })
-const geistMono = Geist_Mono({
-  variable: '--font-geist-mono',
+const inter = Inter({ variable: '--font-sans', subsets: ['latin'] })
+const robotoMono = Roboto_Mono({
+  variable: '--font-mono',
   subsets: ['latin'],
 })
 
 export const metadata: Metadata = {
-  title: 'PLATA — Finanzas ARS & USD',
+  title: 'PLATA — Finanzas Cloud Dashboard',
   description:
-    'App de finanzas personales para Argentina: cuentas en pesos y dólares, ingresos, gastos y transferencias.',
+    'App de finanzas personales para Argentina con UI Cloudflare: cuentas en pesos y dólares, ingresos, gastos y transferencias.',
   generator: 'v0.app',
   appleWebApp: { capable: true, statusBarStyle: 'black-translucent', title: 'PLATA' },
   icons: {
@@ -39,7 +39,7 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   colorScheme: 'dark',
-  themeColor: '#0c0e12',
+  themeColor: '#0e1015',
   userScalable: false,
   width: 'device-width',
   initialScale: 1,
@@ -54,9 +54,9 @@ export default function RootLayout({
   return (
     <html
       lang="es"
-      className={`bg-background ${geistSans.variable} ${geistMono.variable}`}
+      className={`bg-background ${inter.variable} ${robotoMono.variable}`}
     >
-      <body className="bg-background font-sans antialiased">
+      <body className="bg-background font-sans antialiased text-foreground">
         <Providers>
           <AppShell>{children}</AppShell>
         </Providers>

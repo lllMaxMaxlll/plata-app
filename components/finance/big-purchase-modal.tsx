@@ -12,20 +12,19 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
-import { Slider } from "@/components/ui/slider"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Target, Sparkles, Trash2, Check, Loader2 } from "lucide-react"
-import { type BigPurchaseGoal, type Currency } from "@/lib/simulation-engine"
+import { Sparkles, Trash2, Check, Loader2, ShieldCheck, ShoppingBag } from "lucide-react"
+import { type SequentialGoal, type Currency } from "@/lib/simulation-engine"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 
 export interface BigPurchaseModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  currentGoal?: BigPurchaseGoal | null
-  onSaveGoal: (goal: BigPurchaseGoal) => void
+  currentGoal?: SequentialGoal | null
+  onSaveGoal: (goal: SequentialGoal) => void
   onRemoveGoal: () => void
-  horizonMonths: number
+  priorityCount?: number
 }
 
 export function BigPurchaseModal({
@@ -34,12 +33,12 @@ export function BigPurchaseModal({
   currentGoal,
   onSaveGoal,
   onRemoveGoal,
-  horizonMonths,
+  priorityCount = 1,
 }: BigPurchaseModalProps) {
-  const [name, setName] = useState("Compra de Auto")
-  const [amount, setAmount] = useState<number>(15000)
+  const [name, setName] = useState("Fondo de Reserva")
+  const [amount, setAmount] = useState<number>(2000)
   const [currency, setCurrency] = useState<Currency>("USD")
-  const [targetMonth, setTargetMonth] = useState<number>(24)
+  const [type, setType] = useState<"reserve" | "purchase">("reserve")
   const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
@@ -47,13 +46,13 @@ export function BigPurchaseModal({
       setName(currentGoal.name)
       setAmount(currentGoal.amount)
       setCurrency(currentGoal.currency)
-      setTargetMonth(Math.min(currentGoal.targetMonth, horizonMonths))
+      setType(currentGoal.type || "reserve")
     } else {
-      setName("Compra de Auto")
-      setAmount(currency === "USD" ? 15000 : 15000000)
-      setTargetMonth(Math.min(24, horizonMonths))
+      setName("Fondo de Reserva")
+      setAmount(currency === "USD" ? 2000 : 7000000)
+      setType("reserve")
     }
-  }, [currentGoal, open, horizonMonths])
+  }, [currentGoal, open])
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -66,10 +65,11 @@ export function BigPurchaseModal({
         name: name.trim(),
         amount,
         currency,
-        targetMonth,
+        type,
+        priority: currentGoal?.priority || priorityCount + 1,
       })
-      toast.success(currentGoal ? "Meta de compra actualizada." : "Nueva meta de compra agregada.")
-      await new Promise((resolve) => setTimeout(resolve, 350))
+      toast.success(currentGoal ? "Meta actualizada." : "Nueva meta agregada a la secuencia.")
+      await new Promise((resolve) => setTimeout(resolve, 300))
       onOpenChange(false)
     } catch (err: any) {
       toast.error("Error al guardar la meta.")
@@ -82,8 +82,8 @@ export function BigPurchaseModal({
     setSubmitting(true)
     try {
       onRemoveGoal()
-      toast.success("Meta de compra eliminada.")
-      await new Promise((resolve) => setTimeout(resolve, 350))
+      toast.success("Meta eliminada.")
+      await new Promise((resolve) => setTimeout(resolve, 300))
       onOpenChange(false)
     } catch (err: any) {
       toast.error("Error al eliminar la meta.")
@@ -98,126 +98,147 @@ export function BigPurchaseModal({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-base font-semibold">
             <Sparkles className="size-4.5 text-purple-400" />
-            {currentGoal ? "Editar Meta de Compra" : "Nueva Meta de Compra Grande"}
+            {currentGoal ? "Editar Meta Secuencial" : "Nueva Meta en la Secuencia"}
           </DialogTitle>
           <DialogDescription className="text-xs">
-            Define una compra importante (auto, viaje, inmueble) para visualizar si tu patrimonio proyectado podrá cubrirla.
+            Define tu objetivo. La aplicación calculará en qué fecha proyectada llegarás en base a tu capacidad de ahorro libre.
           </DialogDescription>
         </DialogHeader>
 
         <div className={cn("transition-all duration-200", submitting && "pointer-events-none opacity-50 cursor-not-allowed select-none")}>
           <form onSubmit={handleSave} className="space-y-4 py-2">
-          {/* Goal Name */}
-          <div className="space-y-1.5">
-            <Label htmlFor="goal-name" className="text-xs font-medium">
-              Nombre de la Meta / Compra
-            </Label>
-            <Input
-              id="goal-name"
-              type="text"
-              required
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="ej. Compra de Auto, Viaje a Europa..."
-              className="h-9 text-xs"
-            />
-          </div>
-
-          {/* Amount and Currency */}
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="goal-amount" className="text-xs font-medium">
-                Monto Estimado
+            {/* Goal Name */}
+            <div className="space-y-1.5">
+              <Label htmlFor="goal-name" className="text-xs font-medium">
+                Nombre del Objetivo
               </Label>
-              <Tabs
-                value={currency}
-                onValueChange={(val) => setCurrency(val as Currency)}
-                className="h-7"
-              >
-                <TabsList className="h-7 bg-muted/60 p-0.5">
-                  <TabsTrigger value="USD" className="h-6 px-2.5 text-[11px] font-semibold">
-                    USD
-                  </TabsTrigger>
-                  <TabsTrigger value="ARS" className="h-6 px-2.5 text-[11px] font-semibold">
-                    ARS
-                  </TabsTrigger>
-                </TabsList>
-              </Tabs>
+              <Input
+                id="goal-name"
+                type="text"
+                required
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="ej. Fondo de Reserva, Compra Moto, Vacaciones..."
+                className="h-9 text-xs"
+              />
             </div>
-            <Input
-              id="goal-amount"
-              type="number"
-              required
-              min={1}
-              value={amount || ""}
-              onChange={(e) => setAmount(Number(e.target.value))}
-              placeholder="0"
-              className="h-9 text-xs font-semibold tabular-nums"
-            />
-          </div>
 
-          {/* Target Month Slider */}
-          <div className="space-y-2 pt-1">
-            <div className="flex items-center justify-between">
-              <Label className="text-xs font-medium">
-                Horizonte Deseado (Mes proyectado)
-              </Label>
-              <span className="text-xs font-bold text-primary tabular-nums">
-                Mes {targetMonth} ({Math.round(targetMonth / 12 * 10) / 10} años)
-              </span>
+            {/* Amount and Currency */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="goal-amount" className="text-xs font-medium">
+                  Monto Objetivo
+                </Label>
+                <Tabs
+                  value={currency}
+                  onValueChange={(val) => setCurrency(val as Currency)}
+                  className="h-7"
+                >
+                  <TabsList className="h-7 bg-muted/60 p-0.5">
+                    <TabsTrigger value="USD" className="h-6 px-2.5 text-[11px] font-semibold">
+                      USD
+                    </TabsTrigger>
+                    <TabsTrigger value="ARS" className="h-6 px-2.5 text-[11px] font-semibold">
+                      ARS
+                    </TabsTrigger>
+                  </TabsList>
+                </Tabs>
+              </div>
+              <Input
+                id="goal-amount"
+                type="number"
+                required
+                min={1}
+                value={amount || ""}
+                onChange={(e) => setAmount(Number(e.target.value))}
+                placeholder="0"
+                className="h-9 text-xs font-semibold tabular-nums"
+              />
             </div>
-            <Slider
-              value={targetMonth}
-              onValueChange={setTargetMonth}
-              min={1}
-              max={horizonMonths}
-              step={1}
-            />
-            <p className="text-[11px] text-muted-foreground text-right">
-              Máximo para este horizonte: Mes {horizonMonths}
-            </p>
-          </div>
 
-          <DialogFooter className="pt-4 flex items-center justify-between gap-2">
-            {currentGoal ? (
-              <Button
-                type="button"
-                variant="destructive"
-                size="sm"
-                disabled={submitting}
-                onClick={handleRemove}
-                className="h-9 text-xs gap-1.5 cursor-pointer"
-              >
-                {submitting ? <Loader2 className="size-3.5 animate-spin" /> : <Trash2 className="size-3.5" />} Quitar Meta
-              </Button>
-            ) : (
-              <div />
-            )}
+            {/* Goal Type (Reserve vs Purchase) */}
+            <div className="space-y-2 pt-1">
+              <Label className="text-xs font-medium">Propósito de la Meta</Label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setType("reserve")}
+                  className={`flex flex-col items-start gap-1 p-3 rounded-lg border text-left transition-all cursor-pointer ${
+                    type === "reserve"
+                      ? "border-primary bg-primary/10 text-foreground"
+                      : "border-border/60 bg-muted/30 text-muted-foreground hover:bg-muted/60"
+                  }`}
+                >
+                  <div className="flex items-center gap-1.5 font-bold text-xs">
+                    <ShieldCheck className="size-3.5 text-emerald-500" />
+                    Reserva de Capital
+                  </div>
+                  <p className="text-[10px] text-muted-foreground leading-tight">
+                    Fondo de ahorro o colchón. Permanece en tu patrimonio.
+                  </p>
+                </button>
 
-            <div className="flex items-center gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={submitting}
-                onClick={() => onOpenChange(false)}
-                className="h-9 text-xs cursor-pointer"
-              >
-                Cancelar
-              </Button>
-              <Button
-                type="submit"
-                size="sm"
-                disabled={submitting}
-                className="h-9 text-xs gap-1.5 font-semibold bg-primary hover:bg-primary/90 text-primary-foreground cursor-pointer"
-              >
-                {submitting ? <Loader2 className="size-3.5 animate-spin" /> : <Check className="size-3.5" />} Guardar Meta
-              </Button>
+                <button
+                  type="button"
+                  onClick={() => setType("purchase")}
+                  className={`flex flex-col items-start gap-1 p-3 rounded-lg border text-left transition-all cursor-pointer ${
+                    type === "purchase"
+                      ? "border-primary bg-primary/10 text-foreground"
+                      : "border-border/60 bg-muted/30 text-muted-foreground hover:bg-muted/60"
+                  }`}
+                >
+                  <div className="flex items-center gap-1.5 font-bold text-xs">
+                    <ShoppingBag className="size-3.5 text-purple-400" />
+                    Compra / Gasto
+                  </div>
+                  <p className="text-[10px] text-muted-foreground leading-tight">
+                    Compra importante. Se descuenta del capital acumulado.
+                  </p>
+                </button>
+              </div>
             </div>
-          </DialogFooter>
-        </form>
-      </div>
-    </DialogContent>
+
+            <DialogFooter className="pt-4 flex items-center justify-between gap-2">
+              {currentGoal ? (
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="sm"
+                  disabled={submitting}
+                  onClick={handleRemove}
+                  className="h-9 text-xs gap-1.5 cursor-pointer"
+                >
+                  {submitting ? <Loader2 className="size-3.5 animate-spin" /> : <Trash2 className="size-3.5" />} Quitar Meta
+                </Button>
+              ) : (
+                <div />
+              )}
+
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={submitting}
+                  onClick={() => onOpenChange(false)}
+                  className="h-9 text-xs cursor-pointer"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  type="submit"
+                  size="sm"
+                  disabled={submitting}
+                  className="h-9 text-xs gap-1.5 font-semibold bg-primary hover:bg-primary/90 text-primary-foreground cursor-pointer"
+                >
+                  {submitting ? <Loader2 className="size-3.5 animate-spin" /> : <Check className="size-3.5" />} Guardar Meta
+                </Button>
+              </div>
+            </DialogFooter>
+          </form>
+        </div>
+      </DialogContent>
     </Dialog>
   )
 }
+

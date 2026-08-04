@@ -102,7 +102,7 @@ export function StocksView({ onBack }: { onBack?: () => void }) {
   const hasUSDAccount = accounts.some((a) => a.currency === "USD")
 
   return (
-    <div className="pt-[calc(env(safe-area-inset-top)+1.25rem)]">
+    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 pt-4 pb-12 font-sans space-y-6">
       {/* Title */}
       <div className="flex items-center justify-between px-5">
         <div className="flex items-center gap-3">

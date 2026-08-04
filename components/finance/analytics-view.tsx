@@ -19,6 +19,28 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
+import {
+  BarChart,
+  Bar,
+  AreaChart,
+  Area,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  ResponsiveContainer,
+} from "recharts"
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  ChartLegend,
+  ChartLegendContent,
+  type ChartConfig,
+} from "@/components/ui/chart"
+import { BarChart3, LineChart as LineChartIcon } from "lucide-react"
 
 interface AnalyticsViewProps {
   isDesktop?: boolean
@@ -61,6 +83,9 @@ export function AnalyticsView({ isDesktop = false, onBack, onEditTransaction }: 
     availableMonths[1] || "none"
   )
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null)
+  const [trendMonths, setTrendMonths] = useState<3 | 6 | 12>(6)
+  const [chartMode, setChartMode] = useState<"stacked_bar" | "area">("stacked_bar")
+  const [categorySortMode, setCategorySortMode] = useState<"amount_desc" | "diff_desc" | "name_asc">("amount_desc")
 
   const formatMonthName = (monthStr: string) => {
     if (!monthStr || monthStr === "none") return "Ninguno"
@@ -129,41 +154,89 @@ export function AnalyticsView({ isDesktop = false, onBack, onEditTransaction }: 
   }, [expenseTransactions, selectedMonth, comparisonMonth, selectedCurrency, getAccount])
 
   const trendData = useMemo(() => {
-    const lastMonths = [...availableMonths].slice(0, 6).reverse()
-    
-    const monthlyCategoryMap = lastMonths.map((m) => {
-      const map = new Map<string, number>()
+    const lastMonths = [...availableMonths].slice(0, trendMonths).reverse()
+    const categoriesSet = new Set<string>()
+
+    const chartData = lastMonths.map((m) => {
+      const row: Record<string, any> = { month: m }
       let monthTotal = 0
-      
+
+      const [year, month] = m.split("-")
+      const dateObj = new Date(parseInt(year), parseInt(month) - 1, 15)
+      const labelShort = dateObj.toLocaleString("es-AR", { month: "short" })
+      row.label = `${labelShort.charAt(0).toUpperCase() + labelShort.slice(1)} ${year.slice(2)}`
+
       for (const t of expenseTransactions) {
         const acc = getAccount(t.accountId)
         if (!acc || acc.currency !== selectedCurrency) continue
-        
-        const dateObj = new Date(t.date)
-        const year = dateObj.getFullYear()
-        const month = String(dateObj.getMonth() + 1).padStart(2, "0")
-        const tMonth = `${year}-${month}`
-        
-        if (tMonth === m) {
-          map.set(t.category, (map.get(t.category) ?? 0) + t.amount)
+
+        const tDateObj = new Date(t.date)
+        const tYear = tDateObj.getFullYear()
+        const tMonth = String(tDateObj.getMonth() + 1).padStart(2, "0")
+        const tMonthStr = `${tYear}-${tMonth}`
+
+        if (tMonthStr === m) {
+          categoriesSet.add(t.category)
+          row[t.category] = (row[t.category] ?? 0) + t.amount
           monthTotal += t.amount
         }
       }
-      
-      return {
-        month: m,
-        total: monthTotal,
-        categories: map,
+
+      row.total = monthTotal
+      return row
+    })
+
+    const categoriesList = Array.from(categoriesSet)
+    const maxTotal = Math.max(...chartData.map((d) => d.total), 1)
+    const avgTotal = chartData.length > 0 ? chartData.reduce((acc, d) => acc + d.total, 0) / chartData.length : 0
+
+    return {
+      chartData,
+      categories: categoriesList,
+      maxTotal,
+      avgTotal,
+    }
+  }, [availableMonths, expenseTransactions, selectedCurrency, getAccount, trendMonths])
+
+  const chartConfig = useMemo(() => {
+    const cfg: ChartConfig = {
+      total: {
+        label: "Gasto Total",
+        color: "var(--primary)",
+      },
+    }
+    categories.forEach((c) => {
+      cfg[c.name] = {
+        label: c.name,
+        color: c.color || "var(--chart-1)",
       }
     })
-    
-    const maxMonthTotal = Math.max(...monthlyCategoryMap.map((d) => d.total), 1)
-    
-    return {
-      months: monthlyCategoryMap,
-      maxTotal: maxMonthTotal,
+    return cfg
+  }, [categories])
+
+  const sortedCategoryRows = useMemo(() => {
+    if (!analyticsData.rows) return []
+    const list = [...analyticsData.rows]
+    if (categorySortMode === "amount_desc") {
+      return list.sort((a, b) => b.amount - a.amount)
     }
-  }, [availableMonths, expenseTransactions, selectedCurrency, getAccount])
+    if (categorySortMode === "diff_desc") {
+      return list.sort((a, b) => (b.percentChange ?? 0) - (a.percentChange ?? 0))
+    }
+    if (categorySortMode === "name_asc") {
+      return list.sort((a, b) => a.category.localeCompare(b.category))
+    }
+    return list
+  }, [analyticsData.rows, categorySortMode])
+
+  const pieChartData = useMemo(() => {
+    if (!analyticsData.rows || analyticsData.rows.length === 0) return []
+    return analyticsData.rows.map((r) => ({
+      name: r.category,
+      amount: r.amount,
+      fill: getCategoryColor(r.category),
+    }))
+  }, [analyticsData.rows])
 
   const vehicleSpendData = useMemo(() => {
     if (!vehicles || !vehicleLogs) return []
@@ -212,7 +285,7 @@ export function AnalyticsView({ isDesktop = false, onBack, onEditTransaction }: 
   const maxRowVal = analyticsData.rows[0]?.amount ?? 1
 
   return (
-    <div className={`w-full text-foreground ${isDesktop ? "" : "pb-24 pt-[calc(env(safe-area-inset-top)+1rem)] px-4"}`}>
+    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 pt-4 pb-12 font-sans space-y-6 text-foreground">
       {/* Header */}
       {!isDesktop && (
         <div className="flex items-center gap-3 mb-6">
@@ -389,147 +462,165 @@ export function AnalyticsView({ isDesktop = false, onBack, onEditTransaction }: 
         )}
       </div>
 
-      {/* 6-Month Stacked Trend Chart (Responsive SVG) */}
+      {/* Historical Trend Chart (Shadcn UI / Recharts) */}
       <Card className="p-6 shadow-sm mb-8">
-        <div className="flex items-center gap-2 mb-1">
-          <TrendingUp className="size-4.5 text-primary" />
-          <h2 className="text-base font-bold tracking-tight">Tendencia Histórica de Gastos</h2>
-        </div>
-        <p className="text-xs text-muted-foreground mb-6">
-          Distribución mensual apilada por categoría ({selectedCurrency})
-        </p>
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-4 border-b border-border/60 pb-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <TrendingUp className="size-4.5 text-primary" />
+              <h2 className="text-base font-bold tracking-tight">Tendencia Histórica de Gastos</h2>
+            </div>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Evolución del consumo en {selectedCurrency} ({trendMonths} meses)
+            </p>
+          </div>
 
-        {trendData.months.length === 0 || trendData.maxTotal === 1 ? (
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Range Selector */}
+            <div className="inline-flex rounded-md bg-muted/60 p-0.5 text-xs font-mono">
+              {( [3, 6, 12] as const).map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => setTrendMonths(m)}
+                  className={`px-2.5 py-1 rounded text-xs font-medium transition-all cursor-pointer ${
+                    trendMonths === m
+                      ? "bg-background text-foreground shadow-xs font-bold"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {m}M
+                </button>
+              ))}
+            </div>
+
+            {/* Mode Switcher */}
+            <div className="inline-flex rounded-md bg-muted/60 p-0.5 text-xs font-mono">
+              <button
+                type="button"
+                onClick={() => setChartMode("stacked_bar")}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded text-xs font-medium transition-all cursor-pointer ${
+                  chartMode === "stacked_bar"
+                    ? "bg-background text-foreground shadow-xs font-bold"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+                title="Barras Apiladas"
+              >
+                <BarChart3 className="size-3.5" />
+                <span className="hidden sm:inline">Barras</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setChartMode("area")}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded text-xs font-medium transition-all cursor-pointer ${
+                  chartMode === "area"
+                    ? "bg-background text-foreground shadow-xs font-bold"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+                title="Área de Tendencia"
+              >
+                <LineChartIcon className="size-3.5" />
+                <span className="hidden sm:inline">Tendencia</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Monthly Average Banner */}
+        <div className="mb-4 flex items-center justify-between bg-muted/30 border border-border/40 rounded-lg px-4 py-2 text-xs font-mono">
+          <span className="text-muted-foreground">Promedio mensual del período:</span>
+          <span className="font-bold text-foreground tabular-nums">
+            {formatCurrency(trendData.avgTotal, selectedCurrency)}
+          </span>
+        </div>
+
+        {trendData.chartData.length === 0 || trendData.maxTotal === 1 ? (
           <div className="h-48 flex items-center justify-center border border-dashed border-border rounded-2xl bg-muted/20">
-            <p className="text-xs text-muted-foreground">No hay datos suficientes para graficar la tendencia.</p>
+            <p className="text-xs text-muted-foreground">No hay datos suficientes para graficar la tendencia en {selectedCurrency}.</p>
           </div>
         ) : (
-          <div className="flex flex-col gap-6">
-            <div className="w-full h-52">
-              <svg viewBox="0 0 500 200" width="100%" height="100%" preserveAspectRatio="none" className="overflow-visible">
-                {[0.25, 0.5, 0.75, 1.0].map((ratio) => {
-                  const y = 170 - ratio * 140
-                  return (
-                    <g key={ratio} className="opacity-15">
-                      <line x1="40" y1={y} x2="480" y2={y} stroke="var(--foreground)" strokeWidth="1" strokeDasharray="3,3" />
-                      <text x="35" y={y + 3} fill="var(--foreground)" fontSize="8" fontWeight="bold" textAnchor="end" className="tabular-nums">
-                        {formatShort(trendData.maxTotal * ratio, selectedCurrency)}
-                      </text>
-                    </g>
-                  )
-                })}
-                <line x1="40" y1="170" x2="480" y2="170" stroke="var(--border)" strokeWidth="1.5" />
-
-                {trendData.months.map((d, mIdx) => {
-                  const barCount = trendData.months.length
-                  const colWidth = 440 / barCount
-                  const x = 40 + mIdx * colWidth + (colWidth - 32) / 2
-                  
-                  let currentY = 170
-                  const barItems: { y: number; height: number; color: string; catName: string; amt: number }[] = []
-                  
-                  const catEntries = [...d.categories.entries()].sort((a, b) => b[1] - a[1])
-                  
-                  for (const [catName, amt] of catEntries) {
-                    if (amt <= 0) continue
-                    const h = (amt / trendData.maxTotal) * 140
-                    currentY -= h
-                    barItems.push({
-                      y: currentY,
-                      height: h,
-                      color: getCategoryColor(catName),
-                      catName,
-                      amt,
-                    })
+          <ChartContainer config={chartConfig} className="h-64 sm:h-80 w-full">
+            {chartMode === "stacked_bar" ? (
+              <BarChart data={trendData.chartData} margin={{ top: 15, right: 10, left: -15, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-border/40" />
+                <XAxis dataKey="label" tickLine={false} axisLine={false} className="text-xs font-mono" />
+                <YAxis
+                  tickLine={false}
+                  axisLine={false}
+                  tickFormatter={(val) => formatShort(val, selectedCurrency)}
+                  className="text-xs font-mono"
+                />
+                <ChartTooltip
+                  content={
+                    <ChartTooltipContent
+                      labelFormatter={(lbl) => `Mes: ${lbl}`}
+                      formatter={(val, name) => (
+                        <div className="flex items-center justify-between w-full gap-4">
+                          <span className="text-muted-foreground font-sans">{name}</span>
+                          <span className="font-mono font-bold text-foreground tabular-nums">
+                            {formatCurrency(Number(val), selectedCurrency)}
+                          </span>
+                        </div>
+                      )}
+                    />
                   }
-
-                  const formattedMonthLabel = () => {
-                    const [year, month] = d.month.split("-")
-                    const dateObj = new Date(parseInt(year), parseInt(month) - 1, 15)
-                    const label = dateObj.toLocaleString("es-AR", { month: "short" })
-                    return label.charAt(0).toUpperCase() + label.slice(1)
+                />
+                <ChartLegend content={<ChartLegendContent />} />
+                {trendData.categories.map((cat, idx) => (
+                  <Bar
+                    key={cat}
+                    dataKey={cat}
+                    name={cat}
+                    stackId="a"
+                    fill={getCategoryColor(cat)}
+                    radius={idx === trendData.categories.length - 1 ? [4, 4, 0, 0] : [0, 0, 0, 0]}
+                  />
+                ))}
+              </BarChart>
+            ) : (
+              <AreaChart data={trendData.chartData} margin={{ top: 15, right: 10, left: -15, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="areaTrendGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.4} />
+                    <stop offset="95%" stopColor="var(--primary)" stopOpacity={0.0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-border/40" />
+                <XAxis dataKey="label" tickLine={false} axisLine={false} className="text-xs font-mono" />
+                <YAxis
+                  tickLine={false}
+                  axisLine={false}
+                  tickFormatter={(val) => formatShort(val, selectedCurrency)}
+                  className="text-xs font-mono"
+                />
+                <ChartTooltip
+                  content={
+                    <ChartTooltipContent
+                      labelFormatter={(lbl) => `Mes: ${lbl}`}
+                      formatter={(val) => (
+                        <div className="flex items-center justify-between w-full gap-4">
+                          <span className="text-muted-foreground font-sans">Total consumido</span>
+                          <span className="font-mono font-bold text-foreground tabular-nums">
+                            {formatCurrency(Number(val), selectedCurrency)}
+                          </span>
+                        </div>
+                      )}
+                    />
                   }
-
-                  return (
-                    <g key={d.month} className="group cursor-pointer">
-                      {barItems.map((item, i) => (
-                        <rect
-                          key={i}
-                          x={x}
-                          y={item.y}
-                          width="32"
-                          height={item.height}
-                          fill={item.color}
-                          rx={item.height > 6 ? 2 : 0}
-                          className="transition-all duration-300 hover:opacity-90"
-                        >
-                          <title>{`${item.catName}: ${formatShort(item.amt, selectedCurrency)}`}</title>
-                        </rect>
-                      ))}
-
-                      <rect
-                        x={x - 5}
-                        y="20"
-                        width="42"
-                        height="150"
-                        fill="transparent"
-                        className="peer pointer-events-auto"
-                      />
-
-                      <g className="opacity-0 peer-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
-                        <rect
-                          x={Math.max(x - 20, 10)}
-                          y="5"
-                          width="72"
-                          height="18"
-                          rx="6"
-                          fill="var(--card)"
-                          stroke="var(--border)"
-                          strokeWidth="1"
-                        />
-                        <text
-                          x={Math.max(x + 16, 46)}
-                          y="17"
-                          fill="var(--foreground)"
-                          fontSize="9"
-                          fontWeight="bold"
-                          textAnchor="middle"
-                          className="tabular-nums"
-                        >
-                          {formatShort(d.total, selectedCurrency)}
-                        </text>
-                      </g>
-
-                      <text
-                        x={x + 16}
-                        y="186"
-                        fill="var(--muted-foreground)"
-                        fontSize="9.5"
-                        fontWeight="semibold"
-                        textAnchor="middle"
-                        className="transition-colors group-hover:fill-foreground"
-                      >
-                        {formattedMonthLabel()}
-                      </text>
-                    </g>
-                  )
-                })}
-              </svg>
-            </div>
-
-            <div className="flex flex-wrap gap-x-5 gap-y-2 border-t border-border pt-4">
-              {categories.map((c) => {
-                const hasData = trendData.months.some(m => (m.categories.get(c.name) ?? 0) > 0)
-                if (!hasData) return null
-                return (
-                  <div key={c.id} className="flex items-center gap-2">
-                    <span className="size-2.5 rounded-full" style={{ background: c.color }} />
-                    <span className="text-[11.5px] font-semibold text-muted-foreground">{c.name}</span>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
+                />
+                <Area
+                  type="monotone"
+                  dataKey="total"
+                  name="Gasto Total"
+                  stroke="var(--primary)"
+                  fill="url(#areaTrendGradient)"
+                  strokeWidth={2.5}
+                  dot={{ r: 4, fill: "var(--primary)" }}
+                  activeDot={{ r: 6, stroke: "var(--background)", strokeWidth: 2 }}
+                />
+              </AreaChart>
+            )}
+          </ChartContainer>
         )}
       </Card>
 
@@ -592,14 +683,58 @@ export function AnalyticsView({ isDesktop = false, onBack, onEditTransaction }: 
 
       {/* Category Breakdown & MoM Comparative Table */}
       <Card className="p-6 shadow-sm">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-6 border-b border-border/60 pb-4">
           <div>
             <h2 className="text-base font-bold tracking-tight">Distribución por Categorías</h2>
-            <p className="text-xs text-muted-foreground mt-0.5">Hacé clic en una categoría para auditar sus movimientos</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Análisis del mes seleccionado • Hacé clic para auditar movimientos
+            </p>
           </div>
-          <Badge variant="secondary" className="text-xs font-semibold uppercase tracking-wider">
-            {selectedCurrency}
-          </Badge>
+
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Sort Selector */}
+            <div className="inline-flex rounded-md bg-muted/60 p-0.5 text-xs font-mono">
+              <button
+                type="button"
+                onClick={() => setCategorySortMode("amount_desc")}
+                className={`px-2 py-0.5 rounded text-[11px] font-medium transition-all cursor-pointer ${
+                  categorySortMode === "amount_desc"
+                    ? "bg-background text-foreground shadow-xs font-bold"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Monto
+              </button>
+              {comparisonMonth !== "none" && (
+                <button
+                  type="button"
+                  onClick={() => setCategorySortMode("diff_desc")}
+                  className={`px-2 py-0.5 rounded text-[11px] font-medium transition-all cursor-pointer ${
+                    categorySortMode === "diff_desc"
+                      ? "bg-background text-foreground shadow-xs font-bold"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  Variación
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setCategorySortMode("name_asc")}
+                className={`px-2 py-0.5 rounded text-[11px] font-medium transition-all cursor-pointer ${
+                  categorySortMode === "name_asc"
+                    ? "bg-background text-foreground shadow-xs font-bold"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Nombre
+              </button>
+            </div>
+
+            <Badge variant="secondary" className="text-xs font-semibold uppercase tracking-wider">
+              {selectedCurrency}
+            </Badge>
+          </div>
         </div>
 
         {analyticsData.rows.length === 0 ? (
@@ -607,123 +742,187 @@ export function AnalyticsView({ isDesktop = false, onBack, onEditTransaction }: 
             No se encontraron gastos registrados en esta moneda para el mes seleccionado.
           </p>
         ) : (
-          <ul className="flex flex-col gap-5">
-            {analyticsData.rows.map((r) => {
-              const color = getCategoryColor(r.category)
-              const percentOfTotal = analyticsData.total > 0 ? (r.amount / analyticsData.total) * 100 : 0
-              const isExpanded = expandedCategory === r.category
+          <div className="flex flex-col gap-6">
+            {/* Donut Distribution Visualizer */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center border border-border/40 bg-muted/20 rounded-xl p-4">
+              <div className="md:col-span-1 flex justify-center">
+                <ChartContainer config={chartConfig} className="h-44 w-44">
+                  <PieChart>
+                    <ChartTooltip
+                      content={
+                        <ChartTooltipContent
+                          formatter={(val, name) => (
+                            <div className="flex items-center justify-between w-full gap-3">
+                              <span className="text-muted-foreground font-sans">{name}</span>
+                              <span className="font-mono font-bold text-foreground tabular-nums">
+                                {formatCurrency(Number(val), selectedCurrency)}
+                              </span>
+                            </div>
+                          )}
+                        />
+                      }
+                    />
+                    <Pie
+                      data={pieChartData}
+                      dataKey="amount"
+                      nameKey="name"
+                      innerRadius={42}
+                      outerRadius={68}
+                      paddingAngle={2}
+                      stroke="none"
+                    >
+                      {pieChartData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.fill} />
+                      ))}
+                    </Pie>
+                  </PieChart>
+                </ChartContainer>
+              </div>
 
-              const categoryTxs = analyticsData.transactions
-                .filter((t) => t.category === r.category)
-                .sort((a, b) => b.date.localeCompare(a.date))
+              <div className="md:col-span-2 flex flex-col justify-center gap-1.5">
+                <div className="flex items-baseline justify-between border-b border-border/40 pb-2">
+                  <span className="text-xs text-muted-foreground font-mono">Gasto total del mes:</span>
+                  <span className="text-lg font-mono font-bold text-foreground tabular-nums">
+                    {formatCurrency(analyticsData.total, selectedCurrency)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-xs font-mono text-muted-foreground pt-1">
+                  <span>Categorías activas:</span>
+                  <span className="font-bold text-foreground">{analyticsData.rows.length}</span>
+                </div>
+                <p className="text-[11px] text-muted-foreground/80 mt-1 italic">
+                  * Toca cualquier categoría abajo para ver sus movimientos registrados.
+                </p>
+              </div>
+            </div>
 
-              return (
-                <li
-                  key={r.category}
-                  className="border-b border-border last:border-b-0 pb-5 last:pb-0"
-                >
-                  <div
-                    onClick={() => setExpandedCategory(isExpanded ? null : r.category)}
-                    className="flex flex-col gap-2 cursor-pointer group"
+            {/* List of Categories with Shadcn UI Progress & Badges */}
+            <ul className="flex flex-col gap-4">
+              {sortedCategoryRows.map((r) => {
+                const color = getCategoryColor(r.category)
+                const percentOfTotal = analyticsData.total > 0 ? (r.amount / analyticsData.total) * 100 : 0
+                const isExpanded = expandedCategory === r.category
+
+                const categoryTxs = analyticsData.transactions
+                  .filter((t) => t.category === r.category)
+                  .sort((a, b) => b.date.localeCompare(a.date))
+
+                return (
+                  <li
+                    key={r.category}
+                    className="border-b border-border/50 last:border-b-0 pb-4 last:pb-0"
                   >
-                    <div className="flex items-center justify-between text-sm">
-                      <div className="flex items-center gap-2.5">
-                        <span className="size-3 rounded-full shrink-0" style={{ background: color }} />
-                        <span className="font-bold group-hover:text-primary transition-colors">
-                          {r.category}
-                        </span>
-                        <Badge variant="secondary" className="text-[10px] font-semibold uppercase px-1.5 py-0.5">
-                          {percentOfTotal.toFixed(0)}%
-                        </Badge>
-                      </div>
-
-                      <div className="flex items-center gap-4">
-                        <div className="text-right">
-                          <span className="font-extrabold tabular-nums block">
-                            {formatShort(r.amount, selectedCurrency)}
+                    <div
+                      onClick={() => setExpandedCategory(isExpanded ? null : r.category)}
+                      className="flex flex-col gap-2 cursor-pointer group hover:bg-muted/30 p-2 rounded-lg transition-all"
+                    >
+                      <div className="flex items-center justify-between text-xs sm:text-sm">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <span className="size-3 rounded-full shrink-0 shadow-xs" style={{ background: color }} />
+                          <span className="font-bold truncate group-hover:text-primary transition-colors">
+                            {r.category}
                           </span>
-                          
-                          {comparisonMonth !== "none" && (
-                            <span className={`inline-flex items-center gap-0.5 text-[10px] font-extrabold ${
-                              r.diff > 0 
-                                ? "text-destructive" 
-                                : r.diff < 0 
-                                ? "text-emerald-500" 
-                                : "text-muted-foreground"
-                            }`}>
-                              {r.diff > 0 ? "▲" : r.diff < 0 ? "▼" : "="}{" "}
-                              {r.compAmount === 0 ? (
-                                "Nueva"
-                              ) : (
-                                `${Math.abs(r.percentChange ?? 0).toFixed(0)}%`
-                              )}
+                          <Badge variant="secondary" className="text-[10px] font-mono font-semibold px-1.5 py-0.2 shrink-0">
+                            {percentOfTotal.toFixed(1)}%
+                          </Badge>
+                        </div>
+
+                        <div className="flex items-center gap-3 shrink-0 tabular-nums">
+                          <div className="text-right">
+                            <span className="font-mono font-bold block text-foreground">
+                              {formatCurrency(r.amount, selectedCurrency)}
                             </span>
+
+                            {comparisonMonth !== "none" && (
+                              <div className="flex justify-end mt-0.5">
+                                {r.compAmount === 0 ? (
+                                  <Badge variant="outline" className="text-[9px] font-mono px-1 py-0 border-primary/30 text-primary">
+                                    Nueva
+                                  </Badge>
+                                ) : (
+                                  <span
+                                    className={`inline-flex items-center gap-0.5 text-[10px] font-mono font-bold px-1.5 py-0.2 rounded ${
+                                      r.diff > 0
+                                        ? "bg-destructive/10 text-destructive"
+                                        : r.diff < 0
+                                        ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                                        : "bg-muted text-muted-foreground"
+                                    }`}
+                                  >
+                                    {r.diff > 0 ? (
+                                      <TrendingUp className="size-3" />
+                                    ) : r.diff < 0 ? (
+                                      <TrendingDown className="size-3" />
+                                    ) : null}
+                                    {r.diff > 0 ? `+${Math.abs(r.percentChange ?? 0).toFixed(0)}%` : `${r.percentChange?.toFixed(0)}%`}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+
+                          {isExpanded ? (
+                            <ChevronUp className="size-4 text-muted-foreground group-hover:text-foreground transition-colors shrink-0" />
+                          ) : (
+                            <ChevronDown className="size-4 text-muted-foreground group-hover:text-foreground transition-colors shrink-0" />
                           )}
                         </div>
-                        {isExpanded ? (
-                          <ChevronUp className="size-4 text-muted-foreground group-hover:text-foreground transition-colors shrink-0" />
+                      </div>
+
+                      {/* Native Shadcn UI Progress Bar */}
+                      <Progress value={Math.max((r.amount / maxRowVal) * 100, 2)} className="h-1.5" />
+                    </div>
+
+                    {isExpanded && (
+                      <div className="mt-3 ml-3 pl-4 border-l-2 border-primary/40 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                        <div className="flex items-center justify-between border-b border-border/60 pb-1.5 mb-2">
+                          <span className="text-[10px] text-muted-foreground font-mono font-semibold uppercase tracking-wider">
+                            Movimientos del Mes
+                          </span>
+                          <span className="text-[10px] text-muted-foreground font-mono">
+                            {categoryTxs.length} registros
+                          </span>
+                        </div>
+
+                        {categoryTxs.length === 0 ? (
+                          <p className="text-xs text-muted-foreground py-2 font-mono">No hay transacciones registradas.</p>
                         ) : (
-                          <ChevronDown className="size-4 text-muted-foreground group-hover:text-foreground transition-colors shrink-0" />
+                          <ul className="flex flex-col gap-2">
+                            {categoryTxs.map((tx) => {
+                              const acc = getAccount(tx.accountId)
+                              const dateLabel = new Date(tx.date).toLocaleDateString("es-AR", {
+                                day: "2-digit",
+                                month: "short",
+                              })
+                              return (
+                                <li
+                                  key={tx.id}
+                                  onClick={() => onEditTransaction(tx)}
+                                  className="flex items-center justify-between hover:bg-accent/40 p-2 rounded-lg transition-all cursor-pointer group/item text-xs"
+                                >
+                                  <div className="min-w-0 flex-1 pr-4">
+                                    <p className="font-semibold truncate group-hover/item:text-primary transition-colors">
+                                      {tx.note || "Sin descripción"}
+                                    </p>
+                                    <p className="text-[10px] text-muted-foreground truncate font-mono">
+                                      {dateLabel} · Cuenta: <span className="font-medium text-foreground/80">{acc?.name ?? "Desconocida"}</span>
+                                    </p>
+                                  </div>
+                                  <span className="font-mono font-bold tabular-nums text-foreground shrink-0">
+                                    {formatCurrency(tx.amount, selectedCurrency)}
+                                  </span>
+                                </li>
+                              )
+                            })}
+                          </ul>
                         )}
                       </div>
-                    </div>
-
-                    <div className="h-2 overflow-hidden rounded-full bg-muted relative w-full">
-                      <div
-                        className="h-full rounded-full transition-all duration-500"
-                        style={{
-                          width: `${Math.max((r.amount / maxRowVal) * 100, 4)}%`,
-                          background: color,
-                        }}
-                      />
-                    </div>
-                  </div>
-
-                  {isExpanded && (
-                    <div className="mt-4 pl-5 border-l-2 border-border overflow-hidden animate-in fade-in slide-in-from-top-3 duration-200">
-                      <div className="flex items-center justify-between border-b border-border pb-2 mb-2">
-                        <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Movimientos del Mes</span>
-                        <span className="text-[10px] text-muted-foreground font-semibold">{categoryTxs.length} registros</span>
-                      </div>
-                      
-                      {categoryTxs.length === 0 ? (
-                        <p className="text-xs text-muted-foreground py-2">No hay transacciones registradas.</p>
-                      ) : (
-                        <ul className="flex flex-col gap-2.5">
-                          {categoryTxs.map((tx) => {
-                            const acc = getAccount(tx.accountId)
-                            const dateLabel = new Date(tx.date).toLocaleDateString("es-AR", {
-                              day: "2-digit",
-                              month: "short"
-                            })
-                            return (
-                              <li
-                                key={tx.id}
-                                onClick={() => onEditTransaction(tx)}
-                                className="flex items-center justify-between hover:bg-accent/40 p-2 rounded-xl transition-all cursor-pointer group/item"
-                              >
-                                <div className="min-w-0 flex-1 pr-4">
-                                  <p className="text-xs font-semibold truncate group-item-hover:text-primary transition-colors">
-                                    {tx.note || "Sin descripción"}
-                                  </p>
-                                  <p className="text-[10px] text-muted-foreground truncate">
-                                    {dateLabel} · Cuenta: <span className="font-medium text-foreground/80">{acc?.name ?? "Desconocida"}</span>
-                                  </p>
-                                </div>
-                                <span className="text-xs font-bold tabular-nums text-foreground/90 shrink-0">
-                                  {formatShort(tx.amount, selectedCurrency)}
-                                </span>
-                              </li>
-                            )
-                          })}
-                        </ul>
-                      )}
-                    </div>
-                  )}
-                </li>
-              )
-            })}
-          </ul>
+                    )}
+                  </li>
+                )
+              })}
+            </ul>
+          </div>
         )}
       </Card>
     </div>

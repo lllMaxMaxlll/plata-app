@@ -3,6 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Home, Wallet, Plus, Sparkles, LayoutGrid } from "lucide-react"
+import { Button } from "@/components/ui/button"
 
 export type View =
   | "home"
@@ -32,7 +33,7 @@ export function BottomNav({ onAdd }: { onAdd: () => void }) {
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 mx-auto max-w-md">
-      <div className="relative border-t border-border bg-card/90 px-2 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] pt-2 backdrop-blur-lg">
+      <div className="relative border-t border-border bg-card/95 px-2 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] pt-2 backdrop-blur-md">
         <div className="flex items-center justify-between">
           <div className="flex flex-1 justify-around">
             {left.map((item) => (
@@ -40,7 +41,7 @@ export function BottomNav({ onAdd }: { onAdd: () => void }) {
             ))}
           </div>
 
-          <div className="w-16" aria-hidden />
+          <div className="w-14" aria-hidden />
 
           <div className="flex flex-1 justify-around">
             {right.map((item) => (
@@ -49,16 +50,17 @@ export function BottomNav({ onAdd }: { onAdd: () => void }) {
           </div>
         </div>
 
-        {/* Center FAB with scale & opacity animations */}
-        <button
+        {/* Center FAB with Shadcn Button */}
+        <Button
           onClick={onAdd}
           aria-label="Agregar movimiento"
-          className={`absolute -top-5 left-1/2 flex size-14 -translate-x-1/2 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/30 transition-all duration-300 ease-out active:scale-95 ${
+          size="icon"
+          className={`absolute -top-5 left-1/2 flex size-12 -translate-x-1/2 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-all duration-300 active:scale-95 cursor-pointer ${
             showFab ? "scale-100 opacity-100 pointer-events-auto" : "scale-0 opacity-0 pointer-events-none"
           }`}
         >
-          <Plus className="size-6" />
-        </button>
+          <Plus className="size-5" />
+        </Button>
       </div>
     </nav>
   )
@@ -84,11 +86,12 @@ function NavButton({
     <Link
       href={item.href}
       className={`flex flex-col items-center gap-0.5 px-2 py-1 text-[11px] font-medium transition-colors cursor-pointer ${
-        isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
+        isActive ? "text-primary font-semibold" : "text-muted-foreground hover:text-foreground"
       }`}
     >
-      <item.Icon className="size-5" />
+      <item.Icon className="size-4.5" />
       {item.label}
     </Link>
   )
 }
+

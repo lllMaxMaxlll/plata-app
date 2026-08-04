@@ -258,41 +258,7 @@ export function VehiclesView({ isDesktop = false, onBack }: { isDesktop?: boolea
   }
 
   return (
-    <div className={`flex flex-col gap-6 ${isDesktop ? "px-8 py-5" : "px-4 pt-[calc(env(safe-area-inset-top)+1.25rem)] pb-24"}`}>
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        {onBack && !isDesktop && (
-          <Button
-            variant="outline"
-            size="icon-sm"
-            onClick={onBack}
-            className="rounded-xl shrink-0"
-          >
-            <ArrowLeft className="size-4" />
-          </Button>
-        )}
-        <div className="min-w-0 flex-1">
-          <h1 className="text-xl font-bold tracking-tight text-foreground">
-            {isDesktop ? "Mis Vehículos" : "Vehículos"}
-          </h1>
-          <p className="text-xs text-muted-foreground mt-0.5 truncate">
-            Llevá el control de tus gastos de nafta, mantenimientos y services.
-          </p>
-        </div>
-      </div>
-
-      <div className="flex items-center justify-between">
-        <div aria-hidden />
-
-        <Button
-          onClick={handleAddVehicle}
-          size="sm"
-          className="flex items-center gap-1 text-xs font-semibold rounded-xl"
-        >
-          <Plus className="size-4" />
-          Añadir vehículo
-        </Button>
-      </div>
+    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 pt-4 pb-12 font-sans space-y-6">
 
       {vehicles.length === 0 ? (
         <div className="max-w-md mx-auto mt-12 text-center border border-border rounded-xl bg-card p-8 flex flex-col items-center shadow-sm">
@@ -338,6 +304,14 @@ export function VehiclesView({ isDesktop = false, onBack }: { isDesktop?: boolea
                 </Button>
               );
             })}
+            <Button
+              onClick={handleAddVehicle}
+              size="sm"
+              className="flex items-center gap-1 text-xs font-semibold rounded-xl"
+            >
+              <Plus className="size-4" />
+              Añadir vehículo
+            </Button>
           </div>
 
           {activeVehicle && (
@@ -417,8 +391,8 @@ export function VehiclesView({ isDesktop = false, onBack }: { isDesktop?: boolea
                         <li
                           key={al.id}
                           className={`flex items-start gap-2.5 p-3 rounded-xl border text-xs ${al.type === "critical"
-                              ? "bg-red-500/10 text-red-500 border-red-500/20 font-medium"
-                              : "bg-amber-500/10 text-amber-500 border-amber-500/20"
+                            ? "bg-red-500/10 text-red-500 border-red-500/20 font-medium"
+                            : "bg-amber-500/10 text-amber-500 border-amber-500/20"
                             }`}
                         >
                           <span className="font-semibold">{al.title}</span>

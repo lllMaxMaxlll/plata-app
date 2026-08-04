@@ -26,7 +26,7 @@ export function ProfileView({
   ]
 
   return (
-    <section className="px-5 pt-[calc(env(safe-area-inset-top)+1.25rem)]">
+    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 pt-4 pb-12 font-sans space-y-6">
       <div className="flex items-center gap-3">
         {onBack && (
           <Button
@@ -84,7 +84,7 @@ export function ProfileView({
       </Button>
 
       <p className="mt-4 text-center text-xs text-muted-foreground">PLATA · demo v1.0</p>
-    </section>
+    </div>
   )
 }
 

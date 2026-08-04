@@ -411,6 +411,11 @@ export function ProjectionChart({
             </div>
 
             <div className="flex items-center gap-4 flex-wrap">
+              {hoverPoint.achievedGoalNames && hoverPoint.achievedGoalNames.length > 0 && (
+                <Badge variant="outline" className="text-[10px] border-purple-500/50 text-purple-300 gap-1 bg-purple-500/10">
+                  <Sparkles className="size-3" /> Meta alcanzada: {hoverPoint.achievedGoalNames.join(", ")}
+                </Badge>
+              )}
               {activeScenarios.optimistic && (
                 <div className="flex items-center gap-1.5">
                   <span className="size-2 rounded-full bg-emerald-500" />

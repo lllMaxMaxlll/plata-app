@@ -61,7 +61,7 @@ export function MoreView() {
   const profitLossPercentVal = portfolioTotalProfitLossPercent || 0
 
   return (
-    <section className="px-5 pt-[calc(env(safe-area-inset-top)+1.25rem)]">
+    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 pt-4 pb-12 font-sans space-y-6">
       <h1 className="text-xl font-semibold tracking-tight text-foreground">Explorar</h1>
       <p className="text-xs text-muted-foreground mt-0.5">
         Accedé a tus herramientas avanzadas y configuraciones de cuenta.
@@ -243,6 +243,6 @@ export function MoreView() {
       <p className="mt-8 text-center text-[10px] text-muted-foreground tracking-wide font-medium uppercase">
         PLATA · Finanzas Personales v1.0
       </p>
-    </section>
+    </div>
   )
 }
