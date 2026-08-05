@@ -18,7 +18,7 @@ import {
   type DueFrequency,
   type DueItemStatus,
 } from "@/lib/finance-data"
-import { auth, db } from "@/lib/firebase"
+import { auth, db, getApiAuthHeaders } from "@/lib/firebase"
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -799,7 +799,9 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     if (symbols.length === 0) return
 
     try {
-      const res = await fetch(`/api/stocks?symbols=${symbols.join(",")}`)
+      const res = await fetch(`/api/stocks?symbols=${symbols.join(",")}`, {
+        headers: await getApiAuthHeaders(),
+      })
       if (res.ok) {
         const data = await res.json()
         setStockPrices((prev) => {
@@ -812,29 +814,8 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         return
       }
     } catch (err) {
-      console.warn("Error fetching prices from API, simulating instead:", err)
+      console.warn("Error fetching market prices:", err)
     }
-
-    // Fallback simulation if API fails or offline
-    setStockPrices((prev) => {
-      const updated = { ...prev }
-      symbols.forEach((sym) => {
-        const current = updated[sym] || {
-          price: sym === "AAPL" ? 182.3 : sym === "TSLA" ? 184.8 : sym === "MSFT" ? 421.9 : 100,
-          change: 0.5,
-          name: `${sym} Corp.`,
-        }
-        const pct = 1 + (Math.random() * 0.003 - 0.0015)
-        const newPrice = Number((current.price * pct).toFixed(2))
-        const newChange = Number((current.change + (pct - 1) * 100).toFixed(2))
-        updated[sym] = {
-          price: newPrice,
-          change: newChange,
-          name: current.name,
-        }
-      })
-      return updated
-    })
   }, [])
 
   // Poll price updates from Yahoo Finance API every 30 seconds
@@ -855,29 +836,6 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
 
     return () => clearInterval(interval)
   }, [watchlist, stockTransactions, fetchPrices])
-
-  // Micro-fluctuations every 3 seconds to make the UI look alive
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setStockPrices((prev) => {
-        const symbols = Object.keys(prev)
-        if (symbols.length === 0) return prev
-        const nextPrices = { ...prev }
-        symbols.forEach((sym) => {
-          const current = nextPrices[sym]
-          const changePct = (Math.random() * 0.0008 - 0.0004)
-          const newPrice = Number((current.price * (1 + changePct)).toFixed(2))
-          nextPrices[sym] = {
-            ...current,
-            price: newPrice,
-            change: Number((current.change + changePct * 100).toFixed(2)),
-          }
-        })
-        return nextPrices
-      })
-    }, 3000)
-    return () => clearInterval(timer)
-  }, [])
 
   // Calculate user holdings from history of buy/sell transactions
   const holdings = useMemo(() => {
@@ -903,10 +861,10 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     map.forEach((value, symbol) => {
       if (value.shares <= 0) return
 
-      const priceInfo = stockPrices[symbol] || { price: 100, name: `${symbol} Corp.` }
-      const currentPrice = priceInfo.price
-      const name = priceInfo.name
       const avgBuyPrice = Number((value.totalCost / value.shares).toFixed(2))
+      const priceInfo = stockPrices[symbol]
+      const currentPrice = priceInfo?.price ?? avgBuyPrice
+      const name = priceInfo?.name ?? symbol
       const currentValue = Number((value.shares * currentPrice).toFixed(2))
       const profitLoss = Number((currentValue - value.totalCost).toFixed(2))
       const profitLossPercent = value.totalCost > 0 ? Number(((profitLoss / value.totalCost) * 100).toFixed(2)) : 0
@@ -947,7 +905,9 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
 
     let name = `${cleanSym} Corp.`
     try {
-      const res = await fetch(`/api/stocks?symbols=${cleanSym}`)
+      const res = await fetch(`/api/stocks?symbols=${cleanSym}`, {
+        headers: await getApiAuthHeaders(),
+      })
       if (res.ok) {
         const data = await res.json()
         if (data[cleanSym]) {
@@ -986,9 +946,17 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     if (!user) throw new Error("Usuario no autenticado.")
 
     const symbol = input.symbol.trim().toUpperCase()
+    if (!symbol || !Number.isFinite(input.shares) || input.shares <= 0 || !Number.isFinite(input.price) || input.price <= 0) {
+      throw new Error("Los datos de la operación no son válidos.")
+    }
     const txId = `st-${Date.now()}`
     const txDocRef = doc(db, "users", user.uid, "stockTransactions", txId)
     const accountRef = doc(db, "users", user.uid, "accounts", input.accountId)
+    const positionRef = doc(db, "users", user.uid, "stockPositions", symbol)
+
+    const existingShares = stockTransactions
+      .filter((tx) => tx.symbol === symbol)
+      .reduce((total, tx) => total + (tx.type === "buy" ? tx.shares : -tx.shares), 0)
 
     const totalAmount = Math.round(input.shares * input.price * 100) / 100
 
@@ -1007,14 +975,24 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     try {
       await runTransaction(db, async (transaction) => {
         const accSnap = await transaction.get(accountRef)
+        const positionSnap = await transaction.get(positionRef)
         if (!accSnap.exists()) {
           throw new Error("La cuenta seleccionada no existe.")
         }
         const accData = accSnap.data() as Account
+        if (accData.currency !== "USD") {
+          throw new Error("Las operaciones bursátiles requieren una cuenta en USD.")
+        }
         const bal = Number(accData.balance)
+        const currentShares = positionSnap.exists()
+          ? Number(positionSnap.data().shares ?? 0)
+          : Math.max(0, existingShares)
 
         if (input.type === "buy" && bal < totalAmount) {
           throw new Error("Saldo insuficiente en la cuenta seleccionada.")
+        }
+        if (input.type === "sell" && currentShares < input.shares) {
+          throw new Error("No tenés suficientes acciones para realizar esta venta.")
         }
 
         const newBal = Math.round((input.type === "buy" ? bal - totalAmount : bal + totalAmount) * 100) / 100
@@ -1030,6 +1008,11 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         })
 
         transaction.update(accountRef, { balance: newBal })
+        transaction.set(positionRef, {
+          symbol,
+          shares: Math.round((currentShares + (input.type === "buy" ? input.shares : -input.shares)) * 1e8) / 1e8,
+          updatedAt: new Date().toISOString(),
+        })
 
         const finTxId = `t-${Date.now()}`
         const finTxDocRef = doc(db, "users", user.uid, "transactions", finTxId)
@@ -1388,9 +1371,14 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     const date = new Date(Date.UTC(y, m - 1, d))
 
     if (frequency === "monthly") {
-      date.setUTCMonth(date.getUTCMonth() + 1)
+      const targetMonth = m
+      const targetYear = y + Math.floor(targetMonth / 12)
+      const normalizedMonth = targetMonth % 12
+      const lastDay = new Date(Date.UTC(targetYear, normalizedMonth + 1, 0)).getUTCDate()
+      date.setUTCFullYear(targetYear, normalizedMonth, Math.min(d, lastDay))
     } else if (frequency === "yearly") {
-      date.setUTCFullYear(date.getUTCFullYear() + 1)
+      const lastDay = new Date(Date.UTC(y + 1, m, 0)).getUTCDate()
+      date.setUTCFullYear(y + 1, m - 1, Math.min(d, lastDay))
     } else if (frequency === "biweekly") {
       date.setUTCDate(date.getUTCDate() + 14)
     }
@@ -1426,51 +1414,56 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     registerTx?: { accountId: string; amount?: number; category?: string; note?: string }
   ) {
     if (!user) throw new Error("Usuario no autenticado.")
-    const item = dueItems.find((d) => d.id === id)
-    if (!item) throw new Error("El vencimiento no existe.")
-
+    const expectedItem = dueItems.find((item) => item.id === id)
+    if (!expectedItem) throw new Error("El vencimiento no existe.")
     const nowIso = new Date().toISOString()
-
-    // 1. If requested, register transaction expense
-    if (registerTx && registerTx.accountId) {
-      const amount = registerTx.amount ?? item.amount
-      const category = registerTx.category || item.category || "Servicios"
-      const note = registerTx.note || `Pago de vencimiento: ${item.title}`
-      await addTransaction({
-        type: "expense",
-        accountId: registerTx.accountId,
-        amount,
-        category,
-        note,
-        date: nowIso,
-      })
-    }
-
-    // 2. If autoRenew is true and frequency is not one_time, advance date to next period
     const docRef = doc(db, "users", user.uid, "dueItems", id)
-    if (item.autoRenew && item.frequency !== "one_time") {
-      const nextDate = calcNextDueDate(item.dueDate, item.frequency)
-      await setDoc(
-        docRef,
-        {
-          dueDate: nextDate,
-          status: "pending",
-          paidAt: nowIso,
-          updatedAt: nowIso,
-        },
-        { merge: true }
-      )
-    } else {
-      await setDoc(
-        docRef,
-        {
-          status: "paid",
-          paidAt: nowIso,
-          updatedAt: nowIso,
-        },
-        { merge: true }
-      )
-    }
+    const accountRef = registerTx?.accountId
+      ? doc(db, "users", user.uid, "accounts", registerTx.accountId)
+      : null
+    const txId = `t-due-${id}-${Date.now()}`
+    const txRef = doc(db, "users", user.uid, "transactions", txId)
+
+    await runTransaction(db, async (transaction) => {
+      const itemSnap = await transaction.get(docRef)
+      if (!itemSnap.exists()) throw new Error("El vencimiento no existe.")
+      const item = { id: itemSnap.id, ...itemSnap.data() } as DueItem
+      if (item.status === "paid") throw new Error("El vencimiento ya fue pagado.")
+      if (item.dueDate !== expectedItem.dueDate) {
+        throw new Error("Este vencimiento ya fue procesado o actualizado.")
+      }
+
+      const accountSnap = accountRef ? await transaction.get(accountRef) : null
+      if (accountRef && !accountSnap?.exists()) throw new Error("La cuenta seleccionada no existe.")
+
+      if (accountRef && accountSnap) {
+        const amount = registerTx?.amount ?? item.amount
+        if (!Number.isFinite(amount) || amount <= 0) throw new Error("El importe no es válido.")
+        const balance = Number(accountSnap.data()!.balance)
+        transaction.update(accountRef, { balance: Math.round((balance - amount) * 100) / 100 })
+        transaction.set(txRef, {
+          id: txId,
+          type: "expense",
+          amount: Math.round(amount * 100) / 100,
+          accountId: registerTx!.accountId,
+          toAccountId: null,
+          toAmount: null,
+          exchangeRate: null,
+          category: registerTx?.category || item.category || "Servicios",
+          note: registerTx?.note || `Pago de vencimiento: ${item.title}`,
+          date: nowIso,
+          receiptName: null,
+        })
+      }
+
+      const recurring = item.autoRenew && item.frequency !== "one_time"
+      transaction.update(docRef, {
+        ...(recurring ? { dueDate: calcNextDueDate(item.dueDate, item.frequency) } : {}),
+        status: recurring ? "pending" : "paid",
+        paidAt: nowIso,
+        updatedAt: nowIso,
+      })
+    })
   }
 
   async function markDueItemAsPending(id: string) {
@@ -1512,7 +1505,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
 
   async function syncMacroFromApi(): Promise<MacroSettings> {
     try {
-      const res = await fetch("/api/macro")
+      const res = await fetch("/api/macro", { headers: await getApiAuthHeaders() })
       if (res.ok) {
         const data = await res.json()
         const newSettings: MacroSettings = {
@@ -1604,4 +1597,3 @@ export function useFinance() {
   if (!ctx) throw new Error("useFinance must be used within FinanceProvider")
   return ctx
 }
-

@@ -2,7 +2,10 @@
 
 import * as React from "react"
 import * as RechartsPrimitive from "recharts"
+import type { TooltipValueType } from "recharts"
 import { cn } from "@/lib/utils"
+
+type TooltipNameType = number | string
 
 export type ChartConfig = {
   [k in string]: {
@@ -98,14 +101,17 @@ export function ChartTooltipContent({
   color,
   nameKey,
   labelKey,
-}: React.ComponentProps<typeof RechartsPrimitive.Tooltip> &
-  React.ComponentProps<"div"> & {
+}: React.ComponentProps<"div"> & {
+    active?: boolean
     hideLabel?: boolean
     hideIndicator?: boolean
     indicator?: "line" | "dot" | "dashed"
     nameKey?: string
     labelKey?: string
-  }) {
+  } & Omit<
+    RechartsPrimitive.DefaultTooltipContentProps<TooltipValueType, TooltipNameType>,
+    "accessibilityLayer"
+  >) {
   const { config } = useChart()
 
   const tooltipLabel = React.useMemo(() => {
@@ -158,7 +164,7 @@ export function ChartTooltipContent({
 
           return (
             <div
-              key={item.dataKey || index}
+              key={typeof item.dataKey === "string" || typeof item.dataKey === "number" ? item.dataKey : index}
               className={cn(
                 "flex w-full flex-wrap items-center gap-2",
                 indicator === "dot" && "items-center"
@@ -172,11 +178,9 @@ export function ChartTooltipContent({
                     <div
                       className={cn(
                         "shrink-0 rounded-[2px]",
-                        {
-                          "size-2.5 rounded-full": indicator === "dot",
-                          "w-1 h-3": indicator === "line",
-                          "w-0 border-1 border-dashed h-3": indicator === "dashed",
-                        }
+                        indicator === "dot" && "size-2.5 rounded-full",
+                        indicator === "line" && "h-3 w-1",
+                        indicator === "dashed" && "h-3 w-0 border-1 border-dashed"
                       )}
                       style={{
                         backgroundColor: indicatorColor,
@@ -212,11 +216,10 @@ export function ChartLegendContent({
   payload,
   verticalAlign = "bottom",
   nameKey,
-}: React.ComponentProps<"div"> &
-  Pick<RechartsPrimitive.LegendProps, "payload" | "verticalAlign"> & {
+}: React.ComponentProps<"div"> & {
     hideIcon?: boolean
     nameKey?: string
-  }) {
+  } & RechartsPrimitive.DefaultLegendContentProps) {
   const { config } = useChart()
 
   if (!payload?.length) {

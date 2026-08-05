@@ -51,18 +51,13 @@ export function VehiclesView({ isDesktop = false, onBack }: { isDesktop?: boolea
 
   const [searchQuery, setSearchQuery] = useState("")
   const [typeFilter, setTypeFilter] = useState<"all" | VehicleLogType>("all")
+  const [nowTime] = useState(() => Date.now())
 
   const activeVehicle = useMemo(() => {
     if (activeVehId) {
       return vehicles.find((v) => v.id === activeVehId) || vehicles[0]
     }
     return vehicles[0]
-  }, [vehicles, activeVehId])
-
-  useMemo(() => {
-    if (vehicles.length > 0 && !activeVehId) {
-      setActiveVehId(vehicles[0].id)
-    }
   }, [vehicles, activeVehId])
 
   const activeLogs = useMemo(() => {
@@ -187,7 +182,6 @@ export function VehiclesView({ isDesktop = false, onBack }: { isDesktop?: boolea
         }
       })
 
-    const nowTime = Date.now()
     activeLogs
       .filter((l) => l.type === "service" && l.nextServiceDate)
       .forEach((l) => {
@@ -216,7 +210,7 @@ export function VehiclesView({ isDesktop = false, onBack }: { isDesktop?: boolea
       const map = { critical: 2, warning: 1, info: 0 }
       return map[b.type] - map[a.type]
     })
-  }, [activeVehicle, activeLogs])
+  }, [activeVehicle, activeLogs, nowTime])
 
   function handleAddVehicle() {
     setEditingVehicle(null)

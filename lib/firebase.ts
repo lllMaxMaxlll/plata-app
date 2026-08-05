@@ -17,6 +17,11 @@ const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 const db = getFirestore(app);
 const auth = getAuth(app);
 
+async function getApiAuthHeaders(): Promise<Record<string, string>> {
+  const token = await auth.currentUser?.getIdToken()
+  return token ? { Authorization: `Bearer ${token}` } : {}
+}
+
 // Lazy initialize analytics on the client side to prevent SSR errors
 let analytics: any = null;
 if (typeof window !== "undefined") {
@@ -29,4 +34,4 @@ if (typeof window !== "undefined") {
   });
 }
 
-export { app, db, auth, analytics };
+export { app, db, auth, analytics, getApiAuthHeaders };

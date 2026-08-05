@@ -44,7 +44,7 @@ export function SecuritySheet({ open, onClose }: { open: boolean; onClose: () =>
   }, [open])
 
   useEffect(() => {
-    let timer: any
+    let timer: ReturnType<typeof setInterval> | undefined
     if (verificationCooldown > 0) {
       timer = setInterval(() => {
         setVerificationCooldown((prev) => prev - 1)
@@ -55,7 +55,7 @@ export function SecuritySheet({ open, onClose }: { open: boolean; onClose: () =>
 
   if (!user) return null
 
-  const isGoogleUser = (user as any).providerData?.some((p: any) => p.providerId === "google.com")
+  const isGoogleUser = user.providerId === "google.com"
 
   async function handleSendVerification() {
     setSendingVerification(true)

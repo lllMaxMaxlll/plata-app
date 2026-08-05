@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { getApiAuthHeaders } from "@/lib/firebase"
 
 interface Message {
   role: "user" | "assistant"
@@ -22,6 +23,18 @@ function parseMarkdown(text: string): string {
   let inNumList = false
   let inTable = false
   let tableHeaders: string[] = []
+
+  const processInline = (str: string) =>
+    str
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/\*\*(.*?)\*\*/g, "<strong class='font-bold text-foreground'>$1</strong>")
+      .replace(/\*(.*?)\*/g, "<em class='italic text-muted-foreground'>$1</em>")
+      .replace(
+        /`(.*?)`/g,
+        "<code class='bg-muted px-1.5 py-0.5 rounded text-[11px] font-mono border border-border text-primary'>$1</code>"
+      )
 
   const resultLines = lines.map((line) => {
     const cleanLine = line.trim()
@@ -43,32 +56,19 @@ function parseMarkdown(text: string): string {
         const headRow = tableHeaders
           .map(
             (h) =>
-              `<th class="border border-border px-3 py-1.5 text-left text-[11px] font-semibold bg-muted text-muted-foreground uppercase tracking-wider">${h}</th>`
+              `<th class="border border-border px-3 py-1.5 text-left text-[11px] font-semibold bg-muted text-muted-foreground uppercase tracking-wider">${processInline(h)}</th>`
           )
           .join("")
         return `<div class="overflow-x-auto my-3 rounded-xl border border-border bg-card"><table class="w-full border-collapse text-xs text-foreground"><thead><tr class="border-b border-border bg-muted">${headRow}</tr></thead><tbody>`
       } else {
         const cells = parts
-          .map((c) => `<td class="border-b border-border px-3 py-2 text-left text-xs font-medium">${c}</td>`)
+          .map((c) => `<td class="border-b border-border px-3 py-2 text-left text-xs font-medium">${processInline(c)}</td>`)
           .join("")
         return `<tr class="hover:bg-muted/10 transition-colors">${cells}</tr>`
       }
     } else if (inTable) {
       inTable = false
-      return "</tbody></table></div>" + (cleanLine ? `<p class="my-2.5">${cleanLine}</p>` : "")
-    }
-
-    const processInline = (str: string) => {
-      return str
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/\*\*(.*?)\*\*/g, "<strong class='font-bold text-foreground'>$1</strong>")
-        .replace(/\*(.*?)\*/g, "<em class='italic text-muted-foreground'>$1</em>")
-        .replace(
-          /`(.*?)`/g,
-          "<code class='bg-muted px-1.5 py-0.5 rounded text-[11px] font-mono border border-border text-primary'>$1</code>"
-        )
+      return "</tbody></table></div>" + (cleanLine ? `<p class="my-2.5">${processInline(cleanLine)}</p>` : "")
     }
 
     if (cleanLine.startsWith("### ")) {
@@ -384,6 +384,7 @@ export function AdvisorView({ isDesktop = false }: { isDesktop?: boolean }) {
 
       const headers: Record<string, string> = {
         "Content-Type": "application/json",
+        ...(await getApiAuthHeaders()),
       }
 
       if (customApiKey && customApiKey.trim()) {
@@ -777,4 +778,3 @@ export function AdvisorView({ isDesktop = false }: { isDesktop?: boolean }) {
     </div>
   )
 }
-

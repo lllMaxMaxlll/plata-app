@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo } from "react"
+import { useMemo, useState } from "react"
 import Link from "next/link"
 import {
   Bike,
@@ -20,6 +20,7 @@ import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
 
 export function MoreView() {
+  const [nowTime] = useState(() => Date.now())
   const {
     user,
     vehicles,
@@ -36,8 +37,7 @@ export function MoreView() {
 
   const alertCount = useMemo(() => {
     let count = 0
-    const nowTime = Date.now()
-    
+
     vehicles.forEach((vehicle) => {
       const logs = vehicleLogs.filter((l) => l.vehicleId === vehicle.id)
       logs.forEach((l) => {
@@ -56,7 +56,7 @@ export function MoreView() {
     })
     
     return count
-  }, [vehicles, vehicleLogs])
+  }, [vehicles, vehicleLogs, nowTime])
 
   const profitLossPercentVal = portfolioTotalProfitLossPercent || 0
 

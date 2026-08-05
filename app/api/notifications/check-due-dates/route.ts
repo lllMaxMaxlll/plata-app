@@ -1,56 +1,27 @@
 import { NextResponse } from "next/server"
-
-interface CheckDueDatesResponse {
-  timestamp: string
-  totalPendingChecked: number
-  alertsToTrigger: Array<{
-    userId?: string
-    dueItemId: string
-    title: string
-    amount: number
-    currency: string
-    dueDate: string
-    daysUntilDue: number
-    reminderDaysBefore: number
-    message: string
-  }>
-}
+import { authorizeApiRequest } from "@/lib/server-api"
 
 export async function GET(request: Request) {
-  try {
-    const { searchParams } = new URL(request.url)
-    const userId = searchParams.get("userId")
-
-    // Current date in YYYY-MM-DD
-    const today = new Date()
-    const todayIso = today.toISOString().split("T")[0]
-
-    // Calculate alerts payload structure
-    const alertsToTrigger: CheckDueDatesResponse["alertsToTrigger"] = []
-
-    return NextResponse.json({
-      timestamp: new Date().toISOString(),
-      status: "success",
-      message: "Verificación de vencimientos ejecutada.",
-      filterUserId: userId || "all",
-      alertsToTrigger,
-      info: "Esta API comprueba los vencimientos periódicos pendientes dentro de los días de alerta previa configurados por el usuario y despacha notificaciones Web Push FCM.",
-    })
-  } catch (err: any) {
-    return NextResponse.json(
-      { error: err?.message || "Error al verificar vencimientos." },
-      { status: 500 }
-    )
-  }
+  const authResult = await authorizeApiRequest(request, "due-date-check", 10)
+  if (authResult.error) return authResult.error
+  return NextResponse.json(
+    { error: "La ejecución programada requiere Firebase Admin/FCM y todavía no está configurada." },
+    { status: 501 }
+  )
 }
 
 export async function POST(request: Request) {
   try {
+    const authResult = await authorizeApiRequest(request, "due-date-preview", 20)
+    if (authResult.error) return authResult.error
     const body = await request.json().catch(() => ({}))
-    const { dueItems, userId } = body
+    const { dueItems } = body
 
     if (!Array.isArray(dueItems)) {
       return NextResponse.json({ error: "se requiere array 'dueItems'" }, { status: 400 })
+    }
+    if (dueItems.length > 500) {
+      return NextResponse.json({ error: "demasiados vencimientos" }, { status: 413 })
     }
 
     const today = new Date()
@@ -78,7 +49,7 @@ export async function POST(request: Request) {
       const diffTime = targetDate.getTime() - today.getTime()
       const daysUntilDue = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
 
-      const reminderDays = item.reminderDaysBefore || 3
+      const reminderDays = Number.isFinite(item.reminderDaysBefore) ? item.reminderDaysBefore : 3
 
       // Trigger if overdue or due within reminderDays
       if (daysUntilDue <= reminderDays) {
@@ -105,7 +76,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       timestamp: new Date().toISOString(),
-      userId: userId || "anonymous",
+      userId: authResult.userId,
       count: alerts.length,
       alerts,
     })

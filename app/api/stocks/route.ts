@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { authorizeApiRequest } from "@/lib/server-api"
 
 interface CachedQuote {
   price: number
@@ -116,6 +117,9 @@ async function fetchYahooQuote(symbol: string): Promise<{ price: number; change:
 }
 
 export async function GET(request: Request) {
+  const authResult = await authorizeApiRequest(request, "stock-quotes", 30)
+  if (authResult.error) return authResult.error
+
   const { searchParams } = new URL(request.url)
   const symbolsParam = searchParams.get("symbols")
   if (!symbolsParam) {
@@ -125,10 +129,13 @@ export async function GET(request: Request) {
   const symbols = symbolsParam
     .split(",")
     .map((s) => s.trim().toUpperCase())
-    .filter(Boolean)
+    .filter((symbol) => /^[A-Z0-9^-]{1,15}$/.test(symbol))
 
   if (symbols.length === 0) {
     return NextResponse.json({})
+  }
+  if (symbols.length > 25) {
+    return NextResponse.json({ error: "A maximum of 25 symbols is allowed." }, { status: 400 })
   }
 
   const results: Record<string, { price: number; change: number; name: string }> = {}
@@ -149,32 +156,13 @@ export async function GET(request: Request) {
         quote = await fetchYahooQuote(sym)
       }
 
-      // 3. Fallback to popular list or simulation
-      if (!quote) {
-        if (popularStocks[sym]) {
-          quote = popularStocks[sym]
-        } else {
-          let hash = 0
-          for (let i = 0; i < sym.length; i++) {
-            hash = sym.charCodeAt(i) + ((hash << 5) - hash)
-          }
-          const basePrice = Math.abs(hash % 490) + 10
-          const randChange = (hash % 500) / 100
-          quote = {
-            price: basePrice,
-            change: randChange,
-            name: `${sym} Corp.`,
-          }
-        }
-      }
-
-      results[sym] = {
-        price: quote.price,
-        change: quote.change,
-        name: quote.name,
+      if (quote) {
+        results[sym] = { price: quote.price, change: quote.change, name: quote.name }
       }
     })
   )
 
-  return NextResponse.json(results)
+  return NextResponse.json(results, {
+    headers: { "Cache-Control": "private, max-age=15, stale-while-revalidate=30" },
+  })
 }

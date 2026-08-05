@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { authorizeApiRequest } from "@/lib/server-api"
 
 export interface MacroApiResponse {
   rates: {
@@ -12,16 +13,25 @@ export interface MacroApiResponse {
   annualDevaluation: number
   annualReturn: number
   lastUpdated: string
+  assumptionsSource: "environment" | "configured-defaults"
 }
 
-export async function GET() {
+function readConfiguredRate(name: string, fallback: number) {
+  const value = Number(process.env[name])
+  return Number.isFinite(value) ? value : fallback
+}
+
+export async function GET(request: Request) {
+  const authResult = await authorizeApiRequest(request, "macro", 20)
+  if (authResult.error) return authResult.error
+
   try {
     // 1. Fetch Dollar rates from DolarApi.com (Free & Public API for Argentina)
     const res = await fetch("https://dolarapi.com/v1/dolares", {
       next: { revalidate: 300 }, // Cache for 5 minutes
     })
 
-    let rates = {
+    const rates = {
       blue: 1250,
       oficial: 980,
       mep: 1240,
@@ -46,10 +56,13 @@ export async function GET() {
     // Recommended exchange rate for personal finance is Dólar Blue / MEP
     const recommendedExchangeRate = rates.blue || rates.mep || 1250
 
-    // Inflation and Devaluation estimates based on consensus REM/BCRA benchmarks
-    const annualInflation = 45 // 45% annual expectation
-    const annualDevaluation = 40 // 40% annual expectation
-    const annualReturn = 12 // 12% annual USD investment return benchmark
+    // These are planning assumptions, not live market observations.
+    const annualInflation = readConfiguredRate("ANNUAL_INFLATION_RATE", 45)
+    const annualDevaluation = readConfiguredRate("ANNUAL_DEVALUATION_RATE", 40)
+    const annualReturn = readConfiguredRate("ANNUAL_INVESTMENT_RETURN_RATE", 12)
+    const assumptionsSource = process.env.ANNUAL_INFLATION_RATE || process.env.ANNUAL_DEVALUATION_RATE || process.env.ANNUAL_INVESTMENT_RETURN_RATE
+      ? "environment" as const
+      : "configured-defaults" as const
 
     const responseData: MacroApiResponse = {
       rates,
@@ -58,6 +71,7 @@ export async function GET() {
       annualDevaluation,
       annualReturn,
       lastUpdated: new Date().toISOString(),
+      assumptionsSource,
     }
 
     return NextResponse.json(responseData)
@@ -71,6 +85,7 @@ export async function GET() {
         annualDevaluation: 40,
         annualReturn: 12,
         lastUpdated: new Date().toISOString(),
+        assumptionsSource: "configured-defaults",
       },
       { status: 500 }
     )

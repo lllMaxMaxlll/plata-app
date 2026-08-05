@@ -3,9 +3,9 @@
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
 import {
   Dialog,
   DialogContent,
@@ -100,11 +100,11 @@ export function PayVencimientoModal({ open, onClose, item }: PayVencimientoModal
             Marcar como Pagado
           </DialogTitle>
           <DialogDescription className="text-xs text-muted-foreground">
-            Confirmar el pago de "{item.title}" ({formatCurrency(item.amount, item.currency)}).
+            Confirmar el pago de &ldquo;{item.title}&rdquo; ({formatCurrency(item.amount, item.currency)}).
           </DialogDescription>
         </DialogHeader>
 
-        <div className={cn("space-y-4 pt-1 transition-all duration-200", submitting && "pointer-events-none opacity-50 cursor-not-allowed select-none")}>
+        <div className={cn("flex flex-col gap-4 pt-1 transition-all duration-200", submitting && "pointer-events-none opacity-50 cursor-not-allowed select-none")}>
           {/* Detail Box */}
           <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 flex items-center justify-between">
             <div>
@@ -138,11 +138,11 @@ export function PayVencimientoModal({ open, onClose, item }: PayVencimientoModal
 
           {/* Account & Amount details if toggle active */}
           {registerExpense && (
-            <div className="space-y-3.5 rounded-2xl border border-border/40 bg-card/40 p-4 animate-in fade-in slide-in-from-top-2 duration-200">
-              <div className="space-y-1.5">
-                <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            <FieldGroup className="gap-3.5 rounded-2xl border border-border/40 bg-card/40 p-4 animate-in fade-in slide-in-from-top-2 duration-200">
+              <Field>
+                <FieldLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                   Cuenta de Origen
-                </Label>
+                </FieldLabel>
                 <Select value={selectedAccountId} onValueChange={(v) => v && setSelectedAccountId(v)}>
                   <SelectTrigger className="w-full rounded-xl border-border bg-card/60">
                     <SelectValue>
@@ -152,20 +152,22 @@ export function PayVencimientoModal({ open, onClose, item }: PayVencimientoModal
                     </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
-                    {accounts.map((acc) => (
-                      <SelectItem key={acc.id} value={acc.id}>
-                        {acc.name} ({formatCurrency(acc.balance, acc.currency)})
-                      </SelectItem>
-                    ))}
+                    <SelectGroup>
+                      {accounts.map((acc) => (
+                        <SelectItem key={acc.id} value={acc.id}>
+                          {acc.name} ({formatCurrency(acc.balance, acc.currency)})
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
                   </SelectContent>
                 </Select>
-              </div>
+              </Field>
 
               <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                <Field>
+                  <FieldLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                     Monto Real Pagado
-                  </Label>
+                  </FieldLabel>
                   <Input
                     type="number"
                     step="any"
@@ -173,20 +175,20 @@ export function PayVencimientoModal({ open, onClose, item }: PayVencimientoModal
                     onChange={(e) => setPayAmount(e.target.value)}
                     className="rounded-xl border-border bg-card/60 font-semibold"
                   />
-                </div>
+                </Field>
 
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                <Field>
+                  <FieldLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                     Nota / Detalle
-                  </Label>
+                  </FieldLabel>
                   <Input
                     value={note}
                     onChange={(e) => setNote(e.target.value)}
                     className="rounded-xl border-border bg-card/60 text-xs"
                   />
-                </div>
+                </Field>
               </div>
-            </div>
+            </FieldGroup>
           )}
 
           {item.autoRenew && item.frequency !== "one_time" && (

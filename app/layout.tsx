@@ -1,16 +1,9 @@
 import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
-import { Inter, Roboto_Mono } from 'next/font/google'
 import './globals.css'
 import { Toaster } from 'sonner'
 import { Providers } from './providers'
 import { AppShell } from './shell'
-
-const inter = Inter({ variable: '--font-sans', subsets: ['latin'] })
-const robotoMono = Roboto_Mono({
-  variable: '--font-mono',
-  subsets: ['latin'],
-})
 
 export const metadata: Metadata = {
   title: 'PLATA — Finanzas Cloud Dashboard',
@@ -54,7 +47,7 @@ export default function RootLayout({
   return (
     <html
       lang="es"
-      className={`bg-background ${inter.variable} ${robotoMono.variable}`}
+      className="bg-background"
     >
       <body className="bg-background font-sans antialiased text-foreground">
         <Providers>

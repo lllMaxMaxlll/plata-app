@@ -1,13 +1,38 @@
 import { NextResponse } from "next/server"
 import { createOpenRouter } from "@openrouter/ai-sdk-provider"
 import { streamText } from "ai"
+import { authorizeApiRequest } from "@/lib/server-api"
+
+const MAX_MESSAGES = 60
+const MAX_MESSAGE_LENGTH = 12_000
+const MAX_CONTEXT_LENGTH = 80_000
+const MODEL_ID_PATTERN = /^[a-z0-9._-]+\/[a-z0-9._:-]+$/i
 
 export async function POST(request: Request) {
   try {
+    const authResult = await authorizeApiRequest(request, "chat", 20)
+    if (authResult.error) return authResult.error
+
     const { messages, context, model, personality } = await request.json()
 
     if (!messages || !Array.isArray(messages)) {
       return NextResponse.json({ error: "Missing or invalid messages parameter" }, { status: 400 })
+    }
+    if (
+      messages.length > MAX_MESSAGES ||
+      messages.some(
+        (message: unknown) =>
+          typeof message !== "object" ||
+          message === null ||
+          !("content" in message) ||
+          typeof message.content !== "string" ||
+          message.content.length > MAX_MESSAGE_LENGTH
+      )
+    ) {
+      return NextResponse.json({ error: "Chat payload is too large or invalid." }, { status: 413 })
+    }
+    if (typeof context === "string" && context.length > MAX_CONTEXT_LENGTH) {
+      return NextResponse.json({ error: "Financial context is too large." }, { status: 413 })
     }
 
     // Get API Key from custom header or fallback to environment variable
@@ -69,7 +94,15 @@ ${personalityPrompt}
 CONTEXTO FINANCIERO EN TIEMPO REAL DEL USUARIO:
 ${context || "No hay datos financieros disponibles actualmente."}`
 
-    const openRouterModel = model || "openrouter/free"
+    const requestedModel = typeof model === "string" ? model : "openrouter/free"
+    const usingServerKey = !userApiKey?.trim()
+    const serverModels = (process.env.OPENROUTER_ALLOWED_MODELS || "openrouter/free")
+      .split(",")
+      .map((item) => item.trim())
+    if (!MODEL_ID_PATTERN.test(requestedModel) || (usingServerKey && !serverModels.includes(requestedModel))) {
+      return NextResponse.json({ error: "Model is not allowed." }, { status: 400 })
+    }
+    const openRouterModel = requestedModel
 
     // Initialize OpenRouter provider using Vercel AI SDK
     const openrouter = createOpenRouter({

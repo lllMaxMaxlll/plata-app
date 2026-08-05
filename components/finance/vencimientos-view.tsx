@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge"
 import { VencimientoSheet } from "./vencimiento-sheet"
 import { PayVencimientoModal } from "./pay-vencimiento-modal"
 import { requestNotificationPermission } from "@/lib/firebase-messaging"
+import { getApiAuthHeaders } from "@/lib/firebase"
 import { toast } from "sonner"
 import {
   Calendar as CalendarIcon,
@@ -200,7 +201,7 @@ export function VencimientosView({ isDesktop = false }: { isDesktop?: boolean })
     try {
       const res = await fetch("/api/notifications/check-due-dates", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(await getApiAuthHeaders()) },
         body: JSON.stringify({ dueItems }),
       })
       if (res.ok) {

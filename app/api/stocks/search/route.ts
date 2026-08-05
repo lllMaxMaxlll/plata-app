@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { authorizeApiRequest } from "@/lib/server-api"
 
 const popularStocks = [
   { symbol: "AAPL", name: "Apple Inc." },
@@ -13,6 +14,9 @@ const popularStocks = [
 ]
 
 export async function GET(request: Request) {
+  const authResult = await authorizeApiRequest(request, "stock-search", 30)
+  if (authResult.error) return authResult.error
+
   const { searchParams } = new URL(request.url)
   const query = searchParams.get("q")
   if (!query) {
@@ -22,6 +26,9 @@ export async function GET(request: Request) {
   const cleanQuery = query.trim().toUpperCase()
   if (!cleanQuery) {
     return NextResponse.json([])
+  }
+  if (cleanQuery.length > 40) {
+    return NextResponse.json({ error: "Search query is too long." }, { status: 400 })
   }
 
   const token = process.env.FINNHUB_API_KEY
