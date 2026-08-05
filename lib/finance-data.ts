@@ -21,6 +21,8 @@ export interface Transaction {
   amount: number
   /** primary account: source for expense/transfer, destination for income */
   accountId: string
+  /** currency of amount at the time of the transaction; preserved if an account is later deleted */
+  currency?: Currency
   /** destination account for transfers */
   toAccountId?: string
   /** amount credited to destination (transfers across currencies) */

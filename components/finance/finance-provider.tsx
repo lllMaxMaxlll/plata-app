@@ -518,6 +518,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
           type: input.type,
           amount: Math.round(input.amount * 100) / 100,
           accountId: input.accountId,
+          currency: primaryData.currency,
           toAccountId: input.toAccountId || null,
           toAmount: input.toAmount ? Math.round(input.toAmount * 100) / 100 : null,
           exchangeRate: input.exchangeRate ? Math.round(input.exchangeRate * 100) / 100 : null,
@@ -665,6 +666,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
           type: input.type,
           amount: Math.round(input.amount * 100) / 100,
           accountId: input.accountId,
+          currency: (newPrimarySnap.data() as Account).currency,
           toAccountId: input.toAccountId || null,
           toAmount: input.toAmount ? Math.round(input.toAmount * 100) / 100 : null,
           exchangeRate: input.exchangeRate ? Math.round(input.exchangeRate * 100) / 100 : null,
@@ -1022,6 +1024,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
           type: input.type === "buy" ? "expense" : "income",
           amount: totalAmount,
           accountId: input.accountId,
+          currency: "USD",
           toAccountId: null,
           toAmount: null,
           exchangeRate: null,
@@ -1134,12 +1137,14 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         const currentOdometer = Number(vehData.odometer)
 
         let newBalance = 0
+        let accountCurrency: Currency | null = null
         if (accountRef) {
           const accSnap = await transaction.get(accountRef)
           if (!accSnap.exists()) {
             throw new Error("La cuenta seleccionada no existe.")
           }
           const accData = accSnap.data() as Account
+          accountCurrency = accData.currency
           newBalance = Number(accData.balance) - input.amount
         }
 
@@ -1181,6 +1186,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
             type: "expense",
             amount: input.amount,
             accountId: input.accountId,
+            currency: accountCurrency,
             toAccountId: null,
             toAmount: null,
             exchangeRate: null,
@@ -1298,6 +1304,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
             type: "expense",
             amount: input.amount,
             accountId: input.accountId,
+            currency: (newAccSnap!.data() as Account).currency,
             toAccountId: null,
             toAmount: null,
             exchangeRate: null,
@@ -1446,6 +1453,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
           type: "expense",
           amount: Math.round(amount * 100) / 100,
           accountId: registerTx!.accountId,
+          currency: (accountSnap.data() as Account).currency,
           toAccountId: null,
           toAmount: null,
           exchangeRate: null,

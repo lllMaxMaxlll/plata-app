@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import {
   ArrowLeft,
   Calendar,
@@ -41,6 +41,7 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart"
 import { BarChart3, LineChart as LineChartIcon } from "lucide-react"
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 
 interface AnalyticsViewProps {
   isDesktop?: boolean
@@ -56,27 +57,50 @@ export function AnalyticsView({ isDesktop = false, onBack, onEditTransaction }: 
     return transactions.filter(t => t.type === "expense")
   }, [transactions])
 
-  const availableMonths = useMemo(() => {
-    const monthsSet = new Set<string>()
+  const availableMonthsByCurrency = useMemo(() => {
+    const monthSets: Record<Currency, Set<string>> = {
+      ARS: new Set<string>(),
+      USD: new Set<string>(),
+    }
     for (const t of expenseTransactions) {
       if (!t.date) continue
+      const currency = t.currency ?? getAccount(t.accountId)?.currency
+      if (!currency) continue
       const dateObj = new Date(t.date)
       if (isNaN(dateObj.getTime())) continue
       const year = dateObj.getFullYear()
       const month = String(dateObj.getMonth() + 1).padStart(2, "0")
-      monthsSet.add(`${year}-${month}`)
+      monthSets[currency].add(`${year}-${month}`)
     }
-    
-    const sorted = [...monthsSet].sort((a, b) => b.localeCompare(a))
-    
-    if (sorted.length === 0) {
+
+    const currentMonth = (() => {
       const now = new Date()
       const year = now.getFullYear()
       const month = String(now.getMonth() + 1).padStart(2, "0")
-      sorted.push(`${year}-${month}`)
+      return `${year}-${month}`
+    })()
+
+    return {
+      ARS: [...monthSets.ARS].sort((a, b) => b.localeCompare(a)),
+      USD: [...monthSets.USD].sort((a, b) => b.localeCompare(a)),
+      fallback: currentMonth,
     }
-    return sorted
-  }, [expenseTransactions])
+  }, [expenseTransactions, getAccount])
+
+  const availableMonths = availableMonthsByCurrency[selectedCurrency].length > 0
+    ? availableMonthsByCurrency[selectedCurrency]
+    : [availableMonthsByCurrency.fallback]
+
+  const currencyActivity = useMemo(() => {
+    return expenseTransactions.reduce(
+      (summary, transaction) => {
+        const currency = transaction.currency ?? getAccount(transaction.accountId)?.currency
+        if (currency) summary[currency] += 1
+        return summary
+      },
+      { ARS: 0, USD: 0 } as Record<Currency, number>
+    )
+  }, [expenseTransactions, getAccount])
 
   const [selectedMonth, setSelectedMonth] = useState<string>(availableMonths[0])
   const [comparisonMonth, setComparisonMonth] = useState<string>(
@@ -86,6 +110,24 @@ export function AnalyticsView({ isDesktop = false, onBack, onEditTransaction }: 
   const [trendMonths, setTrendMonths] = useState<3 | 6 | 12>(6)
   const [chartMode, setChartMode] = useState<"stacked_bar" | "area">("stacked_bar")
   const [categorySortMode, setCategorySortMode] = useState<"amount_desc" | "diff_desc" | "name_asc">("amount_desc")
+
+  useEffect(() => {
+    if (!availableMonths.includes(selectedMonth)) {
+      setSelectedMonth(availableMonths[0])
+      setComparisonMonth(availableMonths[1] || "none")
+    } else if (comparisonMonth !== "none" && !availableMonths.includes(comparisonMonth)) {
+      setComparisonMonth(availableMonths.find((month) => month !== selectedMonth) || "none")
+    }
+  }, [availableMonths, comparisonMonth, selectedMonth])
+
+  function handleCurrencyChange(currency: Currency) {
+    const months = availableMonthsByCurrency[currency]
+    const nextMonths = months.length > 0 ? months : [availableMonthsByCurrency.fallback]
+    setSelectedCurrency(currency)
+    setSelectedMonth(nextMonths[0])
+    setComparisonMonth(nextMonths[1] || "none")
+    setExpandedCategory(null)
+  }
 
   const formatMonthName = (monthStr: string) => {
     if (!monthStr || monthStr === "none") return "Ninguno"
@@ -105,8 +147,8 @@ export function AnalyticsView({ isDesktop = false, onBack, onEditTransaction }: 
     const comparisonMap = new Map<string, number>()
 
     for (const t of expenseTransactions) {
-      const acc = getAccount(t.accountId)
-      if (!acc || acc.currency !== selectedCurrency) continue
+      const currency = t.currency ?? getAccount(t.accountId)?.currency
+      if (currency !== selectedCurrency) continue
 
       const dateObj = new Date(t.date)
       const year = dateObj.getFullYear()
@@ -167,8 +209,8 @@ export function AnalyticsView({ isDesktop = false, onBack, onEditTransaction }: 
       row.label = `${labelShort.charAt(0).toUpperCase() + labelShort.slice(1)} ${year.slice(2)}`
 
       for (const t of expenseTransactions) {
-        const acc = getAccount(t.accountId)
-        if (!acc || acc.currency !== selectedCurrency) continue
+        const currency = t.currency ?? getAccount(t.accountId)?.currency
+        if (currency !== selectedCurrency) continue
 
         const tDateObj = new Date(t.date)
         const tYear = tDateObj.getFullYear()
@@ -355,24 +397,30 @@ export function AnalyticsView({ isDesktop = false, onBack, onEditTransaction }: 
 
         <div className="flex flex-col gap-1 self-end md:self-auto">
           <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider pl-1 self-end md:self-auto">Moneda</span>
-          <div className="flex rounded-xl bg-muted p-1">
-            <Button
-              variant={selectedCurrency === "ARS" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setSelectedCurrency("ARS")}
-              className="text-xs font-bold px-4"
-            >
+          <ToggleGroup
+            value={[selectedCurrency]}
+            onValueChange={(values) => {
+              const currency = values[0] as Currency | undefined
+              if (currency) handleCurrencyChange(currency)
+            }}
+            multiple={false}
+            variant="outline"
+            spacing={0}
+            aria-label="Moneda de los movimientos"
+          >
+            <ToggleGroupItem value="ARS" className="gap-2 px-3 text-xs font-bold">
               ARS ($)
-            </Button>
-            <Button
-              variant={selectedCurrency === "USD" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setSelectedCurrency("USD")}
-              className="text-xs font-bold px-4"
-            >
+              <Badge variant="secondary" className="px-1.5 text-[9px] tabular-nums">
+                {currencyActivity.ARS}
+              </Badge>
+            </ToggleGroupItem>
+            <ToggleGroupItem value="USD" className="gap-2 px-3 text-xs font-bold">
               USD (US$)
-            </Button>
-          </div>
+              <Badge variant="secondary" className="px-1.5 text-[9px] tabular-nums">
+                {currencyActivity.USD}
+              </Badge>
+            </ToggleGroupItem>
+          </ToggleGroup>
         </div>
       </Card>
 
