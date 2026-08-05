@@ -8,6 +8,7 @@ import { useFinance } from "./finance-provider"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card } from "@/components/ui/card"
+import { AppIcon } from "@/components/finance/app-icon"
 
 export function AuthView() {
   const { login, loginWithGoogle, sendPasswordResetLink } = useFinance()
@@ -91,9 +92,7 @@ export function AuthView() {
     <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col justify-center px-6 py-12 md:max-w-lg md:px-0">
       <Card className="p-8 md:p-10 shadow-2xl rounded-[32px]">
         <div className="mb-8 flex flex-col items-center text-center">
-          <div className="mb-4 flex size-14 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-md">
-            <Wallet className="size-7" />
-          </div>
+          <AppIcon className="mb-4 size-16 border border-primary/20 shadow-md" priority />
           <h1 className="text-2xl font-bold tracking-tight">PLATA</h1>
           <p className="mt-1 text-xs text-muted-foreground text-balance">
             Tus finanzas en pesos y dólares, en un solo lugar.

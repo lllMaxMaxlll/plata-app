@@ -16,6 +16,7 @@ import { CurrencyExchangeSheet } from "@/components/finance/currency-exchange-sh
 import { ExportSheet } from "@/components/finance/export-sheet"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { AppIcon } from "@/components/finance/app-icon"
 import {
   Wallet,
   Home,
@@ -134,9 +135,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <div className="flex flex-col gap-6">
             {/* Cloudflare Logo Branding */}
             <div className="flex items-center gap-3 px-2 py-1">
-              <span className="flex size-8 items-center justify-center rounded-md bg-primary text-primary-foreground font-bold shadow-sm">
-                <Wallet className="size-4.5" />
-              </span>
+              <AppIcon className="size-8 border border-primary/20 shadow-sm" priority />
               <div className="flex flex-col">
                 <div className="flex items-center gap-1.5">
                   <span className="text-sm font-bold tracking-tight text-foreground">
@@ -317,4 +316,3 @@ export function AppShell({ children }: { children: ReactNode }) {
     </>
   )
 }
-

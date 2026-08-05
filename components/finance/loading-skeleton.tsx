@@ -1,6 +1,7 @@
 "use client"
 
 import { Skeleton } from "@/components/ui/skeleton"
+import { AppIcon } from "@/components/finance/app-icon"
 
 export function LoadingSkeleton() {
   return (
@@ -12,7 +13,7 @@ export function LoadingSkeleton() {
           <div className="flex flex-col gap-8">
             {/* Logo */}
             <div className="flex items-center gap-3 px-2">
-              <Skeleton className="size-10 rounded-2xl" />
+              <AppIcon className="size-10 border border-primary/20" pulse priority />
               <div className="flex flex-col gap-1.5 flex-1">
                 <Skeleton className="h-4 w-20" />
                 <Skeleton className="h-2 w-28" />
@@ -109,6 +110,11 @@ export function LoadingSkeleton() {
 
       {/* 2. Mobile Loading Layout (Visible on screens below md) */}
       <div className="md:hidden mx-auto min-h-screen w-full max-w-md bg-background px-5 pt-[calc(env(safe-area-inset-top)+1.25rem)] pb-28 flex flex-col gap-6">
+        <div className="flex flex-col items-center gap-2 py-2">
+          <AppIcon className="size-16 border border-primary/20" pulse priority />
+          <span className="text-xs font-bold tracking-[0.22em] text-muted-foreground">PLATA</span>
+        </div>
+
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex flex-col gap-1.5">
