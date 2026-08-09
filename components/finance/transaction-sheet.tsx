@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from "react"
-import { Upload, Check, Calendar as CalendarIcon, Loader2 } from "lucide-react"
+import { Upload, Check, Calendar as CalendarIcon, AlertCircle } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -21,6 +21,8 @@ import {
 import {
   type TransactionType,
   type Transaction,
+  type Account,
+  formatCurrency,
 } from "@/lib/finance-data"
 import {
   Dialog,
@@ -29,6 +31,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog"
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useFinance } from "./finance-provider"
 import { toast } from "sonner"
 import { Calendar } from "@/components/ui/calendar"
@@ -84,6 +87,33 @@ export function TransactionSheet({
     return Math.round(calculated * 100) / 100
   }, [crossCurrency, amount, rate, fromAccount])
 
+  // Calculate available balance per account, restoring original transaction impact if editing
+  const getAvailableBalance = useMemo(() => {
+    return (acc: Account) => {
+      let bal = Number(acc.balance) || 0
+      if (transaction) {
+        if (transaction.accountId === acc.id) {
+          if (transaction.type === "expense" || transaction.type === "transfer") {
+            bal += Number(transaction.amount) || 0
+          } else if (transaction.type === "income") {
+            bal -= Number(transaction.amount) || 0
+          }
+        }
+        if (transaction.type === "transfer" && transaction.toAccountId === acc.id) {
+          bal -= Number(transaction.toAmount ?? transaction.amount) || 0
+        }
+      }
+      return Math.round(bal * 100) / 100
+    }
+  }, [transaction])
+
+  const isDebit = type === "expense" || type === "transfer"
+  const fromAvailable = fromAccount ? getAvailableBalance(fromAccount) : 0
+  const parsedAmount = parseFloat(amount) || 0
+  const isFromAccountEmpty = isDebit && Boolean(fromAccount && fromAvailable <= 0)
+  const isAmountExceeding =
+    isDebit && Boolean(fromAccount && parsedAmount > 0 && fromAvailable > 0 && parsedAmount > fromAvailable)
+
   useEffect(() => {
     if (open) {
       if (transaction) {
@@ -104,14 +134,17 @@ export function TransactionSheet({
         setType("expense")
         const defaultCat = categories.find((c) => c.type === "expense")?.name ?? ""
         setCategory(defaultCat)
-        const defaultFrom = accounts[0]?.id ?? ""
-        setAccountId(defaultFrom)
-        const defaultTo = accounts.find((a) => a.id !== defaultFrom)?.id ?? ""
+
+        // Select first account with positive balance for expense default
+        const validFrom = accounts.find((a) => getAvailableBalance(a) > 0)?.id ?? accounts[0]?.id ?? ""
+        setAccountId(validFrom)
+
+        const defaultTo = accounts.find((a) => a.id !== validFrom)?.id ?? ""
         setToAccountId(defaultTo)
         setDate(new Date())
       }
     }
-  }, [open, transaction, categories, accounts])
+  }, [open, transaction, categories, accounts, getAvailableBalance])
 
   function handleTab(val: TransactionType) {
     setType(val)
@@ -121,13 +154,24 @@ export function TransactionSheet({
     } else if (val === "expense") {
       const first = categories.find((c) => c.type === "expense")
       if (first) setCategory(first.name)
+      const current = accounts.find((a) => a.id === accountId)
+      if (!current || getAvailableBalance(current) <= 0) {
+        const valid = accounts.find((a) => getAvailableBalance(a) > 0)
+        if (valid) setAccountId(valid.id)
+      }
+    } else if (val === "transfer") {
+      const current = accounts.find((a) => a.id === accountId)
+      if (!current || getAvailableBalance(current) <= 0) {
+        const valid = accounts.find((a) => getAvailableBalance(a) > 0)
+        if (valid) setAccountId(valid.id)
+      }
     }
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    const parsedAmount = parseFloat(amount)
-    if (isNaN(parsedAmount) || parsedAmount <= 0) {
+    const pAmt = parseFloat(amount)
+    if (isNaN(pAmt) || pAmt <= 0) {
       toast.error("Ingresá un monto mayor a 0.")
       return
     }
@@ -135,6 +179,19 @@ export function TransactionSheet({
       toast.error("Seleccioná una cuenta de origen.")
       return
     }
+
+    if (isDebit && fromAccount) {
+      const avail = getAvailableBalance(fromAccount)
+      if (avail <= 0) {
+        toast.error("La cuenta seleccionada no tiene saldo disponible.")
+        return
+      }
+      if (pAmt > avail) {
+        toast.error(`El monto ingresado supera el saldo disponible (${formatCurrency(avail, fromAccount.currency)}).`)
+        return
+      }
+    }
+
     if (type === "transfer") {
       if (!toAccountId) {
         toast.error("Seleccioná una cuenta de destino.")
@@ -157,7 +214,7 @@ export function TransactionSheet({
     try {
       const input = {
         type,
-        amount: Math.round(parsedAmount * 100) / 100,
+        amount: Math.round(pAmt * 100) / 100,
         accountId,
         toAccountId: type === "transfer" ? toAccountId : undefined,
         toAmount: crossCurrency && toAmountPreview ? toAmountPreview : undefined,
@@ -202,6 +259,9 @@ export function TransactionSheet({
     }
   }
 
+  const isSubmitDisabled =
+    submitting || (isDebit && Boolean(fromAccount && (fromAvailable <= 0 || isAmountExceeding)))
+
   return (
     <>
       <Dialog open={open} onOpenChange={(isOpen) => !isOpen && !submitting && onClose()}>
@@ -244,11 +304,30 @@ export function TransactionSheet({
                   className="h-16 w-56 bg-transparent text-center text-xl md:text-5xl font-bold tracking-tight tabular-nums border-none shadow-none focus-visible:ring-0 placeholder:text-muted-foreground/40"
                 />
               </div>
+              {isAmountExceeding && (
+                <p className="mt-1 flex items-center justify-center gap-1.5 text-xs font-medium text-destructive animate-in fade-in">
+                  <AlertCircle className="size-3.5 shrink-0" />
+                  El monto supera el saldo disponible ({formatCurrency(fromAvailable, fromAccount?.currency ?? "ARS")})
+                </p>
+              )}
             </div>
 
             {/* Account selectors */}
             <Field label={type === "transfer" ? "Desde" : type === "income" ? "Acreditar en" : "Pagar desde"}>
-              <AccountSelect value={accountId} onChange={setAccountId} accounts={accounts} disabled={submitting} />
+              <AccountSelect
+                value={accountId}
+                onChange={setAccountId}
+                accounts={accounts}
+                getAvailableBalance={getAvailableBalance}
+                isDebit={isDebit}
+                disabled={submitting}
+              />
+              {isFromAccountEmpty && (
+                <p className="mt-1 flex items-center gap-1.5 text-xs font-medium text-destructive animate-in fade-in">
+                  <AlertCircle className="size-3.5 shrink-0" />
+                  Esta cuenta no tiene saldo disponible.
+                </p>
+              )}
             </Field>
 
             {type === "transfer" && (
@@ -257,6 +336,8 @@ export function TransactionSheet({
                   value={toAccountId}
                   onChange={setToAccountId}
                   accounts={accounts.filter((a) => a.id !== accountId)}
+                  getAvailableBalance={getAvailableBalance}
+                  isDebit={false}
                   disabled={submitting}
                 />
               </Field>
@@ -369,7 +450,7 @@ export function TransactionSheet({
               <Button
                 type="submit"
                 size="lg"
-                disabled={submitting}
+                disabled={isSubmitDisabled}
                 variant={type === "expense" ? "destructive" : "default"}
                 className="h-11 w-full rounded-xl text-sm font-semibold"
               >
@@ -445,25 +526,72 @@ function AccountSelect({
   value,
   onChange,
   accounts,
+  getAvailableBalance,
+  isDebit,
   disabled,
 }: {
   value: string
   onChange: (v: string) => void
-  accounts: { id: string; name: string; currency: string }[]
+  accounts: Account[]
+  getAvailableBalance?: (acc: Account) => number
+  isDebit?: boolean
   disabled?: boolean
 }) {
+  const selectedAcc = accounts.find((a) => a.id === value)
+  const selectedAvailBal = selectedAcc
+    ? getAvailableBalance
+      ? getAvailableBalance(selectedAcc)
+      : selectedAcc.balance
+    : 0
+
   return (
-    <select
-      value={value}
-      disabled={disabled}
-      onChange={(e) => onChange(e.target.value)}
-      className="w-full h-10 rounded-lg border border-input bg-transparent px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
-    >
-      {accounts.map((a) => (
-        <option key={a.id} value={a.id}>
-          {a.name} ({a.currency})
-        </option>
-      ))}
-    </select>
+    <Select value={value} onValueChange={(val) => val && onChange(val)} disabled={disabled}>
+      <SelectTrigger className="w-full h-10 rounded-xl border border-input bg-transparent px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50">
+        <SelectValue>
+          {selectedAcc ? (
+            <span className="flex items-center justify-between w-full gap-2 pr-2">
+              <span className="font-medium truncate">{selectedAcc.name}</span>
+              <span className="text-muted-foreground text-xs tabular-nums shrink-0">
+                {formatCurrency(selectedAvailBal, selectedAcc.currency)}
+              </span>
+            </span>
+          ) : (
+            <span className="text-muted-foreground/50">Seleccionar cuenta</span>
+          )}
+        </SelectValue>
+      </SelectTrigger>
+      <SelectContent className="rounded-xl border border-border bg-popover text-popover-foreground shadow-lg max-h-60 overflow-y-auto">
+        <SelectGroup>
+          {accounts.map((a) => {
+            const availBal = getAvailableBalance ? getAvailableBalance(a) : a.balance
+            const isDisabled = Boolean(isDebit && availBal <= 0)
+            return (
+              <SelectItem
+                key={a.id}
+                value={a.id}
+                disabled={isDisabled}
+                className="flex items-center justify-between py-2 cursor-pointer"
+              >
+                <div className="flex items-center justify-between w-full gap-3 pr-2">
+                  <span className={cn("font-medium truncate", isDisabled && "text-muted-foreground/60")}>
+                    {a.name}
+                  </span>
+                  <span
+                    className={cn(
+                      "text-xs tabular-nums shrink-0 ml-auto",
+                      isDisabled ? "text-destructive/80 font-semibold" : "text-muted-foreground"
+                    )}
+                  >
+                    {formatCurrency(availBal, a.currency)}
+                    {isDisabled ? " (Sin saldo)" : ""}
+                  </span>
+                </div>
+              </SelectItem>
+            )
+          })}
+        </SelectGroup>
+      </SelectContent>
+    </Select>
   )
 }
+
