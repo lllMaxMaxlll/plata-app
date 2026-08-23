@@ -14,7 +14,7 @@ import {
   Truck
 } from "lucide-react"
 import { useFinance } from "./finance-provider"
-import { formatShort, formatCurrency, type Transaction, type Currency } from "@/lib/finance-data"
+import { formatShort, formatCurrency, transactionCurrency, type Transaction, type Currency } from "@/lib/finance-data"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -64,7 +64,7 @@ export function AnalyticsView({ isDesktop = false, onBack, onEditTransaction }: 
     }
     for (const t of expenseTransactions) {
       if (!t.date) continue
-      const currency = t.currency ?? getAccount(t.accountId)?.currency
+      const currency = transactionCurrency(t, getAccount(t.accountId))
       if (!currency) continue
       const dateObj = new Date(t.date)
       if (isNaN(dateObj.getTime())) continue
@@ -94,7 +94,7 @@ export function AnalyticsView({ isDesktop = false, onBack, onEditTransaction }: 
   const currencyActivity = useMemo(() => {
     return expenseTransactions.reduce(
       (summary, transaction) => {
-        const currency = transaction.currency ?? getAccount(transaction.accountId)?.currency
+        const currency = transactionCurrency(transaction, getAccount(transaction.accountId))
         if (currency) summary[currency] += 1
         return summary
       },
@@ -147,7 +147,7 @@ export function AnalyticsView({ isDesktop = false, onBack, onEditTransaction }: 
     const comparisonMap = new Map<string, number>()
 
     for (const t of expenseTransactions) {
-      const currency = t.currency ?? getAccount(t.accountId)?.currency
+      const currency = transactionCurrency(t, getAccount(t.accountId))
       if (currency !== selectedCurrency) continue
 
       const dateObj = new Date(t.date)
@@ -209,7 +209,7 @@ export function AnalyticsView({ isDesktop = false, onBack, onEditTransaction }: 
       row.label = `${labelShort.charAt(0).toUpperCase() + labelShort.slice(1)} ${year.slice(2)}`
 
       for (const t of expenseTransactions) {
-        const currency = t.currency ?? getAccount(t.accountId)?.currency
+        const currency = transactionCurrency(t, getAccount(t.accountId))
         if (currency !== selectedCurrency) continue
 
         const tDateObj = new Date(t.date)

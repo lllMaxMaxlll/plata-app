@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react"
 import { Download, ArrowLeft, Search, Filter, X, Calendar, ChevronDown, Check, ArrowDownLeft, ArrowUpRight, ArrowLeftRight } from "lucide-react"
 import type { TransactionType, Transaction, Currency } from "@/lib/finance-data"
-import { formatCurrency, formatShort } from "@/lib/finance-data"
+import { formatCurrency, formatShort, transactionCurrency } from "@/lib/finance-data"
 import { useFinance } from "./finance-provider"
 import { TransactionList } from "./transaction-list"
 import { Button } from "@/components/ui/button"
@@ -105,8 +105,7 @@ export function ActivityView({
     let usd = 0
 
     filtered.forEach((t) => {
-      const acc = getAccount(t.accountId)
-      const currency = acc?.currency ?? "ARS"
+      const currency = transactionCurrency(t, getAccount(t.accountId)) ?? "ARS"
       const sign = t.type === "income" ? 1 : t.type === "expense" ? -1 : 0
 
       if (currency === "ARS") {

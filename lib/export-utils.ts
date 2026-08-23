@@ -1,6 +1,7 @@
 import * as XLSX from "xlsx"
 import jsPDF from "jspdf"
 import autoTable from "jspdf-autotable"
+import { accountLabel, transactionCurrency } from "./finance-data"
 import type { Transaction, Account, Vehicle } from "./finance-data"
 
 export interface MonthOption {
@@ -115,8 +116,7 @@ export function calculateMonthlySummary(
   let totalExpenseUSD = 0
 
   for (const t of monthTransactions) {
-    const acc = accountMap.get(t.accountId)
-    const currency = acc?.currency ?? "ARS"
+    const currency = transactionCurrency(t, accountMap.get(t.accountId)) ?? "ARS"
 
     if (t.type === "income") {
       if (currency === "USD") {
@@ -206,7 +206,7 @@ export function exportToExcel({
   const rowsData = monthTransactions.map((t) => {
     const acc = accountMap.get(t.accountId)
     const toAcc = t.toAccountId ? accountMap.get(t.toAccountId) : undefined
-    const currency = acc?.currency ?? "ARS"
+    const currency = transactionCurrency(t, acc) ?? "ARS"
     const veh = t.vehicleId ? vehicleMap.get(t.vehicleId) : undefined
 
     let typeLabel = "Gasto"
@@ -217,8 +217,8 @@ export function exportToExcel({
       Fecha: formatDate(t.date),
       Tipo: typeLabel,
       Categoría: t.category,
-      "Cuenta Origen": acc ? `${acc.name} (${acc.currency})` : t.accountId,
-      "Cuenta Destino": toAcc ? `${toAcc.name} (${toAcc.currency})` : "-",
+      "Cuenta Origen": acc ? `${acc.name} (${acc.currency})` : accountLabel(acc),
+      "Cuenta Destino": t.toAccountId ? (toAcc ? `${toAcc.name} (${toAcc.currency})` : accountLabel(toAcc)) : "-",
       Monto: t.amount,
       Moneda: currency,
       "Tasa de Cambio": t.exchangeRate ? t.exchangeRate : "-",
@@ -376,16 +376,16 @@ export function exportToPdf({
   const tableBody = monthTransactions.map((t) => {
     const acc = accountMap.get(t.accountId)
     const toAcc = t.toAccountId ? accountMap.get(t.toAccountId) : undefined
-    const currency = acc?.currency ?? "ARS"
+    const currency = transactionCurrency(t, acc) ?? "ARS"
     const veh = t.vehicleId ? vehicleMap.get(t.vehicleId) : undefined
 
     let typeLabel = "Gasto"
     if (t.type === "income") typeLabel = "Ingreso"
     if (t.type === "transfer") typeLabel = "Transfer."
 
-    const accountText = t.type === "transfer" && toAcc
-      ? `${acc?.name ?? ""} → ${toAcc.name}`
-      : acc?.name ?? t.accountId
+    const accountText = t.type === "transfer" && t.toAccountId
+      ? `${accountLabel(acc)} → ${accountLabel(toAcc)}`
+      : accountLabel(acc)
 
     const amountFormatted = formatAmount(t.amount, currency, t.type)
     const noteText = [t.note, veh ? `[${veh.name}]` : null].filter(Boolean).join(" ") || "-"
@@ -493,15 +493,15 @@ export function exportToMarkdown({
     for (const t of monthTransactions) {
       const acc = accountMap.get(t.accountId)
       const toAcc = t.toAccountId ? accountMap.get(t.toAccountId) : undefined
-      const currency = acc?.currency ?? "ARS"
+      const currency = transactionCurrency(t, acc) ?? "ARS"
       const veh = t.vehicleId ? vehicleMap.get(t.vehicleId) : undefined
 
       let typeLabel = "Gasto"
       if (t.type === "income") typeLabel = "Ingreso"
       if (t.type === "transfer") typeLabel = "Transferencia"
 
-      const accountSrc = acc ? `${acc.name} (${acc.currency})` : t.accountId
-      const accountDst = toAcc ? `${toAcc.name} (${toAcc.currency})` : "-"
+      const accountSrc = acc ? `${acc.name} (${acc.currency})` : accountLabel(acc)
+      const accountDst = t.toAccountId ? (toAcc ? `${toAcc.name} (${toAcc.currency})` : accountLabel(toAcc)) : "-"
       const amountText = formatAmount(t.amount, currency, t.type)
       const notesText = [t.note, veh ? `(Vehículo: ${veh.name})` : null].filter(Boolean).join(" ") || "-"
 
