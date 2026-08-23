@@ -85,6 +85,13 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   // Only one shell is mounted: rendering both and hiding one with CSS duplicated
   // every page, its effects and its data fetching.
+  // Las pantallas de /auth se muestran solas: durante la recuperación la sesión
+  // puede tardar en establecerse, y el gate de abajo mostraría el login encima
+  // del formulario de contraseña nueva.
+  if (pathname.startsWith("/auth/")) {
+    return <>{children}</>
+  }
+
   if (loading || isDesktop === null) {
     return <LoadingSkeleton />
   }

@@ -70,7 +70,6 @@ interface FinanceContextValue {
   user: User | null
   loading: boolean
   login: (email: string, password?: string, isSignUp?: boolean) => Promise<void>
-  loginWithGoogle: () => Promise<void>
   logout: () => Promise<void>
   sendPasswordResetLink: (email: string) => Promise<void>
   changePassword: (currentPassword?: string, newPassword?: string) => Promise<void>
@@ -191,8 +190,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let alive = true
 
-    const mapUser = (session: any): User | null => {
-      const u = session?.user
+    const mapUser = (u: any): User | null => {
       if (!u) return null
       return {
         uid: u.id,
@@ -203,16 +201,36 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    supabase.auth.getSession().then(({ data }) => {
+    // getSession() sólo lee lo que hay guardado en el navegador: una sesión
+    // revocada, vencida o de un usuario borrado la da por buena. getUser() la
+    // valida contra el servidor, que es lo único que sirve para decidir si
+    // alguien está realmente adentro.
+    supabase.auth.getUser().then(async ({ data, error }) => {
       if (!alive) return
-      setUser(mapUser(data.session))
-      setLoading(false)
+      if (error || !data.user) {
+        const { data: local } = await supabase.auth.getSession()
+        if (local.session) await supabase.auth.signOut()
+        if (alive) setUser(null)
+      } else {
+        setUser(mapUser(data.user))
+      }
+      if (alive) setLoading(false)
     })
 
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       if (!alive) return
-      setUser(mapUser(session))
+      setUser(mapUser(session?.user))
       setLoading(false)
+
+      // El enlace de recuperación crea una sesión válida, así que sin esto el
+      // usuario entra a la app y nunca llega a elegir contraseña. Redirigimos
+      // acá y no sólo con el redirectTo del mail, porque si la URL no está en la
+      // lista de Redirect URLs del proyecto, Supabase la ignora y manda al inicio.
+      if (event === "PASSWORD_RECOVERY" && typeof window !== "undefined") {
+        if (!window.location.pathname.startsWith("/auth/update-password")) {
+          window.location.assign("/auth/update-password")
+        }
+      }
     })
 
     return () => {
@@ -444,14 +462,6 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     [supabase]
   )
 
-  const loginWithGoogle = useCallback(async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: typeof window !== "undefined" ? window.location.origin : undefined },
-    })
-    if (error) fail(error, "No se pudo iniciar sesión con Google.")
-  }, [supabase])
-
   const logout = useCallback(async () => {
     await supabase.auth.signOut()
     const { clearUserScopedStorage } = await import("@/lib/user-storage")
@@ -461,7 +471,8 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const sendPasswordResetLink = useCallback(
     async (email: string) => {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: typeof window !== "undefined" ? window.location.origin : undefined,
+        redirectTo:
+          typeof window !== "undefined" ? `${window.location.origin}/auth/update-password` : undefined,
       })
       if (error) fail(error, "No se pudo enviar el correo de recuperación.")
     },
@@ -1016,7 +1027,6 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       user,
       loading,
       login,
-      loginWithGoogle,
       logout,
       sendPasswordResetLink,
       changePassword,
@@ -1069,7 +1079,6 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       user,
       loading,
       login,
-      loginWithGoogle,
       logout,
       sendPasswordResetLink,
       changePassword,
