@@ -21,3 +21,5 @@ node_modules
 firebase-debug.log
 *.tsbuildinfo
 .agents/
+# Claude Code: config local y skills materializadas (el lock sí se versiona)
+.claude/skills/
