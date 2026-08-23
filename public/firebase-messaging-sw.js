@@ -1,29 +1,62 @@
 // Firebase Cloud Messaging Background Service Worker
-importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js');
-importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js');
+//
+// The Firebase config is not baked into this file: it is passed as query params
+// when the app registers the worker (see lib/firebase-messaging.ts). All of those
+// values are the public NEXT_PUBLIC_FIREBASE_* client keys.
+importScripts('https://www.gstatic.com/firebasejs/12.15.0/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/12.15.0/firebase-messaging-compat.js');
 
-// Initialize Firebase App in SW context
-firebase.initializeApp({
-  apiKey: "FIREBASE_API_KEY_PLACEHOLDER",
-  authDomain: "FIREBASE_AUTH_DOMAIN_PLACEHOLDER",
-  projectId: "FIREBASE_PROJECT_ID_PLACEHOLDER",
-  storageBucket: "FIREBASE_STORAGE_BUCKET_PLACEHOLDER",
-  messagingSenderId: "FIREBASE_MESSAGING_SENDER_ID_PLACEHOLDER",
-  appId: "FIREBASE_APP_ID_PLACEHOLDER",
-});
+const params = new URL(self.location.href).searchParams;
 
-const messaging = firebase.messaging();
+const firebaseConfig = {
+  apiKey: params.get('apiKey') || '',
+  authDomain: params.get('authDomain') || '',
+  projectId: params.get('projectId') || '',
+  storageBucket: params.get('storageBucket') || '',
+  messagingSenderId: params.get('messagingSenderId') || '',
+  appId: params.get('appId') || '',
+};
 
-messaging.onBackgroundMessage((payload) => {
-  console.log('[firebase-messaging-sw.js] Received background message: ', payload);
-  
-  const notificationTitle = payload.notification?.title || 'PLATA - Vencimiento Próximo';
-  const notificationOptions = {
-    body: payload.notification?.body || 'Tienes facturas por vencer pronto.',
-    icon: '/icon-dark-32x32.png',
-    badge: '/icon-dark-32x32.png',
-    data: payload.data || {},
-  };
+const isConfigured = Boolean(
+  firebaseConfig.apiKey && firebaseConfig.projectId && firebaseConfig.messagingSenderId && firebaseConfig.appId
+);
 
-  self.registration.showNotification(notificationTitle, notificationOptions);
+if (!isConfigured) {
+  console.error(
+    '[firebase-messaging-sw.js] Missing Firebase config in the registration URL. Background notifications are disabled.'
+  );
+} else {
+  firebase.initializeApp(firebaseConfig);
+
+  const messaging = firebase.messaging();
+
+  messaging.onBackgroundMessage((payload) => {
+    const notificationTitle = payload.notification?.title || 'PLATA - Vencimiento Próximo';
+    const notificationOptions = {
+      body: payload.notification?.body || 'Tienes facturas por vencer pronto.',
+      icon: '/icon-512.png',
+      badge: '/icon-dark-32x32.png',
+      data: payload.data || {},
+    };
+
+    self.registration.showNotification(notificationTitle, notificationOptions);
+  });
+}
+
+// Focus an open tab (or open one) when the user taps a notification
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const targetUrl = event.notification.data?.url || '/dashboard/vencimientos';
+
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      for (const client of clientList) {
+        if ('focus' in client) {
+          if ('navigate' in client) client.navigate(targetUrl);
+          return client.focus();
+        }
+      }
+      return self.clients.openWindow(targetUrl);
+    })
+  );
 });

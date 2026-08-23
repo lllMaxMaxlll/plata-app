@@ -3,6 +3,31 @@
 import { getMessaging, getToken, onMessage, isSupported } from "firebase/messaging"
 import { app } from "@/lib/firebase"
 
+/**
+ * Builds the service worker URL carrying the public Firebase client config, so the
+ * worker can initialize itself without the values being hardcoded into the file.
+ */
+function buildServiceWorkerUrl(): string | null {
+  const config = {
+    apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+    authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+    projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+    storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+    appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  }
+
+  if (!config.apiKey || !config.projectId || !config.messagingSenderId || !config.appId) {
+    return null
+  }
+
+  const params = new URLSearchParams()
+  Object.entries(config).forEach(([key, value]) => {
+    if (value) params.set(key, value)
+  })
+  return `/firebase-messaging-sw.js?${params.toString()}`
+}
+
 export async function requestNotificationPermission(
   onTokenReceived?: (token: string) => Promise<void>
 ): Promise<{ success: boolean; token?: string; error?: string }> {
@@ -21,18 +46,37 @@ export async function requestNotificationPermission(
       return { success: false, error: "Permiso de notificaciones denegado por el usuario." }
     }
 
-    // Register Service Worker if needed
-    if ("serviceWorker" in navigator) {
-      await navigator.serviceWorker.register("/firebase-messaging-sw.js")
+    const vapidKey = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY
+    if (!vapidKey) {
+      return {
+        success: false,
+        error: "Falta configurar NEXT_PUBLIC_FIREBASE_VAPID_KEY. Las notificaciones no pueden activarse.",
+      }
     }
 
-    const messaging = getMessaging(app)
-    const vapidKey = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY
+    // Register the background Service Worker, handing it the Firebase config
+    if (!("serviceWorker" in navigator)) {
+      return { success: false, error: "Service Workers no soportados en este navegador." }
+    }
+    const swUrl = buildServiceWorkerUrl()
+    if (!swUrl) {
+      return {
+        success: false,
+        error: "Falta la configuración de Firebase (NEXT_PUBLIC_FIREBASE_*) para registrar las notificaciones.",
+      }
+    }
+    const registration = await navigator.serviceWorker.register(swUrl)
+    await navigator.serviceWorker.ready
 
+    const messaging = getMessaging(app)
+
+    let tokenError: unknown = null
     const currentToken = await getToken(messaging, {
-      vapidKey: vapidKey || undefined,
+      vapidKey,
+      serviceWorkerRegistration: registration,
     }).catch((err) => {
-      console.warn("FCM getToken error (VAPID key might be missing in dev):", err)
+      tokenError = err
+      console.error("FCM getToken error:", err)
       return null
     })
 
@@ -41,11 +85,13 @@ export async function requestNotificationPermission(
         await onTokenReceived(currentToken)
       }
       return { success: true, token: currentToken }
-    } else {
-      return {
-        success: true,
-        error: "Permiso concedido, pero token FCM no generado (configure NEXT_PUBLIC_FIREBASE_VAPID_KEY).",
-      }
+    }
+
+    return {
+      success: false,
+      error:
+        (tokenError as any)?.message ||
+        "Permiso concedido, pero no se pudo generar el token de notificaciones.",
     }
   } catch (err: any) {
     console.error("Error requesting notification permission:", err)

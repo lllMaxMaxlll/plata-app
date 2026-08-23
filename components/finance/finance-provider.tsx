@@ -1061,24 +1061,68 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   async function deleteVehicle(id: string) {
     if (!user) throw new Error("Usuario no autenticado.")
 
-    // We will delete the vehicle doc
-    const docRef = doc(db, "users", user.uid, "vehicles", id)
-    const { deleteDoc } = await import("firebase/firestore")
-    await deleteDoc(docRef)
-
-    // Delete associated logs and transactions
+    const uid = user.uid
+    const vehicleRef = doc(db, "users", uid, "vehicles", id)
     const associatedLogs = vehicleLogs.filter((vl) => vl.vehicleId === id)
-    if (associatedLogs.length > 0) {
-      const batch = writeBatch(db)
-      associatedLogs.forEach((log) => {
-        const logRef = doc(db, "users", user.uid, "vehicleLogs", log.id)
-        batch.delete(logRef)
-        if (log.transactionId) {
-          const txRef = doc(db, "users", user.uid, "transactions", log.transactionId)
-          batch.delete(txRef)
-        }
+
+    // Logs synced to an account must give their money back, same as deleteVehicleLog
+    const refundableLogs = associatedLogs.filter((log) => log.accountId && log.transactionId)
+    const refundByAccount = new Map<string, number>()
+    refundableLogs.forEach((log) => {
+      const accountId = log.accountId as string
+      refundByAccount.set(accountId, (refundByAccount.get(accountId) ?? 0) + (Number(log.amount) || 0))
+    })
+    const accountIds = Array.from(refundByAccount.keys())
+
+    // Firestore caps a transaction at 500 writes (vehicle + logs + txs + accounts)
+    const writeCount = 1 + associatedLogs.length + refundableLogs.length + accountIds.length
+    if (writeCount > 450) {
+      throw new Error(
+        "El vehículo tiene demasiados registros para eliminarse de una sola vez. Borrá algunos registros y volvé a intentarlo."
+      )
+    }
+
+    const originalAccounts = [...accounts]
+    const originalVehicles = [...vehicles]
+
+    // Optimistically drop the vehicle and restore the balances it had discounted
+    setVehicles((prev) => prev.filter((v) => v.id !== id))
+    setAccounts((prev) =>
+      prev.map((acc) => {
+        const refund = refundByAccount.get(acc.id)
+        if (!refund) return acc
+        return { ...acc, balance: Math.round((Number(acc.balance) + refund) * 100) / 100 }
       })
-      await batch.commit()
+    )
+
+    try {
+      await runTransaction(db, async (transaction) => {
+        // 1. READS FIRST
+        const accountSnaps = await Promise.all(
+          accountIds.map((accountId) => transaction.get(doc(db, "users", uid, "accounts", accountId)))
+        )
+
+        // 2. WRITES: refund each account, then remove logs, their transactions and the vehicle
+        accountSnaps.forEach((snap, index) => {
+          if (!snap.exists()) return
+          const refund = refundByAccount.get(accountIds[index]) ?? 0
+          const balance = Number(snap.data().balance)
+          transaction.update(snap.ref, { balance: Math.round((balance + refund) * 100) / 100 })
+        })
+
+        associatedLogs.forEach((log) => {
+          transaction.delete(doc(db, "users", uid, "vehicleLogs", log.id))
+          if (log.transactionId) {
+            transaction.delete(doc(db, "users", uid, "transactions", log.transactionId))
+          }
+        })
+
+        transaction.delete(vehicleRef)
+      })
+    } catch (err) {
+      setAccounts(originalAccounts)
+      setVehicles(originalVehicles)
+      throw err
     }
   }
 
@@ -1446,14 +1490,20 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       if (accountRef && accountSnap) {
         const amount = registerTx?.amount ?? item.amount
         if (!Number.isFinite(amount) || amount <= 0) throw new Error("El importe no es válido.")
-        const balance = Number(accountSnap.data()!.balance)
+        const accountData = accountSnap.data() as Account
+        if (item.currency && accountData.currency !== item.currency) {
+          throw new Error(
+            `El vencimiento está en ${item.currency} y la cuenta seleccionada es en ${accountData.currency}. Elegí una cuenta en ${item.currency}.`
+          )
+        }
+        const balance = Number(accountData.balance)
         transaction.update(accountRef, { balance: Math.round((balance - amount) * 100) / 100 })
         transaction.set(txRef, {
           id: txId,
           type: "expense",
           amount: Math.round(amount * 100) / 100,
           accountId: registerTx!.accountId,
-          currency: (accountSnap.data() as Account).currency,
+          currency: accountData.currency,
           toAccountId: null,
           toAmount: null,
           exchangeRate: null,

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
@@ -34,21 +34,25 @@ export function PayVencimientoModal({ open, onClose, item }: PayVencimientoModal
   const [note, setNote] = useState("")
   const [submitting, setSubmitting] = useState(false)
 
+  // Paying an ARS bill from a USD account would discount the amount in dollars,
+  // so only accounts in the same currency as the due item can be selected.
+  const eligibleAccounts = useMemo(
+    () => (item ? accounts.filter((a) => a.currency === item.currency) : []),
+    [accounts, item]
+  )
+  const hasEligibleAccount = eligibleAccounts.length > 0
+
   useEffect(() => {
     if (open && item) {
       setRegisterExpense(true)
       setPayAmount(String(item.amount))
       setNote(`Pago de servicio: ${item.title}`)
 
-      // Auto select preferred account or first account matching currency
-      if (item.accountId && accounts.some((a) => a.id === item.accountId)) {
-        setSelectedAccountId(item.accountId)
-      } else {
-        const matchingCurrency = accounts.find((a) => a.currency === item.currency)
-        setSelectedAccountId(matchingCurrency ? matchingCurrency.id : accounts[0]?.id || "")
-      }
+      // Auto select the preferred account, falling back to the first one in the same currency
+      const preferred = eligibleAccounts.find((a) => a.id === item.accountId)
+      setSelectedAccountId(preferred?.id ?? eligibleAccounts[0]?.id ?? "")
     }
-  }, [open, item, accounts])
+  }, [open, item, eligibleAccounts])
 
   if (!item) return null
 
@@ -57,9 +61,16 @@ export function PayVencimientoModal({ open, onClose, item }: PayVencimientoModal
     setSubmitting(true)
 
     try {
-      if (registerExpense) {
+      // Without an account in the item currency we can only flag it as paid
+      if (registerExpense && hasEligibleAccount) {
         if (!selectedAccountId) {
-          toast.error("Seleccioná una cuenta para registrar el gasto.")
+          toast.error(`Seleccioná una cuenta en ${item.currency} para registrar el gasto.`)
+          setSubmitting(false)
+          return
+        }
+        const account = eligibleAccounts.find((a) => a.id === selectedAccountId)
+        if (!account) {
+          toast.error(`La cuenta seleccionada no está en ${item.currency}.`)
           setSubmitting(false)
           return
         }
@@ -90,7 +101,7 @@ export function PayVencimientoModal({ open, onClose, item }: PayVencimientoModal
     }
   }
 
-  const selectedAccount = accounts.find((a) => a.id === selectedAccountId)
+  const selectedAccount = eligibleAccounts.find((a) => a.id === selectedAccountId)
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && !submitting && onClose()}>
@@ -133,11 +144,22 @@ export function PayVencimientoModal({ open, onClose, item }: PayVencimientoModal
                 </p>
               </div>
             </div>
-            <Switch checked={registerExpense} onCheckedChange={setRegisterExpense} />
+            <Switch
+              checked={registerExpense && hasEligibleAccount}
+              disabled={!hasEligibleAccount}
+              onCheckedChange={setRegisterExpense}
+            />
           </div>
 
+          {!hasEligibleAccount && (
+            <p className="text-[11px] font-medium text-amber-500/90 bg-amber-500/10 p-2.5 rounded-xl border border-amber-500/20 text-center">
+              No tenés ninguna cuenta en {item.currency}. Podés marcarlo como pagado, pero el movimiento no se va a
+              registrar.
+            </p>
+          )}
+
           {/* Account & Amount details if toggle active */}
-          {registerExpense && (
+          {registerExpense && hasEligibleAccount && (
             <FieldGroup className="gap-3.5 rounded-2xl border border-border/40 bg-card/40 p-4 animate-in fade-in slide-in-from-top-2 duration-200">
               <Field>
                 <FieldLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
@@ -153,7 +175,7 @@ export function PayVencimientoModal({ open, onClose, item }: PayVencimientoModal
                   </SelectTrigger>
                   <SelectContent>
                     <SelectGroup>
-                      {accounts.map((acc) => (
+                      {eligibleAccounts.map((acc) => (
                         <SelectItem key={acc.id} value={acc.id}>
                           {acc.name} ({formatCurrency(acc.balance, acc.currency)})
                         </SelectItem>
