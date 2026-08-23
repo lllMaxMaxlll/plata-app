@@ -154,6 +154,83 @@ interface FinanceContextValue {
 
 const FinanceContext = createContext<FinanceContextValue | null>(null)
 
+async function seedDefaultCategories(uid: string) {
+  try {
+    const batch = writeBatch(db)
+    const defaults: Omit<Category, "id">[] = [
+      // Expenses
+      { name: "Comida", type: "expense", color: "var(--chart-1)" },
+      { name: "Servicios", type: "expense", color: "var(--chart-2)" },
+      { name: "Transporte", type: "expense", color: "var(--chart-3)" },
+      { name: "Alquiler", type: "expense", color: "var(--chart-4)" },
+      { name: "Otros", type: "expense", color: "var(--chart-5)" },
+      // Income
+      { name: "Salario", type: "income", color: "oklch(0.76 0.16 156)" },
+      { name: "Efectivo", type: "income", color: "oklch(0.78 0.15 75)" },
+      { name: "Inversiones", type: "income", color: "oklch(0.7 0.13 230)" },
+      { name: "Trabajo Extra", type: "income", color: "oklch(0.66 0.18 350)" },
+    ]
+    
+    defaults.forEach((cat) => {
+      const newRef = doc(collection(db, "users", uid, "categories"))
+      batch.set(newRef, { id: newRef.id, ...cat })
+    })
+    
+    await batch.commit()
+  } catch (err) {
+    console.error("Error seeding categories:", err)
+  }
+}
+
+function assertValidTransactionInput(input: NewTransactionInput) {
+  if (!Number.isFinite(input.amount) || input.amount <= 0) {
+    throw new Error("El monto debe ser un número mayor a 0.")
+  }
+  if (input.type === "transfer") {
+    if (!input.toAccountId) {
+      throw new Error("La transferencia requiere una cuenta de destino.")
+    }
+    if (input.toAccountId === input.accountId) {
+      throw new Error("La cuenta de origen y destino deben ser distintas.")
+    }
+    if (input.toAmount !== undefined && (!Number.isFinite(input.toAmount) || input.toAmount <= 0)) {
+      throw new Error("El monto acreditado en destino no es válido.")
+    }
+  }
+}
+
+function assertSufficientBalance(account: Pick<Account, "name" | "currency">, available: number, amount: number) {
+  if (available < amount) {
+    throw new Error(
+      `Saldo insuficiente en "${account.name}". Disponible: ${formatCurrency(available, account.currency)}.`
+    )
+  }
+}
+
+function calcNextDueDate(currentDueDate: string, frequency: DueFrequency): string {
+  const parts = currentDueDate.split("-").map(Number)
+  if (parts.length !== 3 || parts.some(isNaN)) {
+    const d = new Date()
+    return d.toISOString().split("T")[0]
+  }
+  const [y, m, d] = parts
+  const date = new Date(Date.UTC(y, m - 1, d))
+
+  if (frequency === "monthly") {
+    const targetMonth = m
+    const targetYear = y + Math.floor(targetMonth / 12)
+    const normalizedMonth = targetMonth % 12
+    const lastDay = new Date(Date.UTC(targetYear, normalizedMonth + 1, 0)).getUTCDate()
+    date.setUTCFullYear(targetYear, normalizedMonth, Math.min(d, lastDay))
+  } else if (frequency === "yearly") {
+    const lastDay = new Date(Date.UTC(y + 1, m, 0)).getUTCDate()
+    date.setUTCFullYear(y + 1, m - 1, Math.min(d, lastDay))
+  } else if (frequency === "biweekly") {
+    date.setUTCDate(date.getUTCDate() + 14)
+  }
+  return date.toISOString().split("T")[0]
+}
+
 export function FinanceProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
@@ -208,41 +285,15 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     return unsubscribe
   }, [])
 
-  // Seeding helper for default categories
-  async function seedDefaultCategories(uid: string) {
-    try {
-      const batch = writeBatch(db)
-      const defaults: Omit<Category, "id">[] = [
-        // Expenses
-        { name: "Comida", type: "expense", color: "var(--chart-1)" },
-        { name: "Servicios", type: "expense", color: "var(--chart-2)" },
-        { name: "Transporte", type: "expense", color: "var(--chart-3)" },
-        { name: "Alquiler", type: "expense", color: "var(--chart-4)" },
-        { name: "Otros", type: "expense", color: "var(--chart-5)" },
-        // Income
-        { name: "Salario", type: "income", color: "oklch(0.76 0.16 156)" },
-        { name: "Efectivo", type: "income", color: "oklch(0.78 0.15 75)" },
-        { name: "Inversiones", type: "income", color: "oklch(0.7 0.13 230)" },
-        { name: "Trabajo Extra", type: "income", color: "oklch(0.66 0.18 350)" },
-      ]
-      
-      defaults.forEach((cat) => {
-        const newRef = doc(collection(db, "users", uid, "categories"))
-        batch.set(newRef, { id: newRef.id, ...cat })
-      })
-      
-      await batch.commit()
-    } catch (err) {
-      console.error("Error seeding categories:", err)
-    }
-  }
-
-  // 2. Real-time subscriptions for logged-in user data
+  // 2. Real-time subscriptions for logged-in user data.
+  // Keyed by uid: onAuthStateChanged hands back a fresh user object on every token
+  // refresh, and depending on its identity re-created all nine listeners each time.
   useEffect(() => {
-    if (!user) return
+    const uid = user?.uid
+    if (!uid) return
 
     // Sync accounts subcollection
-    const accountsRef = collection(db, "users", user.uid, "accounts")
+    const accountsRef = collection(db, "users", uid, "accounts")
     const unsubscribeAccounts = onSnapshot(accountsRef, (snapshot) => {
       const accList: Account[] = []
       snapshot.forEach((doc) => {
@@ -252,7 +303,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     })
 
     // Sync transactions subcollection (ordered by date descending)
-    const txsRef = collection(db, "users", user.uid, "transactions")
+    const txsRef = collection(db, "users", uid, "transactions")
     const txsQuery = query(txsRef, orderBy("date", "desc"))
     const unsubscribeTransactions = onSnapshot(txsQuery, (snapshot) => {
       const txList: Transaction[] = []
@@ -263,10 +314,10 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     })
 
     // Sync categories subcollection
-    const categoriesRef = collection(db, "users", user.uid, "categories")
+    const categoriesRef = collection(db, "users", uid, "categories")
     const unsubscribeCategories = onSnapshot(categoriesRef, (snapshot) => {
       if (snapshot.empty) {
-        seedDefaultCategories(user.uid)
+        seedDefaultCategories(uid)
         return
       }
       const catList: Category[] = []
@@ -277,7 +328,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     })
 
     // Sync watchlist subcollection
-    const watchlistRef = collection(db, "users", user.uid, "watchlist")
+    const watchlistRef = collection(db, "users", uid, "watchlist")
     const unsubscribeWatchlist = onSnapshot(watchlistRef, (snapshot) => {
       const wlList: WatchlistStock[] = []
       snapshot.forEach((doc) => {
@@ -287,7 +338,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     })
 
     // Sync stock transactions subcollection (ordered by date descending)
-    const stockTxsRef = collection(db, "users", user.uid, "stockTransactions")
+    const stockTxsRef = collection(db, "users", uid, "stockTransactions")
     const stockTxsQuery = query(stockTxsRef, orderBy("date", "desc"))
     // If the ordered query fails (missing index), listen unordered and sort here.
     // The fallback listener is tracked so the cleanup below can detach it too.
@@ -316,7 +367,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     )
 
     // Sync vehicles subcollection (ordered by createdAt descending)
-    const vehiclesRef = collection(db, "users", user.uid, "vehicles")
+    const vehiclesRef = collection(db, "users", uid, "vehicles")
     const vehiclesQuery = query(vehiclesRef, orderBy("createdAt", "desc"))
     const unsubscribeVehicles = onSnapshot(vehiclesQuery, (snapshot) => {
       const vList: Vehicle[] = []
@@ -327,7 +378,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     })
 
     // Sync vehicle logs subcollection (ordered by date descending)
-    const vehicleLogsRef = collection(db, "users", user.uid, "vehicleLogs")
+    const vehicleLogsRef = collection(db, "users", uid, "vehicleLogs")
     const vehicleLogsQuery = query(vehicleLogsRef, orderBy("date", "desc"))
     const unsubscribeVehicleLogs = onSnapshot(vehicleLogsQuery, (snapshot) => {
       const vlList: VehicleLog[] = []
@@ -338,7 +389,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     })
 
     // Sync dueItems subcollection (ordered by dueDate ascending)
-    const dueItemsRef = collection(db, "users", user.uid, "dueItems")
+    const dueItemsRef = collection(db, "users", uid, "dueItems")
     const dueItemsQuery = query(dueItemsRef, orderBy("dueDate", "asc"))
     const unsubscribeDueItems = onSnapshot(dueItemsQuery, (snapshot) => {
       const dList: DueItem[] = []
@@ -349,7 +400,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     })
 
     // Sync macro settings document
-    const macroRef = doc(db, "users", user.uid, "settings", "macro")
+    const macroRef = doc(db, "users", uid, "settings", "macro")
     const unsubscribeMacro = onSnapshot(macroRef, (docSnap) => {
       if (docSnap.exists()) {
         setMacroSettings((prev) => ({ ...prev, ...docSnap.data() }))
@@ -368,9 +419,9 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       unsubscribeDueItems()
       unsubscribeMacro()
     }
-  }, [user])
+  }, [user?.uid])
 
-  async function login(email: string, password?: string, isSignUp?: boolean) {
+  const login = useCallback(async (email: string, password?: string, isSignUp?: boolean) => {
     if (!password) {
       throw new Error("La contraseña es requerida.")
     }
@@ -379,23 +430,23 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     } else {
       await signInWithEmailAndPassword(auth, email, password)
     }
-  }
+  }, [])
 
-  async function loginWithGoogle() {
+  const loginWithGoogle = useCallback(async () => {
     const provider = new GoogleAuthProvider()
     provider.setCustomParameters({ prompt: "select_account" })
     await signInWithPopup(auth, provider)
-  }
+  }, [])
 
-  async function logout() {
+  const logout = useCallback(async () => {
     await signOut(auth)
-  }
+  }, [])
 
-  async function sendPasswordResetLink(email: string) {
+  const sendPasswordResetLink = useCallback(async (email: string) => {
     await sendPasswordResetEmail(auth, email)
-  }
+  }, [])
 
-  async function changePassword(currentPassword?: string, newPassword?: string) {
+  const changePassword = useCallback(async (currentPassword?: string, newPassword?: string) => {
     if (!auth.currentUser) throw new Error("Usuario no autenticado.")
     if (!newPassword) throw new Error("La nueva contraseña es requerida.")
 
@@ -411,14 +462,14 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     }
 
     await updatePassword(auth.currentUser, newPassword)
-  }
+  }, [])
 
-  async function sendEmailVerificationLink() {
+  const sendEmailVerificationLink = useCallback(async () => {
     if (!auth.currentUser) throw new Error("Usuario no autenticado.")
     await sendEmailVerification(auth.currentUser)
-  }
+  }, [])
 
-  async function reloadUser() {
+  const reloadUser = useCallback(async () => {
     if (!auth.currentUser) return
     await auth.currentUser.reload()
     const firebaseUser = auth.currentUser
@@ -429,38 +480,13 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       emailVerified: firebaseUser.emailVerified,
       providerId: firebaseUser.providerData[0]?.providerId || null,
     })
-  }
+  }, [])
 
   /**
    * Server-side counterpart of the checks the transaction sheet does: the client
    * can be bypassed (offline queue, another tab, the SDK straight from a console),
    * so every debit is re-validated inside the Firestore transaction.
    */
-  function assertValidTransactionInput(input: NewTransactionInput) {
-    if (!Number.isFinite(input.amount) || input.amount <= 0) {
-      throw new Error("El monto debe ser un número mayor a 0.")
-    }
-    if (input.type === "transfer") {
-      if (!input.toAccountId) {
-        throw new Error("La transferencia requiere una cuenta de destino.")
-      }
-      if (input.toAccountId === input.accountId) {
-        throw new Error("La cuenta de origen y destino deben ser distintas.")
-      }
-      if (input.toAmount !== undefined && (!Number.isFinite(input.toAmount) || input.toAmount <= 0)) {
-        throw new Error("El monto acreditado en destino no es válido.")
-      }
-    }
-  }
-
-  function assertSufficientBalance(account: Pick<Account, "name" | "currency">, available: number, amount: number) {
-    if (available < amount) {
-      throw new Error(
-        `Saldo insuficiente en "${account.name}". Disponible: ${formatCurrency(available, account.currency)}.`
-      )
-    }
-  }
-
   const getAccount = useCallback(
     (id: string) => {
       return accounts.find((a) => a.id === id)
@@ -468,26 +494,26 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     [accounts],
   )
 
-  async function addAccount(input: Omit<Account, "id">) {
+  const addAccount = useCallback(async (input: Omit<Account, "id">) => {
     if (!user) throw new Error("Usuario no autenticado.")
     const newAccRef = doc(collection(db, "users", user.uid, "accounts"))
     await setDoc(newAccRef, { id: newAccRef.id, ...input })
-  }
+  }, [user])
 
-  async function updateAccount(id: string, input: Partial<Omit<Account, "id">>) {
+  const updateAccount = useCallback(async (id: string, input: Partial<Omit<Account, "id">>) => {
     if (!user) throw new Error("Usuario no autenticado.")
     const docRef = doc(db, "users", user.uid, "accounts", id)
     await setDoc(docRef, input, { merge: true })
-  }
+  }, [user])
 
-  async function deleteAccount(id: string) {
+  const deleteAccount = useCallback(async (id: string) => {
     if (!user) throw new Error("Usuario no autenticado.")
     const docRef = doc(db, "users", user.uid, "accounts", id)
     const { deleteDoc } = await import("firebase/firestore")
     await deleteDoc(docRef)
-  }
+  }, [user])
 
-  async function addTransaction(input: NewTransactionInput) {
+  const addTransaction = useCallback(async (input: NewTransactionInput) => {
     if (!user) throw new Error("Usuario no autenticado.")
     assertValidTransactionInput(input)
 
@@ -580,9 +606,9 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       setAccounts(originalAccounts)
       throw err
     }
-  }
+  }, [user, accounts])
 
-  async function updateTransaction(id: string, input: NewTransactionInput) {
+  const updateTransaction = useCallback(async (id: string, input: NewTransactionInput) => {
     if (!user) throw new Error("Usuario no autenticado.")
     assertValidTransactionInput(input)
 
@@ -752,9 +778,9 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       setAccounts(originalAccounts)
       throw err
     }
-  }
+  }, [user, accounts, transactions])
 
-  async function deleteTransaction(id: string) {
+  const deleteTransaction = useCallback(async (id: string) => {
     if (!user) throw new Error("Usuario no autenticado.")
 
     const txDocRef = doc(db, "users", user.uid, "transactions", id)
@@ -824,26 +850,26 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       setAccounts(originalAccounts)
       throw err
     }
-  }
+  }, [user, accounts, transactions])
 
-  async function addCategory(name: string, type: "income" | "expense", color: string) {
+  const addCategory = useCallback(async (name: string, type: "income" | "expense", color: string) => {
     if (!user) throw new Error("Usuario no autenticado.")
     const newCatRef = doc(collection(db, "users", user.uid, "categories"))
     await setDoc(newCatRef, { id: newCatRef.id, name, type, color })
-  }
+  }, [user])
 
-  async function updateCategory(id: string, name: string, color: string) {
+  const updateCategory = useCallback(async (id: string, name: string, color: string) => {
     if (!user) throw new Error("Usuario no autenticado.")
     const docRef = doc(db, "users", user.uid, "categories", id)
     await setDoc(docRef, { name, color }, { merge: true })
-  }
+  }, [user])
 
-  async function deleteCategory(id: string) {
+  const deleteCategory = useCallback(async (id: string) => {
     if (!user) throw new Error("Usuario no autenticado.")
     const docRef = doc(db, "users", user.uid, "categories", id)
     const { deleteDoc } = await import("firebase/firestore")
     await deleteDoc(docRef)
-  }
+  }, [user])
 
   // --- Stocks Portfolio Management ---
 
@@ -950,7 +976,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     return totalCost > 0 ? Number(((portfolioTotalProfitLoss / totalCost) * 100).toFixed(2)) : 0
   }, [holdings, portfolioTotalProfitLoss])
 
-  async function addWatchlistStock(symbol: string) {
+  const addWatchlistStock = useCallback(async (symbol: string) => {
     if (!user) throw new Error("Usuario no autenticado.")
     const cleanSym = symbol.trim().toUpperCase()
     if (!cleanSym) return
@@ -978,23 +1004,23 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       name,
       addedAt: new Date().toISOString(),
     })
-  }
+  }, [user])
 
-  async function removeWatchlistStock(symbol: string) {
+  const removeWatchlistStock = useCallback(async (symbol: string) => {
     if (!user) throw new Error("Usuario no autenticado.")
     const docRef = doc(db, "users", user.uid, "watchlist", symbol)
     const { deleteDoc } = await import("firebase/firestore")
     await deleteDoc(docRef)
-  }
+  }, [user])
 
-  async function executeStockTransaction(input: {
+  const executeStockTransaction = useCallback(async (input: {
     symbol: string
     type: "buy" | "sell"
     shares: number
     price: number
     date: string
     accountId: string
-  }) {
+  }) => {
     if (!user) throw new Error("Usuario no autenticado.")
 
     const symbol = input.symbol.trim().toUpperCase()
@@ -1088,11 +1114,11 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       setAccounts(originalAccounts)
       throw err
     }
-  }
+  }, [user, accounts, stockTransactions])
 
   // --- Vehicles and Vehicle Logs Management ---
 
-  async function addVehicle(input: Omit<Vehicle, "id" | "createdAt">) {
+  const addVehicle = useCallback(async (input: Omit<Vehicle, "id" | "createdAt">) => {
     if (!user) throw new Error("Usuario no autenticado.")
     const newVehRef = doc(collection(db, "users", user.uid, "vehicles"))
     await setDoc(newVehRef, {
@@ -1100,15 +1126,15 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       ...input,
       createdAt: new Date().toISOString(),
     })
-  }
+  }, [user])
 
-  async function updateVehicle(id: string, input: Partial<Omit<Vehicle, "id" | "createdAt">>) {
+  const updateVehicle = useCallback(async (id: string, input: Partial<Omit<Vehicle, "id" | "createdAt">>) => {
     if (!user) throw new Error("Usuario no autenticado.")
     const docRef = doc(db, "users", user.uid, "vehicles", id)
     await setDoc(docRef, input, { merge: true })
-  }
+  }, [user])
 
-  async function deleteVehicle(id: string) {
+  const deleteVehicle = useCallback(async (id: string) => {
     if (!user) throw new Error("Usuario no autenticado.")
 
     const uid = user.uid
@@ -1174,9 +1200,9 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       setVehicles(originalVehicles)
       throw err
     }
-  }
+  }, [user, accounts, vehicles, vehicleLogs])
 
-  async function addVehicleLog(rawInput: Omit<VehicleLog, "id" | "transactionId">) {
+  const addVehicleLog = useCallback(async (rawInput: Omit<VehicleLog, "id" | "transactionId">) => {
     if (!user) throw new Error("Usuario no autenticado.")
 
     const input = { ...rawInput } as any
@@ -1299,9 +1325,9 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       setVehicles(originalVehicles)
       throw err
     }
-  }
+  }, [user, accounts, vehicles])
 
-  async function updateVehicleLog(id: string, rawInput: Omit<VehicleLog, "id">) {
+  const updateVehicleLog = useCallback(async (id: string, rawInput: Omit<VehicleLog, "id">) => {
     if (!user) throw new Error("Usuario no autenticado.")
 
     const input = { ...rawInput } as any
@@ -1431,9 +1457,9 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       setVehicles(originalVehicles)
       throw err
     }
-  }
+  }, [user, accounts, vehicles, vehicleLogs])
 
-  async function deleteVehicleLog(id: string) {
+  const deleteVehicleLog = useCallback(async (id: string) => {
     if (!user) throw new Error("Usuario no autenticado.")
 
     const logDocRef = doc(db, "users", user.uid, "vehicleLogs", id)
@@ -1462,35 +1488,11 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       setAccounts(originalAccounts)
       throw err
     }
-  }
+  }, [user, accounts, vehicleLogs])
 
   // --- Due Dates & Recurring Services Management ---
 
-  function calcNextDueDate(currentDueDate: string, frequency: DueFrequency): string {
-    const parts = currentDueDate.split("-").map(Number)
-    if (parts.length !== 3 || parts.some(isNaN)) {
-      const d = new Date()
-      return d.toISOString().split("T")[0]
-    }
-    const [y, m, d] = parts
-    const date = new Date(Date.UTC(y, m - 1, d))
-
-    if (frequency === "monthly") {
-      const targetMonth = m
-      const targetYear = y + Math.floor(targetMonth / 12)
-      const normalizedMonth = targetMonth % 12
-      const lastDay = new Date(Date.UTC(targetYear, normalizedMonth + 1, 0)).getUTCDate()
-      date.setUTCFullYear(targetYear, normalizedMonth, Math.min(d, lastDay))
-    } else if (frequency === "yearly") {
-      const lastDay = new Date(Date.UTC(y + 1, m, 0)).getUTCDate()
-      date.setUTCFullYear(y + 1, m - 1, Math.min(d, lastDay))
-    } else if (frequency === "biweekly") {
-      date.setUTCDate(date.getUTCDate() + 14)
-    }
-    return date.toISOString().split("T")[0]
-  }
-
-  async function addDueItem(input: Omit<DueItem, "id" | "createdAt">) {
+  const addDueItem = useCallback(async (input: Omit<DueItem, "id" | "createdAt">) => {
     if (!user) throw new Error("Usuario no autenticado.")
     const newRef = doc(collection(db, "users", user.uid, "dueItems"))
     await setDoc(newRef, {
@@ -1499,25 +1501,25 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       status: input.status || "pending",
       createdAt: new Date().toISOString(),
     })
-  }
+  }, [user])
 
-  async function updateDueItem(id: string, input: Partial<Omit<DueItem, "id">>) {
+  const updateDueItem = useCallback(async (id: string, input: Partial<Omit<DueItem, "id">>) => {
     if (!user) throw new Error("Usuario no autenticado.")
     const docRef = doc(db, "users", user.uid, "dueItems", id)
     await setDoc(docRef, { ...input, updatedAt: new Date().toISOString() }, { merge: true })
-  }
+  }, [user])
 
-  async function deleteDueItem(id: string) {
+  const deleteDueItem = useCallback(async (id: string) => {
     if (!user) throw new Error("Usuario no autenticado.")
     const docRef = doc(db, "users", user.uid, "dueItems", id)
     const { deleteDoc } = await import("firebase/firestore")
     await deleteDoc(docRef)
-  }
+  }, [user])
 
-  async function markDueItemAsPaid(
+  const markDueItemAsPaid = useCallback(async (
     id: string,
     registerTx?: { accountId: string; amount?: number; category?: string; note?: string }
-  ) {
+  ) => {
     if (!user) throw new Error("Usuario no autenticado.")
     const expectedItem = dueItems.find((item) => item.id === id)
     if (!expectedItem) throw new Error("El vencimiento no existe.")
@@ -1576,9 +1578,9 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         updatedAt: nowIso,
       })
     })
-  }
+  }, [user, dueItems])
 
-  async function markDueItemAsPending(id: string) {
+  const markDueItemAsPending = useCallback(async (id: string) => {
     if (!user) throw new Error("Usuario no autenticado.")
     const docRef = doc(db, "users", user.uid, "dueItems", id)
     await setDoc(
@@ -1590,9 +1592,9 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       },
       { merge: true }
     )
-  }
+  }, [user])
 
-  async function saveFCMToken(token: string) {
+  const saveFCMToken = useCallback(async (token: string) => {
     if (!user || !token) return
     const tokenRef = doc(db, "users", user.uid, "fcmTokens", token)
     await setDoc(tokenRef, {
@@ -1600,9 +1602,9 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       updatedAt: new Date().toISOString(),
       userAgent: typeof navigator !== "undefined" ? navigator.userAgent : "",
     })
-  }
+  }, [user])
 
-  async function updateMacroSettings(settings: Partial<MacroSettings>) {
+  const updateMacroSettings = useCallback(async (settings: Partial<MacroSettings>) => {
     const updated = {
       ...macroSettings,
       ...settings,
@@ -1613,9 +1615,9 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       const macroRef = doc(db, "users", user.uid, "settings", "macro")
       await setDoc(macroRef, updated, { merge: true })
     }
-  }
+  }, [user, macroSettings])
 
-  async function syncMacroFromApi(): Promise<MacroSettings> {
+  const syncMacroFromApi = useCallback(async (): Promise<MacroSettings> => {
     try {
       const res = await fetch("/api/macro", { headers: await getApiAuthHeaders() })
       if (res.ok) {
@@ -1635,7 +1637,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       console.error("Error syncing macro data from API:", e)
     }
     return macroSettings
-  }
+  }, [macroSettings, updateMacroSettings])
 
   const totalsByCurrency = useMemo(() => {
     return accounts.reduce(
@@ -1647,59 +1649,116 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     )
   }, [accounts])
 
-  const value: FinanceContextValue = {
-    user,
-    loading,
-    login,
-    loginWithGoogle,
-    logout,
-    sendPasswordResetLink,
-    changePassword,
-    sendEmailVerificationLink,
-    reloadUser,
-    accounts,
-    transactions,
-    categories,
-    addTransaction,
-    updateTransaction,
-    deleteTransaction,
-    addAccount,
-    updateAccount,
-    deleteAccount,
-    addCategory,
-    updateCategory,
-    deleteCategory,
-    getAccount,
-    totalsByCurrency,
-    watchlist,
-    stockTransactions,
-    stockPrices,
-    holdings,
-    portfolioTotalValue,
-    portfolioTotalProfitLoss,
-    portfolioTotalProfitLossPercent,
-    addWatchlistStock,
-    removeWatchlistStock,
-    executeStockTransaction,
-    vehicles,
-    vehicleLogs,
-    addVehicle,
-    updateVehicle,
-    deleteVehicle,
-    addVehicleLog,
-    updateVehicleLog,
-    deleteVehicleLog,
-    dueItems,
-    addDueItem,
-    updateDueItem,
-    deleteDueItem,
-    markDueItemAsPaid,
-    markDueItemAsPending,
-    saveFCMToken,
-    macroSettings,
-    updateMacroSettings,
-    syncMacroFromApi,
-  }
+  // Memoized so the context value only changes when the data or an action does,
+  // instead of on every provider render.
+  const value: FinanceContextValue = useMemo(
+    () => ({
+      user,
+      loading,
+      login,
+      loginWithGoogle,
+      logout,
+      sendPasswordResetLink,
+      changePassword,
+      sendEmailVerificationLink,
+      reloadUser,
+      accounts,
+      transactions,
+      categories,
+      addTransaction,
+      updateTransaction,
+      deleteTransaction,
+      addAccount,
+      updateAccount,
+      deleteAccount,
+      addCategory,
+      updateCategory,
+      deleteCategory,
+      getAccount,
+      totalsByCurrency,
+      watchlist,
+      stockTransactions,
+      stockPrices,
+      holdings,
+      portfolioTotalValue,
+      portfolioTotalProfitLoss,
+      portfolioTotalProfitLossPercent,
+      addWatchlistStock,
+      removeWatchlistStock,
+      executeStockTransaction,
+      vehicles,
+      vehicleLogs,
+      addVehicle,
+      updateVehicle,
+      deleteVehicle,
+      addVehicleLog,
+      updateVehicleLog,
+      deleteVehicleLog,
+      dueItems,
+      addDueItem,
+      updateDueItem,
+      deleteDueItem,
+      markDueItemAsPaid,
+      markDueItemAsPending,
+      saveFCMToken,
+      macroSettings,
+      updateMacroSettings,
+      syncMacroFromApi,
+    }),
+    [
+      user,
+      loading,
+      login,
+      loginWithGoogle,
+      logout,
+      sendPasswordResetLink,
+      changePassword,
+      sendEmailVerificationLink,
+      reloadUser,
+      accounts,
+      transactions,
+      categories,
+      addTransaction,
+      updateTransaction,
+      deleteTransaction,
+      addAccount,
+      updateAccount,
+      deleteAccount,
+      addCategory,
+      updateCategory,
+      deleteCategory,
+      getAccount,
+      totalsByCurrency,
+      watchlist,
+      stockTransactions,
+      stockPrices,
+      holdings,
+      portfolioTotalValue,
+      portfolioTotalProfitLoss,
+      portfolioTotalProfitLossPercent,
+      addWatchlistStock,
+      removeWatchlistStock,
+      executeStockTransaction,
+      vehicles,
+      vehicleLogs,
+      addVehicle,
+      updateVehicle,
+      deleteVehicle,
+      addVehicleLog,
+      updateVehicleLog,
+      deleteVehicleLog,
+      dueItems,
+      addDueItem,
+      updateDueItem,
+      deleteDueItem,
+      markDueItemAsPaid,
+      markDueItemAsPending,
+      saveFCMToken,
+      macroSettings,
+      updateMacroSettings,
+      syncMacroFromApi,
+    ]
+  )
 
   return <FinanceContext.Provider value={value}>{children}</FinanceContext.Provider>
 }
