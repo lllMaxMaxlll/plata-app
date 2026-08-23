@@ -9,6 +9,11 @@ __v0_jsx-dev-runtime.ts
 # Environment variables
 .env*.local
 
+# Secrets: service accounts, service_role keys — never commit
+.secrets/
+/export/
+*-firebase-adminsdk-*.json
+
 # Common ignores
 node_modules
 .next/
@@ -16,3 +21,5 @@ node_modules
 firebase-debug.log
 *.tsbuildinfo
 .agents/
+# Claude Code: config local y skills materializadas (el lock sí se versiona)
+.claude/skills/

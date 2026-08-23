@@ -22,7 +22,7 @@ import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { getApiAuthHeaders } from "@/lib/firebase"
+import { getApiAuthHeaders } from "@/lib/supabase/client"
 
 export function StocksView({ onBack }: { onBack?: () => void }) {
   const {

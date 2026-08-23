@@ -8,7 +8,8 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { getApiAuthHeaders } from "@/lib/firebase"
+import { getApiAuthHeaders } from "@/lib/supabase/client"
+import { readUserScoped, writeUserScoped } from "@/lib/user-storage"
 
 interface Message {
   role: "user" | "assistant"
@@ -229,7 +230,10 @@ const DEFAULT_MODELS = [
 ]
 
 export function AdvisorView({ isDesktop = false }: { isDesktop?: boolean }) {
-  const { accounts, transactions, holdings, watchlist, vehicles, vehicleLogs } = useFinance()
+  const { user, accounts, transactions, holdings, watchlist, vehicles, vehicleLogs } = useFinance()
+  // Everything below is persisted per account: the chat quotes balances and the
+  // API key is a credential, so a second user on this device must not see them.
+  const uid = user?.uid
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState("")
   const [isSending, setIsSending] = useState(false)
@@ -244,7 +248,7 @@ export function AdvisorView({ isDesktop = false }: { isDesktop?: boolean }) {
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null)
 
   useEffect(() => {
-    const saved = localStorage.getItem("plata_ai_chat_history")
+    const saved = readUserScoped("ai_chat_history", uid)
     if (saved) {
       try {
         setMessages(JSON.parse(saved))
@@ -262,21 +266,21 @@ export function AdvisorView({ isDesktop = false }: { isDesktop?: boolean }) {
       ])
     }
 
-    const savedModel = localStorage.getItem("plata_ai_selected_model")
+    const savedModel = readUserScoped("ai_selected_model", uid)
     if (savedModel) {
       setSelectedModel(savedModel)
     }
 
-    const savedPersonality = localStorage.getItem("plata_ai_selected_personality")
+    const savedPersonality = readUserScoped("ai_selected_personality", uid)
     if (savedPersonality) {
       setPersonality(savedPersonality)
     }
 
-    const savedKey = localStorage.getItem("plata_openrouter_api_key")
+    const savedKey = readUserScoped("openrouter_api_key", uid)
     if (savedKey) {
       setCustomApiKey(savedKey)
     }
-  }, [])
+  }, [uid])
 
   useEffect(() => {
     const fetchModels = async () => {
@@ -328,29 +332,21 @@ export function AdvisorView({ isDesktop = false }: { isDesktop?: boolean }) {
   }, [])
 
   useEffect(() => {
-    if (messages.length > 0) {
-      localStorage.setItem("plata_ai_chat_history", JSON.stringify(messages))
-    } else {
-      localStorage.removeItem("plata_ai_chat_history")
-    }
+    writeUserScoped("ai_chat_history", uid, messages.length > 0 ? JSON.stringify(messages) : null)
     scrollToBottom()
-  }, [messages])
+  }, [messages, uid])
 
   useEffect(() => {
-    localStorage.setItem("plata_ai_selected_model", selectedModel)
-  }, [selectedModel])
+    writeUserScoped("ai_selected_model", uid, selectedModel)
+  }, [selectedModel, uid])
 
   useEffect(() => {
-    localStorage.setItem("plata_ai_selected_personality", personality)
-  }, [personality])
+    writeUserScoped("ai_selected_personality", uid, personality)
+  }, [personality, uid])
 
   useEffect(() => {
-    if (customApiKey.trim()) {
-      localStorage.setItem("plata_openrouter_api_key", customApiKey.trim())
-    } else {
-      localStorage.removeItem("plata_openrouter_api_key")
-    }
-  }, [customApiKey])
+    writeUserScoped("openrouter_api_key", uid, customApiKey.trim() || null)
+  }, [customApiKey, uid])
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })

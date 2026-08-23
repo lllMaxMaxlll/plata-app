@@ -11,7 +11,7 @@ import { Card } from "@/components/ui/card"
 import { AppIcon } from "@/components/finance/app-icon"
 
 export function AuthView() {
-  const { login, loginWithGoogle, sendPasswordResetLink } = useFinance()
+  const { login, sendPasswordResetLink } = useFinance()
   const [mode, setMode] = useState<"login" | "signup" | "forgot">("login")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -68,21 +68,6 @@ export function AuthView() {
         message = "El formato del email no es válido."
       }
       setError(message)
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
-  async function handleGoogleLogin() {
-    setError(null)
-    setSubmitting(true)
-    try {
-      await loginWithGoogle()
-    } catch (err: any) {
-      console.error(err)
-      if (err.code !== "auth/popup-closed-by-user") {
-        setError("Error al iniciar sesión con Google.")
-      }
     } finally {
       setSubmitting(false)
     }
@@ -225,42 +210,11 @@ export function AuthView() {
         </form>
 
         {mode !== "forgot" && (
-          <>
-            <div className="my-5 flex items-center gap-3 text-xs text-muted-foreground">
-              <span className="h-px flex-1 bg-border" />
-              o continuar con
-              <span className="h-px flex-1 bg-border" />
-            </div>
-
-            <Button
-              type="button"
-              variant="outline"
-              size="lg"
-              onClick={handleGoogleLogin}
-              disabled={submitting}
-              className="h-11 w-full rounded-xl text-sm"
-            >
-              <GoogleIcon />
-              Continuar con Google
-            </Button>
-
-            <p className="mt-8 text-center text-xs text-muted-foreground text-balance">
-              Conectado a Firebase de forma segura.
-            </p>
-          </>
+          <p className="mt-8 text-center text-xs text-muted-foreground text-balance">
+            Tus datos viajan cifrados y sólo vos podés verlos.
+          </p>
         )}
       </Card>
     </main>
-  )
-}
-
-function GoogleIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="size-4" aria-hidden="true">
-      <path
-        fill="#EA4335"
-        d="M12 10.2v3.9h5.5c-.24 1.4-1.7 4.1-5.5 4.1-3.3 0-6-2.7-6-6.2s2.7-6.2 6-6.2c1.9 0 3.1.8 3.9 1.5l2.6-2.5C17.1 3.2 14.8 2 12 2 6.9 2 2.8 6.1 2.8 11.2S6.9 20.4 12 20.4c5.3 0 8.8-3.7 8.8-9 0-.6-.06-1-.15-1.5H12z"
-      />
-    </svg>
   )
 }

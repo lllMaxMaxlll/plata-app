@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, useContext, useMemo, useState, useEffect, useCallback, type ReactNode } from "react"
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react"
 import {
   type Account,
   type Currency,
@@ -12,36 +12,24 @@ import {
   type StockHolding,
   type Vehicle,
   type VehicleLog,
-  type VehicleType,
-  type VehicleLogType,
   type DueItem,
-  type DueFrequency,
-  type DueItemStatus,
 } from "@/lib/finance-data"
-import { auth, db, getApiAuthHeaders } from "@/lib/firebase"
+import { getApiAuthHeaders, getSupabase } from "@/lib/supabase/client"
 import {
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  signInWithPopup,
-  GoogleAuthProvider,
-  signOut,
-  onAuthStateChanged,
-  sendPasswordResetEmail,
-  updatePassword,
-  sendEmailVerification,
-  reauthenticateWithCredential,
-  EmailAuthProvider,
-} from "firebase/auth"
-import {
-  collection,
-  doc,
-  setDoc,
-  onSnapshot,
-  query,
-  orderBy,
-  runTransaction,
-  writeBatch,
-} from "firebase/firestore"
+  fromAccount,
+  fromDueItem,
+  fromVehicle,
+  toAccount,
+  toCategory,
+  toDueItem,
+  toMacroSettings,
+  toStockTransaction,
+  toTransaction,
+  toVehicle,
+  toVehicleLog,
+  toWatchlistStock,
+  vehicleLogExtras,
+} from "@/lib/supabase/mappers"
 
 export interface User {
   uid: string
@@ -82,7 +70,6 @@ interface FinanceContextValue {
   user: User | null
   loading: boolean
   login: (email: string, password?: string, isSignUp?: boolean) => Promise<void>
-  loginWithGoogle: () => Promise<void>
   logout: () => Promise<void>
   sendPasswordResetLink: (email: string) => Promise<void>
   changePassword: (currentPassword?: string, newPassword?: string) => Promise<void>
@@ -134,7 +121,6 @@ interface FinanceContextValue {
   updateVehicleLog: (id: string, input: Omit<VehicleLog, "id">) => Promise<void>
   deleteVehicleLog: (id: string) => Promise<void>
 
-
   dueItems: DueItem[]
   addDueItem: (input: Omit<DueItem, "id" | "createdAt">) => Promise<void>
   updateDueItem: (id: string, input: Partial<Omit<DueItem, "id">>) => Promise<void>
@@ -153,1370 +139,901 @@ interface FinanceContextValue {
 
 const FinanceContext = createContext<FinanceContextValue | null>(null)
 
+const DEFAULT_MACRO_SETTINGS: MacroSettings = {
+  exchangeRate: 1250,
+  annualInflation: 45,
+  annualDevaluation: 40,
+  annualReturn: 12,
+  lastUpdated: "",
+  rates: { blue: 1250, oficial: 980, mep: 1240, ccl: 1255 },
+}
+
+const DEFAULT_CATEGORIES: Omit<Category, "id">[] = [
+  { name: "Comida", type: "expense", color: "var(--chart-1)" },
+  { name: "Servicios", type: "expense", color: "var(--chart-2)" },
+  { name: "Transporte", type: "expense", color: "var(--chart-3)" },
+  { name: "Alquiler", type: "expense", color: "var(--chart-4)" },
+  { name: "Otros", type: "expense", color: "var(--chart-5)" },
+  { name: "Salario", type: "income", color: "oklch(0.76 0.16 156)" },
+  { name: "Efectivo", type: "income", color: "oklch(0.78 0.15 75)" },
+  { name: "Inversiones", type: "income", color: "oklch(0.7 0.13 230)" },
+  { name: "Trabajo Extra", type: "income", color: "oklch(0.66 0.18 350)" },
+]
+
+/** Postgres devuelve mensajes útiles; los errores de red no. */
+function fail(error: { message?: string } | null, fallback: string): never {
+  throw new Error(error?.message || fallback)
+}
+
+const isJwtError = (error: { message?: string; code?: string } | null) =>
+  Boolean(error && (/jwt/i.test(error.message ?? "") || error.code === "PGRST301"))
+
+/**
+ * Reintenta una lectura cuando el token es rechazado.
+ *
+ * El token lo emite GoTrue y lo valida PostgREST: son servicios distintos, y si
+ * el que valida va unos segundos atrás, un token recién emitido le parece "del
+ * futuro" y lo rechaza. Dura lo que tarda en alinearse, pero sin reintento deja
+ * una tabla vacía hasta el próximo evento de realtime — en una app de finanzas,
+ * una pantalla a medio cargar es peor que una lenta.
+ *
+ * Si el token está vencido hay que pedir uno nuevo; si es del futuro, pedir otro
+ * lo empeora (vendría con una fecha todavía más adelantada), así que sólo se
+ * espera y se reintenta con el mismo.
+ */
+async function withAuthRetry<T>(
+  supabase: ReturnType<typeof getSupabase>,
+  run: () => PromiseLike<{ data: T; error: any }>
+): Promise<{ data: T; error: any }> {
+  const first = await run()
+  if (!isJwtError(first.error)) return first
+
+  if (/expired/i.test(first.error?.message ?? "")) {
+    await supabase.auth.refreshSession()
+  } else {
+    await new Promise((resolve) => setTimeout(resolve, 1200))
+  }
+  return run()
+}
+
 export function FinanceProvider({ children }: { children: ReactNode }) {
+  const supabase = getSupabase()
+
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [accounts, setAccounts] = useState<Account[]>([])
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [categories, setCategories] = useState<Category[]>([])
-
   const [watchlist, setWatchlist] = useState<WatchlistStock[]>([])
   const [stockTransactions, setStockTransactions] = useState<StockTransaction[]>([])
   const [stockPrices, setStockPrices] = useState<Record<string, { price: number; change: number; name: string }>>({})
-
   const [vehicles, setVehicles] = useState<Vehicle[]>([])
   const [vehicleLogs, setVehicleLogs] = useState<VehicleLog[]>([])
   const [dueItems, setDueItems] = useState<DueItem[]>([])
-
-  const DEFAULT_MACRO_SETTINGS: MacroSettings = {
-    exchangeRate: 1250,
-    annualInflation: 45,
-    annualDevaluation: 40,
-    annualReturn: 12,
-    lastUpdated: "",
-    rates: { blue: 1250, oficial: 980, mep: 1240, ccl: 1255 },
-  }
-
   const [macroSettings, setMacroSettings] = useState<MacroSettings>(DEFAULT_MACRO_SETTINGS)
 
-  // 1. Listen to Auth State Changes
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-      if (firebaseUser) {
-        setUser({
-          uid: firebaseUser.uid,
-          name: firebaseUser.displayName || firebaseUser.email?.split("@")[0] || "Usuario",
-          email: firebaseUser.email || "",
-          emailVerified: firebaseUser.emailVerified,
-          providerId: firebaseUser.providerData[0]?.providerId || null,
-        })
-      } else {
-        setUser(null)
-        setAccounts([])
-        setTransactions([])
-        setCategories([])
-        setWatchlist([])
-        setStockTransactions([])
-        setStockPrices({})
-        setVehicles([])
-        setVehicleLogs([])
-        setDueItems([])
-      }
-      setLoading(false)
-    })
-    return unsubscribe
-  }, [])
+  const uid = user?.uid
 
-  // Seeding helper for default categories
-  async function seedDefaultCategories(uid: string) {
-    try {
-      const batch = writeBatch(db)
-      const defaults: Omit<Category, "id">[] = [
-        // Expenses
-        { name: "Comida", type: "expense", color: "var(--chart-1)" },
-        { name: "Servicios", type: "expense", color: "var(--chart-2)" },
-        { name: "Transporte", type: "expense", color: "var(--chart-3)" },
-        { name: "Alquiler", type: "expense", color: "var(--chart-4)" },
-        { name: "Otros", type: "expense", color: "var(--chart-5)" },
-        // Income
-        { name: "Salario", type: "income", color: "oklch(0.76 0.16 156)" },
-        { name: "Efectivo", type: "income", color: "oklch(0.78 0.15 75)" },
-        { name: "Inversiones", type: "income", color: "oklch(0.7 0.13 230)" },
-        { name: "Trabajo Extra", type: "income", color: "oklch(0.66 0.18 350)" },
-      ]
-      
-      defaults.forEach((cat) => {
-        const newRef = doc(collection(db, "users", uid, "categories"))
-        batch.set(newRef, { id: newRef.id, ...cat })
-      })
-      
-      await batch.commit()
-    } catch (err) {
-      console.error("Error seeding categories:", err)
+  // ---------------------------------------------------------------------------
+  // Autenticación
+  // ---------------------------------------------------------------------------
+
+  useEffect(() => {
+    let alive = true
+
+    const mapUser = (u: any): User | null => {
+      if (!u) return null
+      return {
+        uid: u.id,
+        name: u.user_metadata?.full_name || u.user_metadata?.name || u.email?.split("@")[0] || "Usuario",
+        email: u.email || "",
+        emailVerified: Boolean(u.email_confirmed_at || u.confirmed_at),
+        providerId: u.app_metadata?.provider ?? null,
+      }
     }
-  }
 
-  // 2. Real-time subscriptions for logged-in user data
-  useEffect(() => {
-    if (!user) return
-
-    // Sync accounts subcollection
-    const accountsRef = collection(db, "users", user.uid, "accounts")
-    const unsubscribeAccounts = onSnapshot(accountsRef, (snapshot) => {
-      const accList: Account[] = []
-      snapshot.forEach((doc) => {
-        accList.push({ id: doc.id, ...doc.data() } as Account)
-      })
-      setAccounts(accList)
-    })
-
-    // Sync transactions subcollection (ordered by date descending)
-    const txsRef = collection(db, "users", user.uid, "transactions")
-    const txsQuery = query(txsRef, orderBy("date", "desc"))
-    const unsubscribeTransactions = onSnapshot(txsQuery, (snapshot) => {
-      const txList: Transaction[] = []
-      snapshot.forEach((doc) => {
-        txList.push({ id: doc.id, ...doc.data() } as Transaction)
-      })
-      setTransactions(txList)
-    })
-
-    // Sync categories subcollection
-    const categoriesRef = collection(db, "users", user.uid, "categories")
-    const unsubscribeCategories = onSnapshot(categoriesRef, (snapshot) => {
-      if (snapshot.empty) {
-        seedDefaultCategories(user.uid)
-        return
+    // getSession() sólo lee lo que hay guardado en el navegador: una sesión
+    // revocada, vencida o de un usuario borrado la da por buena. getUser() la
+    // valida contra el servidor, que es lo único que sirve para decidir si
+    // alguien está realmente adentro.
+    supabase.auth.getUser().then(async ({ data, error }) => {
+      if (!alive) return
+      if (error || !data.user) {
+        const { data: local } = await supabase.auth.getSession()
+        if (local.session) await supabase.auth.signOut()
+        if (alive) setUser(null)
+      } else {
+        setUser(mapUser(data.user))
       }
-      const catList: Category[] = []
-      snapshot.forEach((doc) => {
-        catList.push({ id: doc.id, ...doc.data() } as Category)
-      })
-      setCategories(catList)
+      if (alive) setLoading(false)
     })
 
-    // Sync watchlist subcollection
-    const watchlistRef = collection(db, "users", user.uid, "watchlist")
-    const unsubscribeWatchlist = onSnapshot(watchlistRef, (snapshot) => {
-      const wlList: WatchlistStock[] = []
-      snapshot.forEach((doc) => {
-        wlList.push({ id: doc.id, ...doc.data() } as WatchlistStock)
-      })
-      setWatchlist(wlList)
-    })
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!alive) return
+      setUser(mapUser(session?.user))
+      setLoading(false)
 
-    // Sync stock transactions subcollection (ordered by date descending)
-    const stockTxsRef = collection(db, "users", user.uid, "stockTransactions")
-    const stockTxsQuery = query(stockTxsRef, orderBy("date", "desc"))
-    const unsubscribeStockTxs = onSnapshot(
-      stockTxsQuery,
-      (snapshot) => {
-        const stList: StockTransaction[] = []
-        snapshot.forEach((doc) => {
-          stList.push({ id: doc.id, ...doc.data() } as StockTransaction)
-        })
-        setStockTransactions(stList)
-      },
-      (err) => {
-        console.warn("Stock transactions query error, falling back:", err)
-        return onSnapshot(stockTxsRef, (snapshot) => {
-          const stList: StockTransaction[] = []
-          snapshot.forEach((doc) => {
-            stList.push({ id: doc.id, ...doc.data() } as StockTransaction)
-          })
-          stList.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-          setStockTransactions(stList)
-        })
-      }
-    )
-
-    // Sync vehicles subcollection (ordered by createdAt descending)
-    const vehiclesRef = collection(db, "users", user.uid, "vehicles")
-    const vehiclesQuery = query(vehiclesRef, orderBy("createdAt", "desc"))
-    const unsubscribeVehicles = onSnapshot(vehiclesQuery, (snapshot) => {
-      const vList: Vehicle[] = []
-      snapshot.forEach((doc) => {
-        vList.push({ id: doc.id, ...doc.data() } as Vehicle)
-      })
-      setVehicles(vList)
-    })
-
-    // Sync vehicle logs subcollection (ordered by date descending)
-    const vehicleLogsRef = collection(db, "users", user.uid, "vehicleLogs")
-    const vehicleLogsQuery = query(vehicleLogsRef, orderBy("date", "desc"))
-    const unsubscribeVehicleLogs = onSnapshot(vehicleLogsQuery, (snapshot) => {
-      const vlList: VehicleLog[] = []
-      snapshot.forEach((doc) => {
-        vlList.push({ id: doc.id, ...doc.data() } as VehicleLog)
-      })
-      setVehicleLogs(vlList)
-    })
-
-    // Sync dueItems subcollection (ordered by dueDate ascending)
-    const dueItemsRef = collection(db, "users", user.uid, "dueItems")
-    const dueItemsQuery = query(dueItemsRef, orderBy("dueDate", "asc"))
-    const unsubscribeDueItems = onSnapshot(dueItemsQuery, (snapshot) => {
-      const dList: DueItem[] = []
-      snapshot.forEach((doc) => {
-        dList.push({ id: doc.id, ...doc.data() } as DueItem)
-      })
-      setDueItems(dList)
-    })
-
-    // Sync macro settings document
-    const macroRef = doc(db, "users", user.uid, "settings", "macro")
-    const unsubscribeMacro = onSnapshot(macroRef, (docSnap) => {
-      if (docSnap.exists()) {
-        setMacroSettings((prev) => ({ ...prev, ...docSnap.data() }))
+      // El enlace de recuperación crea una sesión válida, así que sin esto el
+      // usuario entra a la app y nunca llega a elegir contraseña. Redirigimos
+      // acá y no sólo con el redirectTo del mail, porque si la URL no está en la
+      // lista de Redirect URLs del proyecto, Supabase la ignora y manda al inicio.
+      if (event === "PASSWORD_RECOVERY" && typeof window !== "undefined") {
+        if (!window.location.pathname.startsWith("/auth/update-password")) {
+          window.location.assign("/auth/update-password")
+        }
       }
     })
 
     return () => {
-      unsubscribeAccounts()
-      unsubscribeTransactions()
-      unsubscribeCategories()
-      unsubscribeWatchlist()
-      unsubscribeStockTxs()
-      unsubscribeVehicles()
-      unsubscribeVehicleLogs()
-      unsubscribeDueItems()
-      unsubscribeMacro()
+      alive = false
+      sub.subscription.unsubscribe()
     }
-  }, [user])
+  }, [supabase])
 
-  async function login(email: string, password?: string, isSignUp?: boolean) {
-    if (!password) {
-      throw new Error("La contraseña es requerida.")
-    }
-    if (isSignUp) {
-      await createUserWithEmailAndPassword(auth, email, password)
-    } else {
-      await signInWithEmailAndPassword(auth, email, password)
-    }
-  }
+  // ---------------------------------------------------------------------------
+  // Carga de datos
+  //
+  // Con un par de cientos de filas, releer una tabla entera cuando cambia sale
+  // más barato —y es mucho menos frágil— que reconstruir el estado a partir de
+  // los eventos fila por fila. Los saldos, además, salen de una vista: Postgres
+  // no publica vistas, así que ante cualquier movimiento hay que releerlos igual.
+  // ---------------------------------------------------------------------------
 
-  async function loginWithGoogle() {
-    const provider = new GoogleAuthProvider()
-    provider.setCustomParameters({ prompt: "select_account" })
-    await signInWithPopup(auth, provider)
-  }
-
-  async function logout() {
-    await signOut(auth)
-  }
-
-  async function sendPasswordResetLink(email: string) {
-    await sendPasswordResetEmail(auth, email)
-  }
-
-  async function changePassword(currentPassword?: string, newPassword?: string) {
-    if (!auth.currentUser) throw new Error("Usuario no autenticado.")
-    if (!newPassword) throw new Error("La nueva contraseña es requerida.")
-
-    const isPasswordUser = auth.currentUser.providerData.some(
-      (p) => p.providerId === "password"
+  const loadAccounts = useCallback(async () => {
+    const { data, error } = await withAuthRetry(supabase, () =>
+      supabase.from("account_balances").select("*").order("name")
     )
-    if (isPasswordUser) {
-      if (!currentPassword) throw new Error("La contraseña actual es requerida para reautenticar.")
-      const email = auth.currentUser.email
-      if (!email) throw new Error("El usuario no tiene un correo electrónico asociado.")
-      const credential = EmailAuthProvider.credential(email, currentPassword)
-      await reauthenticateWithCredential(auth.currentUser, credential)
+    if (error) return console.error("No se pudieron leer las cuentas:", error.message)
+    setAccounts((data ?? []).map(toAccount))
+  }, [supabase])
+
+  const loadTransactions = useCallback(async () => {
+    const { data, error } = await withAuthRetry(supabase, () =>
+      supabase.from("transactions").select("*").order("occurred_at", { ascending: false })
+    )
+    if (error) return console.error("No se pudieron leer los movimientos:", error.message)
+    setTransactions((data ?? []).map(toTransaction))
+  }, [supabase])
+
+  const loadCategories = useCallback(async () => {
+    const { data, error } = await withAuthRetry(supabase, () =>
+      supabase.from("categories").select("*").order("name")
+    )
+    if (error) return console.error("No se pudieron leer las categorías:", error.message)
+    setCategories((data ?? []).map(toCategory))
+    return data ?? []
+  }, [supabase])
+
+  const loadVehicles = useCallback(async () => {
+    const { data, error } = await withAuthRetry(supabase, () =>
+      supabase.from("vehicles").select("*").order("created_at", { ascending: false })
+    )
+    if (error) return console.error("No se pudieron leer los vehículos:", error.message)
+    setVehicles((data ?? []).map(toVehicle))
+  }, [supabase])
+
+  const loadVehicleLogs = useCallback(async () => {
+    const { data, error } = await withAuthRetry(supabase, () =>
+      supabase.from("vehicle_logs").select("*").order("occurred_at", { ascending: false })
+    )
+    if (error) return console.error("No se pudieron leer los registros de vehículo:", error.message)
+    setVehicleLogs((data ?? []).map(toVehicleLog))
+  }, [supabase])
+
+  const loadDueItems = useCallback(async () => {
+    const { data, error } = await withAuthRetry(supabase, () =>
+      supabase.from("due_items").select("*").order("due_date")
+    )
+    if (error) return console.error("No se pudieron leer los vencimientos:", error.message)
+    setDueItems((data ?? []).map(toDueItem))
+  }, [supabase])
+
+  const loadStockTrades = useCallback(async () => {
+    const { data, error } = await withAuthRetry(supabase, () =>
+      supabase.from("stock_trades").select("*").order("occurred_at", { ascending: false })
+    )
+    if (error) return console.error("No se pudieron leer las operaciones:", error.message)
+    setStockTransactions((data ?? []).map(toStockTransaction))
+  }, [supabase])
+
+  const loadWatchlist = useCallback(async () => {
+    const { data, error } = await withAuthRetry(supabase, () =>
+      supabase.from("watchlist").select("*").order("symbol")
+    )
+    if (error) return console.error("No se pudo leer la watchlist:", error.message)
+    setWatchlist((data ?? []).map(toWatchlistStock))
+  }, [supabase])
+
+  const loadSettings = useCallback(async () => {
+    const { data, error } = await withAuthRetry(supabase, () =>
+      supabase.from("user_settings").select("*").maybeSingle()
+    )
+    if (error) return console.error("No se pudieron leer las preferencias:", error.message)
+    if (data) setMacroSettings((prev) => ({ ...prev, ...toMacroSettings(data) }))
+  }, [supabase])
+
+  // Alta de las categorías por defecto la primera vez
+  const seedCategories = useCallback(async () => {
+    if (!uid) return
+    const { error } = await supabase
+      .from("categories")
+      .insert(DEFAULT_CATEGORIES.map((c) => ({ ...c, user_id: uid })))
+    if (error) console.error("No se pudieron crear las categorías por defecto:", error.message)
+    else await loadCategories()
+  }, [supabase, uid, loadCategories])
+
+  useEffect(() => {
+    if (!uid) {
+      setAccounts([])
+      setTransactions([])
+      setCategories([])
+      setWatchlist([])
+      setStockTransactions([])
+      setStockPrices({})
+      setVehicles([])
+      setVehicleLogs([])
+      setDueItems([])
+      setMacroSettings(DEFAULT_MACRO_SETTINGS)
+      return
     }
 
-    await updatePassword(auth.currentUser, newPassword)
-  }
+    let alive = true
 
-  async function sendEmailVerificationLink() {
-    if (!auth.currentUser) throw new Error("Usuario no autenticado.")
-    await sendEmailVerification(auth.currentUser)
-  }
-
-  async function reloadUser() {
-    if (!auth.currentUser) return
-    await auth.currentUser.reload()
-    const firebaseUser = auth.currentUser
-    setUser({
-      uid: firebaseUser.uid,
-      name: firebaseUser.displayName || firebaseUser.email?.split("@")[0] || "Usuario",
-      email: firebaseUser.email || "",
-      emailVerified: firebaseUser.emailVerified,
-      providerId: firebaseUser.providerData[0]?.providerId || null,
+    Promise.all([
+      loadAccounts(),
+      loadTransactions(),
+      loadCategories(),
+      loadVehicles(),
+      loadVehicleLogs(),
+      loadDueItems(),
+      loadStockTrades(),
+      loadWatchlist(),
+      loadSettings(),
+    ]).then((results) => {
+      if (!alive) return
+      const cats = results[2] as unknown as any[] | undefined
+      if (Array.isArray(cats) && cats.length === 0) seedCategories()
     })
-  }
 
-  const getAccount = useCallback(
-    (id: string) => {
-      return accounts.find((a) => a.id === id)
+    return () => {
+      alive = false
+    }
+  }, [
+    uid,
+    loadAccounts,
+    loadTransactions,
+    loadCategories,
+    loadVehicles,
+    loadVehicleLogs,
+    loadDueItems,
+    loadStockTrades,
+    loadWatchlist,
+    loadSettings,
+    seedCategories,
+  ])
+
+  // ---------------------------------------------------------------------------
+  // Realtime
+  // ---------------------------------------------------------------------------
+
+  useEffect(() => {
+    if (!uid) return
+
+    const filter = `user_id=eq.${uid}`
+    const on = (table: string, handler: () => void) => ({
+      event: "*" as const,
+      schema: "public",
+      table,
+      filter,
+      handler,
+    })
+
+    // Un movimiento cambia el saldo, que sale de una vista: hay que releer las dos
+    const subscriptions = [
+      on("accounts", () => void loadAccounts()),
+      on("transactions", () => {
+        void loadTransactions()
+        void loadAccounts()
+      }),
+      on("categories", () => void loadCategories()),
+      on("vehicles", () => void loadVehicles()),
+      on("vehicle_logs", () => void loadVehicleLogs()),
+      on("due_items", () => void loadDueItems()),
+      on("stock_trades", () => {
+        void loadStockTrades()
+        void loadAccounts()
+      }),
+      on("watchlist", () => void loadWatchlist()),
+      on("user_settings", () => void loadSettings()),
+    ]
+
+    let channel = supabase.channel(`plata:${uid}`)
+    for (const sub of subscriptions) {
+      channel = channel.on(
+        "postgres_changes" as any,
+        { event: sub.event, schema: sub.schema, table: sub.table, filter: sub.filter },
+        sub.handler
+      )
+    }
+    channel.subscribe()
+
+    // El stream puede perder eventos si el dispositivo estuvo dormido o sin red:
+    // al volver al foco se relee todo antes de confiar en lo que hay en pantalla.
+    const resync = () => {
+      if (document.visibilityState !== "visible") return
+      void loadAccounts()
+      void loadTransactions()
+      void loadVehicleLogs()
+      void loadDueItems()
+      void loadStockTrades()
+    }
+    document.addEventListener("visibilitychange", resync)
+
+    return () => {
+      document.removeEventListener("visibilitychange", resync)
+      void supabase.removeChannel(channel)
+    }
+  }, [
+    supabase,
+    uid,
+    loadAccounts,
+    loadTransactions,
+    loadCategories,
+    loadVehicles,
+    loadVehicleLogs,
+    loadDueItems,
+    loadStockTrades,
+    loadWatchlist,
+    loadSettings,
+  ])
+
+  // ---------------------------------------------------------------------------
+  // Sesión
+  // ---------------------------------------------------------------------------
+
+  const login = useCallback(
+    async (email: string, password?: string, isSignUp?: boolean) => {
+      if (!password) throw new Error("La contraseña es requerida.")
+      const { error } = isSignUp
+        ? await supabase.auth.signUp({ email, password })
+        : await supabase.auth.signInWithPassword({ email, password })
+      if (error) fail(error, "No se pudo iniciar sesión.")
     },
-    [accounts],
+    [supabase]
   )
 
-  async function addAccount(input: Omit<Account, "id">) {
-    if (!user) throw new Error("Usuario no autenticado.")
-    const newAccRef = doc(collection(db, "users", user.uid, "accounts"))
-    await setDoc(newAccRef, { id: newAccRef.id, ...input })
-  }
+  const logout = useCallback(async () => {
+    await supabase.auth.signOut()
+    const { clearUserScopedStorage } = await import("@/lib/user-storage")
+    clearUserScopedStorage()
+  }, [supabase])
 
-  async function updateAccount(id: string, input: Partial<Omit<Account, "id">>) {
-    if (!user) throw new Error("Usuario no autenticado.")
-    const docRef = doc(db, "users", user.uid, "accounts", id)
-    await setDoc(docRef, input, { merge: true })
-  }
-
-  async function deleteAccount(id: string) {
-    if (!user) throw new Error("Usuario no autenticado.")
-    const docRef = doc(db, "users", user.uid, "accounts", id)
-    const { deleteDoc } = await import("firebase/firestore")
-    await deleteDoc(docRef)
-  }
-
-  async function addTransaction(input: NewTransactionInput) {
-    if (!user) throw new Error("Usuario no autenticado.")
-
-    const txId = `t-${Date.now()}`
-    const txDocRef = doc(db, "users", user.uid, "transactions", txId)
-
-    const primaryAccRef = doc(db, "users", user.uid, "accounts", input.accountId)
-    const secondaryAccRef = input.toAccountId
-      ? doc(db, "users", user.uid, "accounts", input.toAccountId)
-      : null
-
-    const originalAccounts = [...accounts]
-
-    // Optimistically update local account balances
-    setAccounts((prev) =>
-      prev.map((acc) => {
-        if (acc.id === input.accountId) {
-          const bal = Number(acc.balance)
-          const newBal = Math.round((input.type === "income" ? bal + input.amount : bal - input.amount) * 100) / 100
-          return { ...acc, balance: newBal }
-        }
-        if (secondaryAccRef && acc.id === input.toAccountId) {
-          const bal = Number(acc.balance)
-          const newBal = Math.round((bal + (input.toAmount ?? input.amount)) * 100) / 100
-          return { ...acc, balance: newBal }
-        }
-        return acc
+  const sendPasswordResetLink = useCallback(
+    async (email: string) => {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo:
+          typeof window !== "undefined" ? `${window.location.origin}/auth/update-password` : undefined,
       })
-    )
+      if (error) fail(error, "No se pudo enviar el correo de recuperación.")
+    },
+    [supabase]
+  )
 
-    try {
-      await runTransaction(db, async (transaction) => {
-        // 1. Read accounts
-        const primarySnap = await transaction.get(primaryAccRef)
-        if (!primarySnap.exists()) {
-          throw new Error("La cuenta de origen no existe.")
-        }
-        const primaryData = primarySnap.data() as Account
-        let newPrimaryBalance = Number(primaryData.balance)
+  const changePassword = useCallback(
+    async (currentPassword?: string, newPassword?: string) => {
+      if (!newPassword) throw new Error("La nueva contraseña es requerida.")
+      if (!user?.email) throw new Error("Usuario no autenticado.")
 
-        let newSecondaryBalance = 0
-        let secondaryData: Account | null = null
-        if (secondaryAccRef) {
-          const secondarySnap = await transaction.get(secondaryAccRef)
-          if (!secondarySnap.exists()) {
-            throw new Error("La cuenta de destino no existe.")
-          }
-          secondaryData = secondarySnap.data() as Account
-          newSecondaryBalance = Number(secondaryData.balance)
-        }
-
-        // 2. Calculate new balances
-        if (input.type === "income") {
-          newPrimaryBalance = Math.round((newPrimaryBalance + input.amount) * 100) / 100
-        } else if (input.type === "expense") {
-          newPrimaryBalance = Math.round((newPrimaryBalance - input.amount) * 100) / 100
-        } else if (input.type === "transfer" && secondaryData) {
-          newPrimaryBalance = Math.round((newPrimaryBalance - input.amount) * 100) / 100
-          newSecondaryBalance = Math.round((newSecondaryBalance + (input.toAmount ?? input.amount)) * 100) / 100
-        }
-
-        // 3. Write transaction document
-        transaction.set(txDocRef, {
-          id: txId,
-          type: input.type,
-          amount: Math.round(input.amount * 100) / 100,
-          accountId: input.accountId,
-          currency: primaryData.currency,
-          toAccountId: input.toAccountId || null,
-          toAmount: input.toAmount ? Math.round(input.toAmount * 100) / 100 : null,
-          exchangeRate: input.exchangeRate ? Math.round(input.exchangeRate * 100) / 100 : null,
-          category: input.category,
-          note: input.note || null,
-          date: input.date || new Date().toISOString(),
-          receiptName: input.receiptName || null,
+      // Supabase no tiene reautenticación con contraseña: se verifica iniciando
+      // sesión otra vez antes de permitir el cambio.
+      if (currentPassword) {
+        const { error } = await supabase.auth.signInWithPassword({
+          email: user.email,
+          password: currentPassword,
         })
+        if (error) throw new Error("La contraseña actual no es correcta.")
+      }
 
-        // 4. Update balances
-        transaction.update(primaryAccRef, { balance: newPrimaryBalance })
-        if (secondaryAccRef) {
-          transaction.update(secondaryAccRef, { balance: newSecondaryBalance })
-        }
-      })
-    } catch (err) {
-      setAccounts(originalAccounts)
-      throw err
-    }
-  }
+      const { error } = await supabase.auth.updateUser({ password: newPassword })
+      if (error) fail(error, "No se pudo cambiar la contraseña.")
+    },
+    [supabase, user]
+  )
 
-  async function updateTransaction(id: string, input: NewTransactionInput) {
-    if (!user) throw new Error("Usuario no autenticado.")
+  const sendEmailVerificationLink = useCallback(async () => {
+    if (!user?.email) throw new Error("Usuario no autenticado.")
+    const { error } = await supabase.auth.resend({ type: "signup", email: user.email })
+    if (error) fail(error, "No se pudo reenviar la verificación.")
+  }, [supabase, user])
 
-    const txDocRef = doc(db, "users", user.uid, "transactions", id)
-    const oldTx = transactions.find((t) => t.id === id)
-    if (!oldTx) throw new Error("El movimiento no existe.")
-
-    const originalAccounts = [...accounts]
-    // Optimistically update account balances
-    setAccounts((prev) => {
-      // 1. Revert old transaction balances
-      const reverted = prev.map((acc) => {
-        if (acc.id === oldTx.accountId) {
-          const bal = Number(acc.balance)
-          const revertedBal = Math.round((oldTx.type === "income" ? bal - oldTx.amount : bal + oldTx.amount) * 100) / 100
-          return { ...acc, balance: revertedBal }
-        }
-        if (oldTx.type === "transfer" && oldTx.toAccountId && acc.id === oldTx.toAccountId) {
-          const bal = Number(acc.balance)
-          const revertedBal = Math.round((bal - (oldTx.toAmount ?? oldTx.amount)) * 100) / 100
-          return { ...acc, balance: revertedBal }
-        }
-        return acc
-      })
- 
-      // 2. Apply new transaction balances
-      return reverted.map((acc) => {
-        if (acc.id === input.accountId) {
-          const bal = Number(acc.balance)
-          const newBal = Math.round((input.type === "income" ? bal + input.amount : bal - input.amount) * 100) / 100
-          return { ...acc, balance: newBal }
-        }
-        if (input.type === "transfer" && input.toAccountId && acc.id === input.toAccountId) {
-          const bal = Number(acc.balance)
-          const newBal = Math.round((bal + (input.toAmount ?? input.amount)) * 100) / 100
-          return { ...acc, balance: newBal }
-        }
-        return acc
-      })
-    })
-
-    try {
-      await runTransaction(db, async (transaction) => {
-        // READS FIRST:
-        const txSnap = await transaction.get(txDocRef)
-        if (!txSnap.exists()) throw new Error("El movimiento no existe.")
-        const currentOldTx = txSnap.data() as Transaction
-
-        const oldPrimaryAccRef = doc(db, "users", user.uid, "accounts", currentOldTx.accountId)
-        const oldPrimarySnap = await transaction.get(oldPrimaryAccRef)
-        if (!oldPrimarySnap.exists()) throw new Error("Cuenta original de origen no existe.")
-
-        let oldSecondarySnap = null
-        if (currentOldTx.type === "transfer" && currentOldTx.toAccountId) {
-          const oldSecondaryAccRef = doc(db, "users", user.uid, "accounts", currentOldTx.toAccountId)
-          oldSecondarySnap = await transaction.get(oldSecondaryAccRef)
-        }
-
-        const newPrimaryAccRef = doc(db, "users", user.uid, "accounts", input.accountId)
-        let newPrimarySnap: any = oldPrimarySnap
-        if (input.accountId !== currentOldTx.accountId) {
-          newPrimarySnap = await transaction.get(newPrimaryAccRef)
-          if (!newPrimarySnap.exists()) throw new Error("Nueva cuenta de origen no existe.")
-        }
-
-        let newSecondarySnap = null
-        if (input.type === "transfer" && input.toAccountId) {
-          if (currentOldTx.type === "transfer" && input.toAccountId === currentOldTx.toAccountId) {
-            newSecondarySnap = oldSecondarySnap
-          } else {
-            const newSecondaryAccRef = doc(db, "users", user.uid, "accounts", input.toAccountId)
-            newSecondarySnap = await transaction.get(newSecondaryAccRef)
-            if (!newSecondarySnap.exists()) throw new Error("Nueva cuenta de destino no existe.")
-          }
-        }
-
-        // WRITES:
-        // 1. Reverse old balance changes
-        let oldPrimaryBalance = Number(oldPrimarySnap.data()?.balance ?? 0)
-        if (currentOldTx.type === "income") {
-          oldPrimaryBalance = Math.round((oldPrimaryBalance - currentOldTx.amount) * 100) / 100
-        } else if (currentOldTx.type === "expense") {
-          oldPrimaryBalance = Math.round((oldPrimaryBalance + currentOldTx.amount) * 100) / 100
-        } else if (currentOldTx.type === "transfer") {
-          oldPrimaryBalance = Math.round((oldPrimaryBalance + currentOldTx.amount) * 100) / 100
-        }
- 
-        let oldSecondaryBalance = 0
-        if (oldSecondarySnap && oldSecondarySnap.exists()) {
-          oldSecondaryBalance = Math.round((Number(oldSecondarySnap.data()?.balance ?? 0) - (currentOldTx.toAmount ?? currentOldTx.amount)) * 100) / 100
-        }
- 
-        // 2. Set base reversed balances for target accounts
-        let newPrimaryBalance = Number(newPrimarySnap.data()?.balance ?? 0)
-        if (input.accountId === currentOldTx.accountId) {
-          newPrimaryBalance = oldPrimaryBalance
-        } else if (currentOldTx.type === "transfer" && input.accountId === currentOldTx.toAccountId) {
-          newPrimaryBalance = oldSecondaryBalance
-        }
- 
-        let newSecondaryBalance = 0
-        if (input.type === "transfer" && input.toAccountId && newSecondarySnap) {
-          newSecondaryBalance = Number(newSecondarySnap.data()?.balance ?? 0)
-          if (input.toAccountId === currentOldTx.accountId) {
-            newSecondaryBalance = oldPrimaryBalance
-          } else if (currentOldTx.type === "transfer" && input.toAccountId === currentOldTx.toAccountId) {
-            newSecondaryBalance = oldSecondaryBalance
-          }
-        }
- 
-        // 3. Apply new transaction balance changes
-        if (input.type === "income") {
-          newPrimaryBalance = Math.round((newPrimaryBalance + input.amount) * 100) / 100
-        } else if (input.type === "expense") {
-          newPrimaryBalance = Math.round((newPrimaryBalance - input.amount) * 100) / 100
-        } else if (input.type === "transfer") {
-          newPrimaryBalance = Math.round((newPrimaryBalance - input.amount) * 100) / 100
-          newSecondaryBalance = Math.round((newSecondaryBalance + (input.toAmount ?? input.amount)) * 100) / 100
-        }
- 
-        // 4. Update Firestore documents
-        transaction.set(txDocRef, {
-          id: id,
-          type: input.type,
-          amount: Math.round(input.amount * 100) / 100,
-          accountId: input.accountId,
-          currency: (newPrimarySnap.data() as Account).currency,
-          toAccountId: input.toAccountId || null,
-          toAmount: input.toAmount ? Math.round(input.toAmount * 100) / 100 : null,
-          exchangeRate: input.exchangeRate ? Math.round(input.exchangeRate * 100) / 100 : null,
-          category: input.category,
-          note: input.note || null,
-          date: input.date || currentOldTx.date,
-          receiptName: input.receiptName || null,
-        })
-
-        // Update primary accounts
-        if (input.accountId === currentOldTx.accountId) {
-          transaction.update(oldPrimaryAccRef, { balance: newPrimaryBalance })
-        } else {
-          transaction.update(oldPrimaryAccRef, { balance: oldPrimaryBalance })
-          transaction.update(newPrimaryAccRef, { balance: newPrimaryBalance })
-        }
-
-        // Update secondary accounts
-        if (oldSecondarySnap) {
-          if (newSecondarySnap && input.toAccountId === currentOldTx.toAccountId) {
-            transaction.update(newSecondarySnap.ref, { balance: newSecondaryBalance })
-          } else {
-            transaction.update(oldSecondarySnap.ref, { balance: oldSecondaryBalance })
-            if (newSecondarySnap) {
-              transaction.update(newSecondarySnap.ref, { balance: newSecondaryBalance })
-            }
-          }
-        } else if (newSecondarySnap) {
-          transaction.update(newSecondarySnap.ref, { balance: newSecondaryBalance })
-        }
-      })
-    } catch (err) {
-      setAccounts(originalAccounts)
-      throw err
-    }
-  }
-
-  async function deleteTransaction(id: string) {
-    if (!user) throw new Error("Usuario no autenticado.")
-
-    const txDocRef = doc(db, "users", user.uid, "transactions", id)
-    const oldTx = transactions.find((t) => t.id === id)
-    if (!oldTx) throw new Error("El movimiento no existe.")
-
-    const originalAccounts = [...accounts]
-
-    // Optimistically update account balances by reversing transaction
-    setAccounts((prev) =>
-      prev.map((acc) => {
-        if (acc.id === oldTx.accountId) {
-          const bal = Number(acc.balance)
-          const revertedBal = Math.round((oldTx.type === "income" ? bal - oldTx.amount : bal + oldTx.amount) * 100) / 100
-          return { ...acc, balance: revertedBal }
-        }
-        if (oldTx.type === "transfer" && oldTx.toAccountId && acc.id === oldTx.toAccountId) {
-          const bal = Number(acc.balance)
-          const revertedBal = Math.round((bal - (oldTx.toAmount ?? oldTx.amount)) * 100) / 100
-          return { ...acc, balance: revertedBal }
-        }
-        return acc
-      })
+  const reloadUser = useCallback(async () => {
+    const { data, error } = await supabase.auth.getUser()
+    if (error || !data.user) return
+    setUser((prev) =>
+      prev ? { ...prev, emailVerified: Boolean(data.user.email_confirmed_at), email: data.user.email || prev.email } : prev
     )
+  }, [supabase])
 
-    try {
-      await runTransaction(db, async (transaction) => {
-        const txSnap = await transaction.get(txDocRef)
-        if (!txSnap.exists()) {
-          throw new Error("El movimiento no existe.")
-        }
-        const txData = txSnap.data() as Transaction
+  // ---------------------------------------------------------------------------
+  // Cuentas
+  // ---------------------------------------------------------------------------
 
-        // 1. Get primary account
-        const primaryAccRef = doc(db, "users", user.uid, "accounts", txData.accountId)
-        const primarySnap = await transaction.get(primaryAccRef)
-        if (primarySnap.exists()) {
-          const primaryData = primarySnap.data() as Account
-          let newPrimaryBalance = Number(primaryData.balance)
+  const getAccount = useCallback((id: string) => accounts.find((a) => a.id === id), [accounts])
 
-          // 2. Reverse balance changes
-          if (txData.type === "income") {
-            newPrimaryBalance = Math.round((newPrimaryBalance - txData.amount) * 100) / 100
-          } else if (txData.type === "expense") {
-            newPrimaryBalance = Math.round((newPrimaryBalance + txData.amount) * 100) / 100
-          } else if (txData.type === "transfer") {
-            newPrimaryBalance = Math.round((newPrimaryBalance + txData.amount) * 100) / 100
-          }
-          transaction.update(primaryAccRef, { balance: newPrimaryBalance })
-        }
-
-        // 3. Reverse secondary balance if transfer
-        if (txData.type === "transfer" && txData.toAccountId) {
-          const secondaryAccRef = doc(db, "users", user.uid, "accounts", txData.toAccountId)
-          const secondarySnap = await transaction.get(secondaryAccRef)
-          if (secondarySnap.exists()) {
-            const secondaryData = secondarySnap.data() as Account
-            const newSecondaryBalance = Math.round((Number(secondaryData.balance) - (txData.toAmount ?? txData.amount)) * 100) / 100
-            transaction.update(secondaryAccRef, { balance: newSecondaryBalance })
-          }
-        }
-
-        // 4. Delete the transaction doc
-        transaction.delete(txDocRef)
+  const addAccount = useCallback(
+    async (input: Omit<Account, "id">) => {
+      if (!uid) throw new Error("Usuario no autenticado.")
+      const { error } = await supabase.from("accounts").insert({
+        user_id: uid,
+        name: input.name,
+        currency: input.currency,
+        kind: input.kind,
+        initial_balance: input.balance,
       })
-    } catch (err) {
-      setAccounts(originalAccounts)
-      throw err
-    }
-  }
+      if (error) fail(error, "No se pudo crear la cuenta.")
+      await loadAccounts()
+    },
+    [supabase, uid, loadAccounts]
+  )
 
-  async function addCategory(name: string, type: "income" | "expense", color: string) {
-    if (!user) throw new Error("Usuario no autenticado.")
-    const newCatRef = doc(collection(db, "users", user.uid, "categories"))
-    await setDoc(newCatRef, { id: newCatRef.id, name, type, color })
-  }
+  const updateAccount = useCallback(
+    async (id: string, input: Partial<Omit<Account, "id">>) => {
+      if (!uid) throw new Error("Usuario no autenticado.")
+      const row = fromAccount(input)
 
-  async function updateCategory(id: string, name: string, color: string) {
-    if (!user) throw new Error("Usuario no autenticado.")
-    const docRef = doc(db, "users", user.uid, "categories", id)
-    await setDoc(docRef, { name, color }, { merge: true })
-  }
+      // El saldo es derivado: para que la cuenta muestre el número que el usuario
+      // escribió, hay que corregir el saldo de arranque por la diferencia.
+      if (input.balance !== undefined) {
+        const actual = accounts.find((a) => a.id === id)
+        const { data } = await supabase.from("accounts").select("initial_balance").eq("id", id).single()
+        const movimientos = (actual?.balance ?? 0) - Number(data?.initial_balance ?? 0)
+        row.initial_balance = Math.round((input.balance - movimientos) * 100) / 100
+      }
 
-  async function deleteCategory(id: string) {
-    if (!user) throw new Error("Usuario no autenticado.")
-    const docRef = doc(db, "users", user.uid, "categories", id)
-    const { deleteDoc } = await import("firebase/firestore")
-    await deleteDoc(docRef)
-  }
+      const { error } = await supabase.from("accounts").update(row).eq("id", id)
+      if (error) fail(error, "No se pudo actualizar la cuenta.")
+      await loadAccounts()
+    },
+    [supabase, uid, accounts, loadAccounts]
+  )
 
-  // --- Stocks Portfolio Management ---
+  const deleteAccount = useCallback(
+    async (id: string) => {
+      const { error } = await supabase.from("accounts").delete().eq("id", id)
+      if (error) fail(error, "No se pudo eliminar la cuenta.")
+      await Promise.all([loadAccounts(), loadTransactions()])
+    },
+    [supabase, loadAccounts, loadTransactions]
+  )
+
+  // ---------------------------------------------------------------------------
+  // Movimientos
+  // ---------------------------------------------------------------------------
+
+  const addTransaction = useCallback(
+    async (input: NewTransactionInput) => {
+      const { error } = await supabase.rpc("create_transaction", {
+        p_type: input.type,
+        p_amount: input.amount,
+        p_account_id: input.accountId,
+        p_category: input.category,
+        p_occurred_at: input.date ?? new Date().toISOString(),
+        p_to_account_id: input.toAccountId ?? undefined,
+        p_to_amount: input.toAmount ?? undefined,
+        p_exchange_rate: input.exchangeRate ?? undefined,
+        p_note: input.note ?? undefined,
+        p_receipt_name: input.receiptName ?? undefined,
+        p_vehicle_id: undefined,
+      })
+      if (error) fail(error, "No se pudo registrar el movimiento.")
+      await Promise.all([loadTransactions(), loadAccounts()])
+    },
+    [supabase, loadTransactions, loadAccounts]
+  )
+
+  const updateTransaction = useCallback(
+    async (id: string, input: NewTransactionInput) => {
+      const previa = transactions.find((t) => t.id === id)
+      const { error } = await supabase.rpc("update_transaction", {
+        p_id: id,
+        p_type: input.type,
+        p_amount: input.amount,
+        p_account_id: input.accountId,
+        p_category: input.category,
+        p_occurred_at: input.date ?? previa?.date ?? new Date().toISOString(),
+        p_to_account_id: input.toAccountId ?? undefined,
+        p_to_amount: input.toAmount ?? undefined,
+        p_exchange_rate: input.exchangeRate ?? undefined,
+        p_note: input.note ?? undefined,
+        p_receipt_name: input.receiptName ?? undefined,
+        p_vehicle_id: previa?.vehicleId ?? undefined,
+      })
+      if (error) fail(error, "No se pudo modificar el movimiento.")
+      await Promise.all([loadTransactions(), loadAccounts()])
+    },
+    [supabase, transactions, loadTransactions, loadAccounts]
+  )
+
+  const deleteTransaction = useCallback(
+    async (id: string) => {
+      // Sin código de reversión: el saldo se deriva de los movimientos
+      const { error } = await supabase.from("transactions").delete().eq("id", id)
+      if (error) fail(error, "No se pudo eliminar el movimiento.")
+      await Promise.all([loadTransactions(), loadAccounts()])
+    },
+    [supabase, loadTransactions, loadAccounts]
+  )
+
+  // ---------------------------------------------------------------------------
+  // Categorías
+  // ---------------------------------------------------------------------------
+
+  const addCategory = useCallback(
+    async (name: string, type: "income" | "expense", color: string) => {
+      if (!uid) throw new Error("Usuario no autenticado.")
+      const { error } = await supabase.from("categories").insert({ user_id: uid, name, type, color })
+      if (error) fail(error, "No se pudo crear la categoría.")
+      await loadCategories()
+    },
+    [supabase, uid, loadCategories]
+  )
+
+  const updateCategory = useCallback(
+    async (id: string, name: string, color: string) => {
+      const { error } = await supabase.from("categories").update({ name, color }).eq("id", id)
+      if (error) fail(error, "No se pudo actualizar la categoría.")
+      await loadCategories()
+    },
+    [supabase, loadCategories]
+  )
+
+  const deleteCategory = useCallback(
+    async (id: string) => {
+      const { error } = await supabase.from("categories").delete().eq("id", id)
+      if (error) fail(error, "No se pudo eliminar la categoría.")
+      await loadCategories()
+    },
+    [supabase, loadCategories]
+  )
+
+  // ---------------------------------------------------------------------------
+  // Acciones
+  // ---------------------------------------------------------------------------
 
   const fetchPrices = useCallback(async (symbols: string[]) => {
     if (symbols.length === 0) return
-
     try {
-      const res = await fetch(`/api/stocks?symbols=${symbols.join(",")}`, {
-        headers: await getApiAuthHeaders(),
-      })
-      if (res.ok) {
-        const data = await res.json()
-        setStockPrices((prev) => {
-          const updated = { ...prev }
-          Object.keys(data).forEach((sym) => {
-            updated[sym] = data[sym]
-          })
-          return updated
-        })
-        return
-      }
+      const res = await fetch(`/api/stocks?symbols=${symbols.join(",")}`, { headers: await getApiAuthHeaders() })
+      if (!res.ok) return
+      const data = await res.json()
+      setStockPrices((prev) => ({ ...prev, ...data }))
     } catch (err) {
       console.warn("Error fetching market prices:", err)
     }
   }, [])
 
-  // Poll price updates from Yahoo Finance API every 30 seconds
   useEffect(() => {
     const symbols = Array.from(
-      new Set([
-        ...watchlist.map((w) => w.symbol),
-        ...stockTransactions.map((t) => t.symbol),
-      ])
+      new Set([...watchlist.map((w) => w.symbol), ...stockTransactions.map((t) => t.symbol)])
     )
     if (symbols.length === 0) return
 
     fetchPrices(symbols)
-
-    const interval = setInterval(() => {
-      fetchPrices(symbols)
-    }, 30000)
-
+    const interval = setInterval(() => fetchPrices(symbols), 30000)
     return () => clearInterval(interval)
   }, [watchlist, stockTransactions, fetchPrices])
 
-  // Calculate user holdings from history of buy/sell transactions
   const holdings = useMemo(() => {
     const map = new Map<string, { shares: number; totalCost: number }>()
-    const sortedTxs = [...stockTransactions].sort(
-      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
-    )
+    const sorted = [...stockTransactions].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
 
-    for (const tx of sortedTxs) {
+    for (const tx of sorted) {
       const current = map.get(tx.symbol) || { shares: 0, totalCost: 0 }
       if (tx.type === "buy") {
-        const nextShares = current.shares + tx.shares
-        const nextCost = current.totalCost + (tx.shares * tx.price)
-        map.set(tx.symbol, { shares: nextShares, totalCost: nextCost })
+        map.set(tx.symbol, {
+          shares: current.shares + tx.shares,
+          totalCost: current.totalCost + tx.shares * tx.price,
+        })
       } else {
         const nextShares = Math.max(0, current.shares - tx.shares)
-        const nextCost = nextShares === 0 ? 0 : current.totalCost * (nextShares / current.shares)
-        map.set(tx.symbol, { shares: nextShares, totalCost: nextCost })
+        map.set(tx.symbol, {
+          shares: nextShares,
+          totalCost: nextShares === 0 ? 0 : current.totalCost * (nextShares / current.shares),
+        })
       }
     }
 
     const list: StockHolding[] = []
     map.forEach((value, symbol) => {
       if (value.shares <= 0) return
-
       const avgBuyPrice = Number((value.totalCost / value.shares).toFixed(2))
       const priceInfo = stockPrices[symbol]
       const currentPrice = priceInfo?.price ?? avgBuyPrice
-      const name = priceInfo?.name ?? symbol
       const currentValue = Number((value.shares * currentPrice).toFixed(2))
       const profitLoss = Number((currentValue - value.totalCost).toFixed(2))
-      const profitLossPercent = value.totalCost > 0 ? Number(((profitLoss / value.totalCost) * 100).toFixed(2)) : 0
-
       list.push({
         symbol,
-        name,
+        name: priceInfo?.name ?? symbol,
         shares: value.shares,
         avgBuyPrice,
         totalCost: Number(value.totalCost.toFixed(2)),
         currentPrice,
         currentValue,
         profitLoss,
-        profitLossPercent,
+        profitLossPercent: value.totalCost > 0 ? Number(((profitLoss / value.totalCost) * 100).toFixed(2)) : 0,
       })
     })
-
     return list
   }, [stockTransactions, stockPrices])
 
-  const portfolioTotalValue = useMemo(() => {
-    return holdings.reduce((sum, h) => sum + h.currentValue, 0)
-  }, [holdings])
-
-  const portfolioTotalProfitLoss = useMemo(() => {
-    return holdings.reduce((sum, h) => sum + h.profitLoss, 0)
-  }, [holdings])
-
+  const portfolioTotalValue = useMemo(() => holdings.reduce((sum, h) => sum + h.currentValue, 0), [holdings])
+  const portfolioTotalProfitLoss = useMemo(() => holdings.reduce((sum, h) => sum + h.profitLoss, 0), [holdings])
   const portfolioTotalProfitLossPercent = useMemo(() => {
     const totalCost = holdings.reduce((sum, h) => sum + h.totalCost, 0)
     return totalCost > 0 ? Number(((portfolioTotalProfitLoss / totalCost) * 100).toFixed(2)) : 0
   }, [holdings, portfolioTotalProfitLoss])
 
-  async function addWatchlistStock(symbol: string) {
-    if (!user) throw new Error("Usuario no autenticado.")
-    const cleanSym = symbol.trim().toUpperCase()
-    if (!cleanSym) return
+  const addWatchlistStock = useCallback(
+    async (symbol: string) => {
+      if (!uid) throw new Error("Usuario no autenticado.")
+      const clean = symbol.trim().toUpperCase()
+      if (!clean) return
 
-    let name = `${cleanSym} Corp.`
-    try {
-      const res = await fetch(`/api/stocks?symbols=${cleanSym}`, {
-        headers: await getApiAuthHeaders(),
-      })
-      if (res.ok) {
-        const data = await res.json()
-        if (data[cleanSym]) {
-          name = data[cleanSym].name
-          setStockPrices((prev) => ({ ...prev, [cleanSym]: data[cleanSym] }))
-        }
-      }
-    } catch (e) {
-      console.warn("Could not fetch stock name:", e)
-    }
-
-    const docRef = doc(db, "users", user.uid, "watchlist", cleanSym)
-    await setDoc(docRef, {
-      id: cleanSym,
-      symbol: cleanSym,
-      name,
-      addedAt: new Date().toISOString(),
-    })
-  }
-
-  async function removeWatchlistStock(symbol: string) {
-    if (!user) throw new Error("Usuario no autenticado.")
-    const docRef = doc(db, "users", user.uid, "watchlist", symbol)
-    const { deleteDoc } = await import("firebase/firestore")
-    await deleteDoc(docRef)
-  }
-
-  async function executeStockTransaction(input: {
-    symbol: string
-    type: "buy" | "sell"
-    shares: number
-    price: number
-    date: string
-    accountId: string
-  }) {
-    if (!user) throw new Error("Usuario no autenticado.")
-
-    const symbol = input.symbol.trim().toUpperCase()
-    if (!symbol || !Number.isFinite(input.shares) || input.shares <= 0 || !Number.isFinite(input.price) || input.price <= 0) {
-      throw new Error("Los datos de la operación no son válidos.")
-    }
-    const txId = `st-${Date.now()}`
-    const txDocRef = doc(db, "users", user.uid, "stockTransactions", txId)
-    const accountRef = doc(db, "users", user.uid, "accounts", input.accountId)
-    const positionRef = doc(db, "users", user.uid, "stockPositions", symbol)
-
-    const existingShares = stockTransactions
-      .filter((tx) => tx.symbol === symbol)
-      .reduce((total, tx) => total + (tx.type === "buy" ? tx.shares : -tx.shares), 0)
-
-    const totalAmount = Math.round(input.shares * input.price * 100) / 100
-
-    const originalAccounts = [...accounts]
-    setAccounts((prev) =>
-      prev.map((acc) => {
-        if (acc.id === input.accountId) {
-          const bal = Number(acc.balance)
-          const newBal = Math.round((input.type === "buy" ? bal - totalAmount : bal + totalAmount) * 100) / 100
-          return { ...acc, balance: newBal }
-        }
-        return acc
-      })
-    )
-
-    try {
-      await runTransaction(db, async (transaction) => {
-        const accSnap = await transaction.get(accountRef)
-        const positionSnap = await transaction.get(positionRef)
-        if (!accSnap.exists()) {
-          throw new Error("La cuenta seleccionada no existe.")
-        }
-        const accData = accSnap.data() as Account
-        if (accData.currency !== "USD") {
-          throw new Error("Las operaciones bursátiles requieren una cuenta en USD.")
-        }
-        const bal = Number(accData.balance)
-        const currentShares = positionSnap.exists()
-          ? Number(positionSnap.data().shares ?? 0)
-          : Math.max(0, existingShares)
-
-        if (input.type === "buy" && bal < totalAmount) {
-          throw new Error("Saldo insuficiente en la cuenta seleccionada.")
-        }
-        if (input.type === "sell" && currentShares < input.shares) {
-          throw new Error("No tenés suficientes acciones para realizar esta venta.")
-        }
-
-        const newBal = Math.round((input.type === "buy" ? bal - totalAmount : bal + totalAmount) * 100) / 100
-
-        transaction.set(txDocRef, {
-          id: txId,
-          symbol,
-          type: input.type,
-          shares: input.shares,
-          price: Math.round(input.price * 100) / 100,
-          date: input.date,
-          accountId: input.accountId,
-        })
-
-        transaction.update(accountRef, { balance: newBal })
-        transaction.set(positionRef, {
-          symbol,
-          shares: Math.round((currentShares + (input.type === "buy" ? input.shares : -input.shares)) * 1e8) / 1e8,
-          updatedAt: new Date().toISOString(),
-        })
-
-        const finTxId = `t-${Date.now()}`
-        const finTxDocRef = doc(db, "users", user.uid, "transactions", finTxId)
-
-        transaction.set(finTxDocRef, {
-          id: finTxId,
-          type: input.type === "buy" ? "expense" : "income",
-          amount: totalAmount,
-          accountId: input.accountId,
-          currency: "USD",
-          toAccountId: null,
-          toAmount: null,
-          exchangeRate: null,
-          category: "Inversiones",
-          note: `${input.type === "buy" ? "Compra" : "Venta"} de ${input.shares} acciones de ${symbol} @ $${input.price}`,
-          date: input.date,
-          receiptName: null,
-        })
-      })
-    } catch (err) {
-      setAccounts(originalAccounts)
-      throw err
-    }
-  }
-
-  // --- Vehicles and Vehicle Logs Management ---
-
-  async function addVehicle(input: Omit<Vehicle, "id" | "createdAt">) {
-    if (!user) throw new Error("Usuario no autenticado.")
-    const newVehRef = doc(collection(db, "users", user.uid, "vehicles"))
-    await setDoc(newVehRef, {
-      id: newVehRef.id,
-      ...input,
-      createdAt: new Date().toISOString(),
-    })
-  }
-
-  async function updateVehicle(id: string, input: Partial<Omit<Vehicle, "id" | "createdAt">>) {
-    if (!user) throw new Error("Usuario no autenticado.")
-    const docRef = doc(db, "users", user.uid, "vehicles", id)
-    await setDoc(docRef, input, { merge: true })
-  }
-
-  async function deleteVehicle(id: string) {
-    if (!user) throw new Error("Usuario no autenticado.")
-
-    // We will delete the vehicle doc
-    const docRef = doc(db, "users", user.uid, "vehicles", id)
-    const { deleteDoc } = await import("firebase/firestore")
-    await deleteDoc(docRef)
-
-    // Delete associated logs and transactions
-    const associatedLogs = vehicleLogs.filter((vl) => vl.vehicleId === id)
-    if (associatedLogs.length > 0) {
-      const batch = writeBatch(db)
-      associatedLogs.forEach((log) => {
-        const logRef = doc(db, "users", user.uid, "vehicleLogs", log.id)
-        batch.delete(logRef)
-        if (log.transactionId) {
-          const txRef = doc(db, "users", user.uid, "transactions", log.transactionId)
-          batch.delete(txRef)
-        }
-      })
-      await batch.commit()
-    }
-  }
-
-  async function addVehicleLog(rawInput: Omit<VehicleLog, "id" | "transactionId">) {
-    if (!user) throw new Error("Usuario no autenticado.")
-
-    const input = { ...rawInput } as any
-    Object.keys(input).forEach((key) => {
-      if (input[key] === undefined) {
-        input[key] = null
-      }
-    })
-
-    const logId = `vl-${Date.now()}`
-    const logDocRef = doc(db, "users", user.uid, "vehicleLogs", logId)
-    const vehicleRef = doc(db, "users", user.uid, "vehicles", input.vehicleId)
-
-    const hasSync = !!input.accountId && input.amount > 0
-    const txId = hasSync ? `t-${Date.now()}` : null
-    const txDocRef = txId ? doc(db, "users", user.uid, "transactions", txId) : null
-    const accountRef = input.accountId ? doc(db, "users", user.uid, "accounts", input.accountId) : null
-
-    const originalAccounts = [...accounts]
-    const originalVehicles = [...vehicles]
-
-    // Optimistically update account balances
-    if (hasSync && input.accountId) {
-      setAccounts((prev) =>
-        prev.map((acc) => {
-          if (acc.id === input.accountId) {
-            return { ...acc, balance: Number(acc.balance) - input.amount }
-          }
-          return acc
-        })
-      )
-    }
-
-    // Optimistically update vehicle odometer
-    setVehicles((prev) =>
-      prev.map((v) => {
-        if (v.id === input.vehicleId && input.odometer > v.odometer) {
-          return { ...v, odometer: input.odometer }
-        }
-        return v
-      })
-    )
-
-    try {
-      await runTransaction(db, async (transaction) => {
-        // 1. READS FIRST
-        const vehSnap = await transaction.get(vehicleRef)
-        if (!vehSnap.exists()) {
-          throw new Error("El vehículo no existe.")
-        }
-        const vehData = vehSnap.data() as Vehicle
-        const currentOdometer = Number(vehData.odometer)
-
-        let newBalance = 0
-        let accountCurrency: Currency | null = null
-        if (accountRef) {
-          const accSnap = await transaction.get(accountRef)
-          if (!accSnap.exists()) {
-            throw new Error("La cuenta seleccionada no existe.")
-          }
-          const accData = accSnap.data() as Account
-          accountCurrency = accData.currency
-          newBalance = Number(accData.balance) - input.amount
-        }
-
-        // 2. WRITES
-        // Save vehicle log
-        transaction.set(logDocRef, {
-          id: logId,
-          ...input,
-          transactionId: txId || null,
-        })
-
-        // Update vehicle odometer if higher
-        if (input.odometer > currentOdometer) {
-          transaction.update(vehicleRef, { odometer: input.odometer })
-        }
-
-        // Create transaction and update account balance if synced
-        if (txDocRef && accountRef) {
-          let note = `[${vehData.name}] `
-          if (input.type === "fuel") {
-            note += `Combustible ${input.gasStation || ""} (${input.liters || 0} L)`
-          } else if (input.type === "service") {
-            note += `Service: ${input.serviceType || ""}`
-          } else if (input.type === "part") {
-            note += `Repuesto: ${input.itemName || ""}`
-          } else if (input.type === "gear") {
-            note += `Indumentaria: ${input.itemName || ""}`
-          } else if (input.type === "insurance") {
-            note += `Seguro / Patente`
-          } else {
-            note += `Gasto`
-          }
-          if (input.note) {
-            note += ` - ${input.note}`
-          }
-
-          transaction.set(txDocRef, {
-            id: txId,
-            type: "expense",
-            amount: input.amount,
-            accountId: input.accountId,
-            currency: accountCurrency,
-            toAccountId: null,
-            toAmount: null,
-            exchangeRate: null,
-            category: "Transporte",
-            note: note,
-            date: input.date,
-            receiptName: null,
-            vehicleId: input.vehicleId || null,
-          })
-
-          transaction.update(accountRef, { balance: newBalance })
-        }
-      })
-    } catch (err) {
-      setAccounts(originalAccounts)
-      setVehicles(originalVehicles)
-      throw err
-    }
-  }
-
-  async function updateVehicleLog(id: string, rawInput: Omit<VehicleLog, "id">) {
-    if (!user) throw new Error("Usuario no autenticado.")
-
-    const input = { ...rawInput } as any
-    Object.keys(input).forEach((key) => {
-      if (input[key] === undefined) {
-        input[key] = null
-      }
-    })
-
-    const logDocRef = doc(db, "users", user.uid, "vehicleLogs", id)
-    const oldLog = vehicleLogs.find((vl) => vl.id === id)
-    if (!oldLog) throw new Error("El registro no existe.")
-
-    const vehicleRef = doc(db, "users", user.uid, "vehicles", input.vehicleId)
-
-    const originalAccounts = [...accounts]
-    const originalVehicles = [...vehicles]
-
-    try {
-      await runTransaction(db, async (transaction) => {
-        // 1. READS FIRST
-        const vehSnap = await transaction.get(vehicleRef)
-        if (!vehSnap.exists()) throw new Error("El vehículo no existe.")
-        const vehData = vehSnap.data() as Vehicle
-        const currentOdometer = Number(vehData.odometer)
-
-        let oldAccSnap = null
-        if (oldLog.accountId) {
-          const oldAccRef = doc(db, "users", user.uid, "accounts", oldLog.accountId)
-          oldAccSnap = await transaction.get(oldAccRef)
-        }
-
-        let newAccSnap = null
-        if (input.accountId) {
-          if (oldLog.accountId === input.accountId) {
-            newAccSnap = oldAccSnap
-          } else {
-            const newAccRef = doc(db, "users", user.uid, "accounts", input.accountId)
-            newAccSnap = await transaction.get(newAccRef)
+      let name = `${clean} Corp.`
+      try {
+        const res = await fetch(`/api/stocks?symbols=${clean}`, { headers: await getApiAuthHeaders() })
+        if (res.ok) {
+          const data = await res.json()
+          if (data[clean]) {
+            name = data[clean].name
+            setStockPrices((prev) => ({ ...prev, [clean]: data[clean] }))
           }
         }
-
-        // 2. WRITES
-        let oldAccFinalBalance = oldAccSnap && oldAccSnap.exists() ? Math.round((Number(oldAccSnap.data().balance) + oldLog.amount) * 100) / 100 : 0
-        let newAccFinalBalance = 0
-
-        if (input.accountId && newAccSnap && newAccSnap.exists()) {
-          if (oldLog.accountId === input.accountId) {
-            newAccFinalBalance = Math.round((oldAccFinalBalance - input.amount) * 100) / 100
-            oldAccFinalBalance = newAccFinalBalance
-          } else {
-            newAccFinalBalance = Math.round((Number(newAccSnap.data().balance) - input.amount) * 100) / 100
-          }
-        }
-
-        // Apply account balance updates
-        if (oldLog.accountId && oldAccSnap && oldAccSnap.exists()) {
-          const oldAccRef = doc(db, "users", user.uid, "accounts", oldLog.accountId)
-          transaction.update(oldAccRef, { balance: oldAccFinalBalance })
-        }
-        if (input.accountId && newAccSnap && newAccSnap.exists() && oldLog.accountId !== input.accountId) {
-          const newAccRef = doc(db, "users", user.uid, "accounts", input.accountId)
-          transaction.update(newAccRef, { balance: newAccFinalBalance })
-        }
-
-        // Manage transaction document (link, update, or unlink)
-        const finalTxId = oldLog.transactionId || (input.accountId ? `t-${Date.now()}` : null)
-        const finalTxDocRef = finalTxId ? doc(db, "users", user.uid, "transactions", finalTxId) : null
-
-        if (oldLog.transactionId && !input.accountId) {
-          const oldTxRef = doc(db, "users", user.uid, "transactions", oldLog.transactionId)
-          transaction.delete(oldTxRef)
-        } else if (finalTxDocRef && input.accountId) {
-          let note = `[${vehData.name}] `
-          if (input.type === "fuel") {
-            note += `Combustible ${input.gasStation || ""} (${input.liters || 0} L)`
-          } else if (input.type === "service") {
-            note += `Service: ${input.serviceType || ""}`
-          } else if (input.type === "part") {
-            note += `Repuesto: ${input.itemName || ""}`
-          } else if (input.type === "gear") {
-            note += `Indumentaria: ${input.itemName || ""}`
-          } else if (input.type === "insurance") {
-            note += `Seguro / Patente`
-          } else {
-            note += `Gasto`
-          }
-          if (input.note) {
-            note += ` - ${input.note}`
-          }
-
-          transaction.set(finalTxDocRef, {
-            id: finalTxId,
-            type: "expense",
-            amount: input.amount,
-            accountId: input.accountId,
-            currency: (newAccSnap!.data() as Account).currency,
-            toAccountId: null,
-            toAmount: null,
-            exchangeRate: null,
-            category: "Transporte",
-            note: note,
-            date: input.date,
-            receiptName: null,
-            vehicleId: input.vehicleId || null,
-          })
-        }
-
-        // Update vehicle log doc
-        transaction.set(logDocRef, {
-          id: id,
-          ...input,
-          transactionId: finalTxId || null,
-        })
-
-        // Update odometer if higher
-        if (input.odometer > currentOdometer) {
-          transaction.update(vehicleRef, { odometer: input.odometer })
-        }
-      })
-    } catch (err) {
-      setAccounts(originalAccounts)
-      setVehicles(originalVehicles)
-      throw err
-    }
-  }
-
-  async function deleteVehicleLog(id: string) {
-    if (!user) throw new Error("Usuario no autenticado.")
-
-    const logDocRef = doc(db, "users", user.uid, "vehicleLogs", id)
-    const oldLog = vehicleLogs.find((vl) => vl.id === id)
-    if (!oldLog) throw new Error("El registro no existe.")
-
-    const originalAccounts = [...accounts]
-
-    try {
-      await runTransaction(db, async (transaction) => {
-        if (oldLog.accountId && oldLog.transactionId) {
-          const accRef = doc(db, "users", user.uid, "accounts", oldLog.accountId)
-          const accSnap = await transaction.get(accRef)
-          if (accSnap.exists()) {
-            const accData = accSnap.data() as Account
-            transaction.update(accRef, { balance: Math.round((Number(accData.balance) + oldLog.amount) * 100) / 100 })
-          }
-
-          const txRef = doc(db, "users", user.uid, "transactions", oldLog.transactionId)
-          transaction.delete(txRef)
-        }
-
-        transaction.delete(logDocRef)
-      })
-    } catch (err) {
-      setAccounts(originalAccounts)
-      throw err
-    }
-  }
-
-  // --- Due Dates & Recurring Services Management ---
-
-  function calcNextDueDate(currentDueDate: string, frequency: DueFrequency): string {
-    const parts = currentDueDate.split("-").map(Number)
-    if (parts.length !== 3 || parts.some(isNaN)) {
-      const d = new Date()
-      return d.toISOString().split("T")[0]
-    }
-    const [y, m, d] = parts
-    const date = new Date(Date.UTC(y, m - 1, d))
-
-    if (frequency === "monthly") {
-      const targetMonth = m
-      const targetYear = y + Math.floor(targetMonth / 12)
-      const normalizedMonth = targetMonth % 12
-      const lastDay = new Date(Date.UTC(targetYear, normalizedMonth + 1, 0)).getUTCDate()
-      date.setUTCFullYear(targetYear, normalizedMonth, Math.min(d, lastDay))
-    } else if (frequency === "yearly") {
-      const lastDay = new Date(Date.UTC(y + 1, m, 0)).getUTCDate()
-      date.setUTCFullYear(y + 1, m - 1, Math.min(d, lastDay))
-    } else if (frequency === "biweekly") {
-      date.setUTCDate(date.getUTCDate() + 14)
-    }
-    return date.toISOString().split("T")[0]
-  }
-
-  async function addDueItem(input: Omit<DueItem, "id" | "createdAt">) {
-    if (!user) throw new Error("Usuario no autenticado.")
-    const newRef = doc(collection(db, "users", user.uid, "dueItems"))
-    await setDoc(newRef, {
-      id: newRef.id,
-      ...input,
-      status: input.status || "pending",
-      createdAt: new Date().toISOString(),
-    })
-  }
-
-  async function updateDueItem(id: string, input: Partial<Omit<DueItem, "id">>) {
-    if (!user) throw new Error("Usuario no autenticado.")
-    const docRef = doc(db, "users", user.uid, "dueItems", id)
-    await setDoc(docRef, { ...input, updatedAt: new Date().toISOString() }, { merge: true })
-  }
-
-  async function deleteDueItem(id: string) {
-    if (!user) throw new Error("Usuario no autenticado.")
-    const docRef = doc(db, "users", user.uid, "dueItems", id)
-    const { deleteDoc } = await import("firebase/firestore")
-    await deleteDoc(docRef)
-  }
-
-  async function markDueItemAsPaid(
-    id: string,
-    registerTx?: { accountId: string; amount?: number; category?: string; note?: string }
-  ) {
-    if (!user) throw new Error("Usuario no autenticado.")
-    const expectedItem = dueItems.find((item) => item.id === id)
-    if (!expectedItem) throw new Error("El vencimiento no existe.")
-    const nowIso = new Date().toISOString()
-    const docRef = doc(db, "users", user.uid, "dueItems", id)
-    const accountRef = registerTx?.accountId
-      ? doc(db, "users", user.uid, "accounts", registerTx.accountId)
-      : null
-    const txId = `t-due-${id}-${Date.now()}`
-    const txRef = doc(db, "users", user.uid, "transactions", txId)
-
-    await runTransaction(db, async (transaction) => {
-      const itemSnap = await transaction.get(docRef)
-      if (!itemSnap.exists()) throw new Error("El vencimiento no existe.")
-      const item = { id: itemSnap.id, ...itemSnap.data() } as DueItem
-      if (item.status === "paid") throw new Error("El vencimiento ya fue pagado.")
-      if (item.dueDate !== expectedItem.dueDate) {
-        throw new Error("Este vencimiento ya fue procesado o actualizado.")
+      } catch {
+        // el nombre es cosmético: si la cotización no responde, se guarda igual
       }
 
-      const accountSnap = accountRef ? await transaction.get(accountRef) : null
-      if (accountRef && !accountSnap?.exists()) throw new Error("La cuenta seleccionada no existe.")
+      const { error } = await supabase.from("watchlist").upsert({ user_id: uid, symbol: clean, name })
+      if (error) fail(error, "No se pudo agregar el símbolo.")
+      await loadWatchlist()
+    },
+    [supabase, uid, loadWatchlist]
+  )
 
-      if (accountRef && accountSnap) {
-        const amount = registerTx?.amount ?? item.amount
-        if (!Number.isFinite(amount) || amount <= 0) throw new Error("El importe no es válido.")
-        const balance = Number(accountSnap.data()!.balance)
-        transaction.update(accountRef, { balance: Math.round((balance - amount) * 100) / 100 })
-        transaction.set(txRef, {
-          id: txId,
-          type: "expense",
-          amount: Math.round(amount * 100) / 100,
-          accountId: registerTx!.accountId,
-          currency: (accountSnap.data() as Account).currency,
-          toAccountId: null,
-          toAmount: null,
-          exchangeRate: null,
-          category: registerTx?.category || item.category || "Servicios",
-          note: registerTx?.note || `Pago de vencimiento: ${item.title}`,
-          date: nowIso,
-          receiptName: null,
-        })
-      }
+  const removeWatchlistStock = useCallback(
+    async (symbol: string) => {
+      const { error } = await supabase.from("watchlist").delete().eq("symbol", symbol.toUpperCase())
+      if (error) fail(error, "No se pudo quitar el símbolo.")
+      await loadWatchlist()
+    },
+    [supabase, loadWatchlist]
+  )
 
-      const recurring = item.autoRenew && item.frequency !== "one_time"
-      transaction.update(docRef, {
-        ...(recurring ? { dueDate: calcNextDueDate(item.dueDate, item.frequency) } : {}),
-        status: recurring ? "pending" : "paid",
-        paidAt: nowIso,
-        updatedAt: nowIso,
+  const executeStockTransaction = useCallback(
+    async (input: { symbol: string; type: "buy" | "sell"; shares: number; price: number; date: string; accountId: string }) => {
+      const { error } = await supabase.rpc("execute_stock_trade", {
+        p_symbol: input.symbol,
+        p_side: input.type,
+        p_shares: input.shares,
+        p_price: input.price,
+        p_account_id: input.accountId,
+        p_occurred_at: input.date,
       })
-    })
-  }
+      if (error) fail(error, "No se pudo registrar la operación.")
+      await Promise.all([loadStockTrades(), loadTransactions(), loadAccounts()])
+    },
+    [supabase, loadStockTrades, loadTransactions, loadAccounts]
+  )
 
-  async function markDueItemAsPending(id: string) {
-    if (!user) throw new Error("Usuario no autenticado.")
-    const docRef = doc(db, "users", user.uid, "dueItems", id)
-    await setDoc(
-      docRef,
-      {
-        status: "pending",
-        paidAt: null,
-        updatedAt: new Date().toISOString(),
-      },
-      { merge: true }
-    )
-  }
+  // ---------------------------------------------------------------------------
+  // Vehículos
+  // ---------------------------------------------------------------------------
 
-  async function saveFCMToken(token: string) {
-    if (!user || !token) return
-    const tokenRef = doc(db, "users", user.uid, "fcmTokens", token)
-    await setDoc(tokenRef, {
-      token,
-      updatedAt: new Date().toISOString(),
-      userAgent: typeof navigator !== "undefined" ? navigator.userAgent : "",
-    })
-  }
+  const addVehicle = useCallback(
+    async (input: Omit<Vehicle, "id" | "createdAt">) => {
+      if (!uid) throw new Error("Usuario no autenticado.")
+      const { error } = await supabase.from("vehicles").insert({
+        user_id: uid,
+        name: input.name,
+        type: input.type,
+        brand: input.brand ?? null,
+        model: input.model ?? null,
+        year: input.year ?? null,
+        plate: input.plate ?? null,
+        odometer: Math.round(input.odometer ?? 0),
+        fuel_capacity: input.fuelCapacity ?? null,
+      })
+      if (error) fail(error, "No se pudo crear el vehículo.")
+      await loadVehicles()
+    },
+    [supabase, uid, loadVehicles]
+  )
 
-  async function updateMacroSettings(settings: Partial<MacroSettings>) {
-    const updated = {
-      ...macroSettings,
-      ...settings,
-      lastUpdated: new Date().toISOString(),
-    }
-    setMacroSettings(updated)
-    if (user) {
-      const macroRef = doc(db, "users", user.uid, "settings", "macro")
-      await setDoc(macroRef, updated, { merge: true })
-    }
-  }
+  const updateVehicle = useCallback(
+    async (id: string, input: Partial<Omit<Vehicle, "id" | "createdAt">>) => {
+      const { error } = await supabase.from("vehicles").update(fromVehicle(input)).eq("id", id)
+      if (error) fail(error, "No se pudo actualizar el vehículo.")
+      await loadVehicles()
+    },
+    [supabase, loadVehicles]
+  )
 
-  async function syncMacroFromApi(): Promise<MacroSettings> {
+  const deleteVehicle = useCallback(
+    async (id: string) => {
+      const { error } = await supabase.rpc("delete_vehicle", { p_id: id })
+      if (error) fail(error, "No se pudo eliminar el vehículo.")
+      await Promise.all([loadVehicles(), loadVehicleLogs(), loadTransactions(), loadAccounts()])
+    },
+    [supabase, loadVehicles, loadVehicleLogs, loadTransactions, loadAccounts]
+  )
+
+  const addVehicleLog = useCallback(
+    async (input: Omit<VehicleLog, "id" | "transactionId">) => {
+      const { error } = await supabase.rpc("create_vehicle_log", {
+        p_vehicle_id: input.vehicleId,
+        p_type: input.type,
+        p_occurred_at: input.date,
+        p_odometer: Math.round(input.odometer ?? 0),
+        p_amount: input.amount ?? 0,
+        p_account_id: input.accountId ?? undefined,
+        p_note: input.note ?? undefined,
+        p_extra: vehicleLogExtras(input),
+      })
+      if (error) fail(error, "No se pudo registrar el gasto del vehículo.")
+      await Promise.all([loadVehicleLogs(), loadVehicles(), loadTransactions(), loadAccounts()])
+    },
+    [supabase, loadVehicleLogs, loadVehicles, loadTransactions, loadAccounts]
+  )
+
+  const updateVehicleLog = useCallback(
+    async (id: string, input: Omit<VehicleLog, "id">) => {
+      // Editar un registro es borrarlo y volver a crearlo: así el gasto asociado
+      // se recalcula por el mismo camino que una alta, sin lógica duplicada.
+      const { error: deleteError } = await supabase.rpc("delete_vehicle_log", { p_id: id })
+      if (deleteError) fail(deleteError, "No se pudo actualizar el registro.")
+
+      const { error } = await supabase.rpc("create_vehicle_log", {
+        p_vehicle_id: input.vehicleId,
+        p_type: input.type,
+        p_occurred_at: input.date,
+        p_odometer: Math.round(input.odometer ?? 0),
+        p_amount: input.amount ?? 0,
+        p_account_id: input.accountId ?? undefined,
+        p_note: input.note ?? undefined,
+        p_extra: vehicleLogExtras(input),
+      })
+      if (error) fail(error, "No se pudo actualizar el registro.")
+      await Promise.all([loadVehicleLogs(), loadVehicles(), loadTransactions(), loadAccounts()])
+    },
+    [supabase, loadVehicleLogs, loadVehicles, loadTransactions, loadAccounts]
+  )
+
+  const deleteVehicleLog = useCallback(
+    async (id: string) => {
+      const { error } = await supabase.rpc("delete_vehicle_log", { p_id: id })
+      if (error) fail(error, "No se pudo eliminar el registro.")
+      await Promise.all([loadVehicleLogs(), loadTransactions(), loadAccounts()])
+    },
+    [supabase, loadVehicleLogs, loadTransactions, loadAccounts]
+  )
+
+  // ---------------------------------------------------------------------------
+  // Vencimientos
+  // ---------------------------------------------------------------------------
+
+  const addDueItem = useCallback(
+    async (input: Omit<DueItem, "id" | "createdAt">) => {
+      if (!uid) throw new Error("Usuario no autenticado.")
+      const { error } = await supabase.from("due_items").insert({
+        user_id: uid,
+        title: input.title,
+        category: input.category,
+        amount: input.amount,
+        currency: input.currency,
+        due_date: input.dueDate,
+        frequency: input.frequency,
+        reminder_days_before: input.reminderDaysBefore,
+        auto_renew: input.autoRenew,
+        account_id: input.accountId || null,
+        status: input.status || "pending",
+      })
+      if (error) fail(error, "No se pudo crear el vencimiento.")
+      await loadDueItems()
+    },
+    [supabase, uid, loadDueItems]
+  )
+
+  const updateDueItem = useCallback(
+    async (id: string, input: Partial<Omit<DueItem, "id">>) => {
+      const { error } = await supabase
+        .from("due_items")
+        .update({ ...fromDueItem(input), updated_at: new Date().toISOString() })
+        .eq("id", id)
+      if (error) fail(error, "No se pudo actualizar el vencimiento.")
+      await loadDueItems()
+    },
+    [supabase, loadDueItems]
+  )
+
+  const deleteDueItem = useCallback(
+    async (id: string) => {
+      const { error } = await supabase.from("due_items").delete().eq("id", id)
+      if (error) fail(error, "No se pudo eliminar el vencimiento.")
+      await loadDueItems()
+    },
+    [supabase, loadDueItems]
+  )
+
+  const markDueItemAsPaid = useCallback(
+    async (id: string, registerTx?: { accountId: string; amount?: number; category?: string; note?: string }) => {
+      const { error } = await supabase.rpc("pay_due_item", {
+        p_id: id,
+        p_account_id: registerTx?.accountId ?? undefined,
+        p_amount: registerTx?.amount ?? undefined,
+        p_category: registerTx?.category ?? undefined,
+        p_note: registerTx?.note ?? undefined,
+      })
+      if (error) fail(error, "No se pudo registrar el pago.")
+      await Promise.all([loadDueItems(), loadTransactions(), loadAccounts()])
+    },
+    [supabase, loadDueItems, loadTransactions, loadAccounts]
+  )
+
+  const markDueItemAsPending = useCallback(
+    async (id: string) => {
+      const { error } = await supabase
+        .from("due_items")
+        .update({ status: "pending", paid_at: null, updated_at: new Date().toISOString() })
+        .eq("id", id)
+      if (error) fail(error, "No se pudo actualizar el vencimiento.")
+      await loadDueItems()
+    },
+    [supabase, loadDueItems]
+  )
+
+  // ---------------------------------------------------------------------------
+  // Preferencias y notificaciones
+  // ---------------------------------------------------------------------------
+
+  const saveFCMToken = useCallback(
+    async (token: string) => {
+      if (!uid || !token) return
+      await supabase.from("push_tokens").upsert({
+        token,
+        user_id: uid,
+        user_agent: typeof navigator !== "undefined" ? navigator.userAgent : null,
+        updated_at: new Date().toISOString(),
+      })
+    },
+    [supabase, uid]
+  )
+
+  const updateMacroSettings = useCallback(
+    async (settings: Partial<MacroSettings>) => {
+      const updated = { ...macroSettings, ...settings, lastUpdated: new Date().toISOString() }
+      setMacroSettings(updated)
+      if (!uid) return
+
+      const { error } = await supabase.from("user_settings").upsert({
+        user_id: uid,
+        exchange_rate: updated.exchangeRate,
+        annual_inflation: updated.annualInflation,
+        annual_devaluation: updated.annualDevaluation,
+        annual_return: updated.annualReturn,
+        rates: updated.rates ?? null,
+        updated_at: updated.lastUpdated,
+      })
+      if (error) console.error("No se pudieron guardar las preferencias:", error.message)
+    },
+    [supabase, uid, macroSettings]
+  )
+
+  const syncMacroFromApi = useCallback(async (): Promise<MacroSettings> => {
     try {
       const res = await fetch("/api/macro", { headers: await getApiAuthHeaders() })
       if (res.ok) {
         const data = await res.json()
-        const newSettings: MacroSettings = {
+        const next: MacroSettings = {
           exchangeRate: data.recommendedExchangeRate ?? 1250,
           annualInflation: data.annualInflation ?? 45,
           annualDevaluation: data.annualDevaluation ?? 40,
@@ -1524,78 +1041,133 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
           lastUpdated: data.lastUpdated || new Date().toISOString(),
           rates: data.rates,
         }
-        await updateMacroSettings(newSettings)
-        return newSettings
+        await updateMacroSettings(next)
+        return next
       }
-    } catch (e) {
-      console.error("Error syncing macro data from API:", e)
+    } catch (err) {
+      console.error("Error syncing macro data from API:", err)
     }
     return macroSettings
-  }
+  }, [macroSettings, updateMacroSettings])
 
-  const totalsByCurrency = useMemo(() => {
-    return accounts.reduce(
-      (acc, a) => {
-        acc[a.currency] = (acc[a.currency] ?? 0) + Number(a.balance)
-        return acc
-      },
-      { ARS: 0, USD: 0 } as Record<Currency, number>,
-    )
-  }, [accounts])
+  const totalsByCurrency = useMemo(
+    () =>
+      accounts.reduce(
+        (acc, a) => {
+          acc[a.currency] = (acc[a.currency] ?? 0) + Number(a.balance)
+          return acc
+        },
+        { ARS: 0, USD: 0 } as Record<Currency, number>
+      ),
+    [accounts]
+  )
 
-  const value: FinanceContextValue = {
-    user,
-    loading,
-    login,
-    loginWithGoogle,
-    logout,
-    sendPasswordResetLink,
-    changePassword,
-    sendEmailVerificationLink,
-    reloadUser,
-    accounts,
-    transactions,
-    categories,
-    addTransaction,
-    updateTransaction,
-    deleteTransaction,
-    addAccount,
-    updateAccount,
-    deleteAccount,
-    addCategory,
-    updateCategory,
-    deleteCategory,
-    getAccount,
-    totalsByCurrency,
-    watchlist,
-    stockTransactions,
-    stockPrices,
-    holdings,
-    portfolioTotalValue,
-    portfolioTotalProfitLoss,
-    portfolioTotalProfitLossPercent,
-    addWatchlistStock,
-    removeWatchlistStock,
-    executeStockTransaction,
-    vehicles,
-    vehicleLogs,
-    addVehicle,
-    updateVehicle,
-    deleteVehicle,
-    addVehicleLog,
-    updateVehicleLog,
-    deleteVehicleLog,
-    dueItems,
-    addDueItem,
-    updateDueItem,
-    deleteDueItem,
-    markDueItemAsPaid,
-    markDueItemAsPending,
-    saveFCMToken,
-    macroSettings,
-    updateMacroSettings,
-    syncMacroFromApi,
-  }
+  const value: FinanceContextValue = useMemo(
+    () => ({
+      user,
+      loading,
+      login,
+      logout,
+      sendPasswordResetLink,
+      changePassword,
+      sendEmailVerificationLink,
+      reloadUser,
+      accounts,
+      transactions,
+      categories,
+      addTransaction,
+      updateTransaction,
+      deleteTransaction,
+      addAccount,
+      updateAccount,
+      deleteAccount,
+      addCategory,
+      updateCategory,
+      deleteCategory,
+      getAccount,
+      totalsByCurrency,
+      watchlist,
+      stockTransactions,
+      stockPrices,
+      holdings,
+      portfolioTotalValue,
+      portfolioTotalProfitLoss,
+      portfolioTotalProfitLossPercent,
+      addWatchlistStock,
+      removeWatchlistStock,
+      executeStockTransaction,
+      vehicles,
+      vehicleLogs,
+      addVehicle,
+      updateVehicle,
+      deleteVehicle,
+      addVehicleLog,
+      updateVehicleLog,
+      deleteVehicleLog,
+      dueItems,
+      addDueItem,
+      updateDueItem,
+      deleteDueItem,
+      markDueItemAsPaid,
+      markDueItemAsPending,
+      saveFCMToken,
+      macroSettings,
+      updateMacroSettings,
+      syncMacroFromApi,
+    }),
+    [
+      user,
+      loading,
+      login,
+      logout,
+      sendPasswordResetLink,
+      changePassword,
+      sendEmailVerificationLink,
+      reloadUser,
+      accounts,
+      transactions,
+      categories,
+      addTransaction,
+      updateTransaction,
+      deleteTransaction,
+      addAccount,
+      updateAccount,
+      deleteAccount,
+      addCategory,
+      updateCategory,
+      deleteCategory,
+      getAccount,
+      totalsByCurrency,
+      watchlist,
+      stockTransactions,
+      stockPrices,
+      holdings,
+      portfolioTotalValue,
+      portfolioTotalProfitLoss,
+      portfolioTotalProfitLossPercent,
+      addWatchlistStock,
+      removeWatchlistStock,
+      executeStockTransaction,
+      vehicles,
+      vehicleLogs,
+      addVehicle,
+      updateVehicle,
+      deleteVehicle,
+      addVehicleLog,
+      updateVehicleLog,
+      deleteVehicleLog,
+      dueItems,
+      addDueItem,
+      updateDueItem,
+      deleteDueItem,
+      markDueItemAsPaid,
+      markDueItemAsPending,
+      saveFCMToken,
+      macroSettings,
+      updateMacroSettings,
+      syncMacroFromApi,
+    ]
+  )
 
   return <FinanceContext.Provider value={value}>{children}</FinanceContext.Provider>
 }

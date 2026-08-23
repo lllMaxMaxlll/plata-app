@@ -1,7 +1,7 @@
 "use client"
 
 import { ArrowDownLeft, ArrowUpRight, ArrowLeftRight, Paperclip } from "lucide-react"
-import { formatShort, type Transaction } from "@/lib/finance-data"
+import { accountLabel, formatShort, type Transaction, transactionCurrency } from "@/lib/finance-data"
 import { useFinance } from "./finance-provider"
 import { Badge } from "@/components/ui/badge"
 
@@ -52,10 +52,10 @@ function TransactionRow({
 
   const subtitle =
     tx.type === "transfer"
-      ? `${account?.name} → ${toAccount?.name}`
+      ? `${accountLabel(account)} → ${accountLabel(toAccount)}`
       : vehicle
-      ? `${tx.category} (${vehicle.name}) · ${account?.name}`
-      : `${tx.category} · ${account?.name}`
+      ? `${tx.category} (${vehicle.name}) · ${accountLabel(account)}`
+      : `${tx.category} · ${accountLabel(account)}`
 
   return (
     <li
@@ -75,7 +75,7 @@ function TransactionRow({
       <div className="text-right font-mono">
         <p className={`text-xs ${config.amountClass}`}>
           {config.sign}
-          {formatShort(tx.amount, account?.currency ?? "ARS")}
+          {formatShort(tx.amount, transactionCurrency(tx, account) ?? "ARS")}
         </p>
         <p className="text-[10px] text-muted-foreground">{relativeDate(tx.date)}</p>
       </div>

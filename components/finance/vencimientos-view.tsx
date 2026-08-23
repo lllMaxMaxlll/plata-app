@@ -16,7 +16,7 @@ import { Badge } from "@/components/ui/badge"
 import { VencimientoSheet } from "./vencimiento-sheet"
 import { PayVencimientoModal } from "./pay-vencimiento-modal"
 import { requestNotificationPermission } from "@/lib/firebase-messaging"
-import { getApiAuthHeaders } from "@/lib/firebase"
+import { getApiAuthHeaders } from "@/lib/supabase/client"
 import { toast } from "sonner"
 import {
   Calendar as CalendarIcon,

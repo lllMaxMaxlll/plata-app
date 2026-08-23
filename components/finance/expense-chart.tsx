@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react"
 import { ArrowUpRight, TrendingUp, TrendingDown, Calendar, DollarSign } from "lucide-react"
-import { formatCurrency, formatShort } from "@/lib/finance-data"
+import { formatCurrency, formatShort, transactionCurrency } from "@/lib/finance-data"
 import { useFinance } from "./finance-provider"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -71,8 +71,7 @@ export function ExpenseChart({
 
     for (const t of transactions) {
       if (t.type !== "expense") continue
-      const acc = getAccount(t.accountId)
-      if (!acc || acc.currency !== selectedCurrency) continue
+      if (transactionCurrency(t, getAccount(t.accountId)) !== selectedCurrency) continue
 
       const tDate = new Date(t.date)
       if (isNaN(tDate.getTime())) continue

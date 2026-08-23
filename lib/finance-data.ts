@@ -61,6 +61,24 @@ export const EXPENSE_CATEGORIES = ["Comida", "Servicios", "Transporte", "Alquile
 // Helpers
 // ---------------------------------------------------------------------------
 
+/** Deleting an account keeps its movements, so they need something to show. */
+export function accountLabel(account?: Pick<Account, "name">): string {
+  return account?.name ?? "Cuenta eliminada"
+}
+
+/**
+ * Currency a movement was made in. The value stored on the transaction wins: it is
+ * written at creation time and survives the account being deleted, so reports keep
+ * showing dollars as dollars. The account is only the fallback for documents
+ * written before that field existed; `undefined` means neither source knows.
+ */
+export function transactionCurrency(
+  transaction: Pick<Transaction, "currency" | "accountId">,
+  account?: Pick<Account, "currency">
+): Currency | undefined {
+  return transaction.currency ?? account?.currency
+}
+
 export function formatCurrency(amount: number, currency: Currency): string {
   const symbol = "$"
   const formatted = new Intl.NumberFormat("es-AR", {
