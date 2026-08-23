@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useMemo, useState, useEffect, useCallback, type ReactNode } from "react"
 import {
+  formatCurrency,
   type Account,
   type Currency,
   type Transaction,
@@ -425,6 +426,36 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     })
   }
 
+  /**
+   * Server-side counterpart of the checks the transaction sheet does: the client
+   * can be bypassed (offline queue, another tab, the SDK straight from a console),
+   * so every debit is re-validated inside the Firestore transaction.
+   */
+  function assertValidTransactionInput(input: NewTransactionInput) {
+    if (!Number.isFinite(input.amount) || input.amount <= 0) {
+      throw new Error("El monto debe ser un número mayor a 0.")
+    }
+    if (input.type === "transfer") {
+      if (!input.toAccountId) {
+        throw new Error("La transferencia requiere una cuenta de destino.")
+      }
+      if (input.toAccountId === input.accountId) {
+        throw new Error("La cuenta de origen y destino deben ser distintas.")
+      }
+      if (input.toAmount !== undefined && (!Number.isFinite(input.toAmount) || input.toAmount <= 0)) {
+        throw new Error("El monto acreditado en destino no es válido.")
+      }
+    }
+  }
+
+  function assertSufficientBalance(account: Pick<Account, "name" | "currency">, available: number, amount: number) {
+    if (available < amount) {
+      throw new Error(
+        `Saldo insuficiente en "${account.name}". Disponible: ${formatCurrency(available, account.currency)}.`
+      )
+    }
+  }
+
   const getAccount = useCallback(
     (id: string) => {
       return accounts.find((a) => a.id === id)
@@ -453,6 +484,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
 
   async function addTransaction(input: NewTransactionInput) {
     if (!user) throw new Error("Usuario no autenticado.")
+    assertValidTransactionInput(input)
 
     // Auto-generated ids: a timestamp collides when two writes land in the same
     // millisecond, and transaction.set() would silently overwrite the first one.
@@ -504,7 +536,10 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
           newSecondaryBalance = Number(secondaryData.balance)
         }
 
-        // 2. Calculate new balances
+        // 2. Calculate new balances, refusing to overdraw the source account
+        if (input.type !== "income") {
+          assertSufficientBalance(primaryData, newPrimaryBalance, input.amount)
+        }
         if (input.type === "income") {
           newPrimaryBalance = Math.round((newPrimaryBalance + input.amount) * 100) / 100
         } else if (input.type === "expense") {
@@ -544,6 +579,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
 
   async function updateTransaction(id: string, input: NewTransactionInput) {
     if (!user) throw new Error("Usuario no autenticado.")
+    assertValidTransactionInput(input)
 
     const txDocRef = doc(db, "users", user.uid, "transactions", id)
     const oldTx = transactions.find((t) => t.id === id)
@@ -652,7 +688,14 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
           }
         }
  
-        // 3. Apply new transaction balance changes
+        // 3. Apply new transaction balance changes, refusing to overdraw the source
+        if (input.type !== "income") {
+          assertSufficientBalance(
+            newPrimarySnap.data() as Account,
+            newPrimaryBalance,
+            input.amount
+          )
+        }
         if (input.type === "income") {
           newPrimaryBalance = Math.round((newPrimaryBalance + input.amount) * 100) / 100
         } else if (input.type === "expense") {
