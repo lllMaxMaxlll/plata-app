@@ -454,8 +454,10 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   async function addTransaction(input: NewTransactionInput) {
     if (!user) throw new Error("Usuario no autenticado.")
 
-    const txId = `t-${Date.now()}`
-    const txDocRef = doc(db, "users", user.uid, "transactions", txId)
+    // Auto-generated ids: a timestamp collides when two writes land in the same
+    // millisecond, and transaction.set() would silently overwrite the first one.
+    const txDocRef = doc(collection(db, "users", user.uid, "transactions"))
+    const txId = txDocRef.id
 
     const primaryAccRef = doc(db, "users", user.uid, "accounts", input.accountId)
     const secondaryAccRef = input.toAccountId
@@ -951,8 +953,8 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     if (!symbol || !Number.isFinite(input.shares) || input.shares <= 0 || !Number.isFinite(input.price) || input.price <= 0) {
       throw new Error("Los datos de la operación no son válidos.")
     }
-    const txId = `st-${Date.now()}`
-    const txDocRef = doc(db, "users", user.uid, "stockTransactions", txId)
+    const txDocRef = doc(collection(db, "users", user.uid, "stockTransactions"))
+    const txId = txDocRef.id
     const accountRef = doc(db, "users", user.uid, "accounts", input.accountId)
     const positionRef = doc(db, "users", user.uid, "stockPositions", symbol)
 
@@ -1016,8 +1018,8 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
           updatedAt: new Date().toISOString(),
         })
 
-        const finTxId = `t-${Date.now()}`
-        const finTxDocRef = doc(db, "users", user.uid, "transactions", finTxId)
+        const finTxDocRef = doc(collection(db, "users", user.uid, "transactions"))
+        const finTxId = finTxDocRef.id
 
         transaction.set(finTxDocRef, {
           id: finTxId,
@@ -1136,13 +1138,13 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       }
     })
 
-    const logId = `vl-${Date.now()}`
-    const logDocRef = doc(db, "users", user.uid, "vehicleLogs", logId)
+    const logDocRef = doc(collection(db, "users", user.uid, "vehicleLogs"))
+    const logId = logDocRef.id
     const vehicleRef = doc(db, "users", user.uid, "vehicles", input.vehicleId)
 
     const hasSync = !!input.accountId && input.amount > 0
-    const txId = hasSync ? `t-${Date.now()}` : null
-    const txDocRef = txId ? doc(db, "users", user.uid, "transactions", txId) : null
+    const txDocRef = hasSync ? doc(collection(db, "users", user.uid, "transactions")) : null
+    const txId = txDocRef?.id ?? null
     const accountRef = input.accountId ? doc(db, "users", user.uid, "accounts", input.accountId) : null
 
     const originalAccounts = [...accounts]
@@ -1318,8 +1320,12 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         }
 
         // Manage transaction document (link, update, or unlink)
-        const finalTxId = oldLog.transactionId || (input.accountId ? `t-${Date.now()}` : null)
-        const finalTxDocRef = finalTxId ? doc(db, "users", user.uid, "transactions", finalTxId) : null
+        const finalTxDocRef = oldLog.transactionId
+          ? doc(db, "users", user.uid, "transactions", oldLog.transactionId)
+          : input.accountId
+            ? doc(collection(db, "users", user.uid, "transactions"))
+            : null
+        const finalTxId = finalTxDocRef?.id ?? null
 
         if (oldLog.transactionId && !input.accountId) {
           const oldTxRef = doc(db, "users", user.uid, "transactions", oldLog.transactionId)
@@ -1472,8 +1478,8 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     const accountRef = registerTx?.accountId
       ? doc(db, "users", user.uid, "accounts", registerTx.accountId)
       : null
-    const txId = `t-due-${id}-${Date.now()}`
-    const txRef = doc(db, "users", user.uid, "transactions", txId)
+    const txRef = doc(collection(db, "users", user.uid, "transactions"))
+    const txId = txRef.id
 
     await runTransaction(db, async (transaction) => {
       const itemSnap = await transaction.get(docRef)
