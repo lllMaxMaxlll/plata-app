@@ -13,12 +13,12 @@ import {
 } from "lucide-react"
 import { useFinance } from "./finance-provider"
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog"
+  ResponsiveDialog,
+  ResponsiveDialogContent,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+  ResponsiveDialogDescription,
+} from "@/components/ui/responsive-dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
@@ -136,23 +136,23 @@ export function ExportSheet({ open, onClose }: { open: boolean; onClose: () => v
   }
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && !exportingFormat && onClose()}>
-      <DialogContent className="w-full sm:max-w-xl max-w-[calc(100vw-2rem)] h-auto max-h-[90vh] rounded-xl bg-card border border-border p-6 shadow-2xl overflow-y-auto overflow-x-hidden transition-all duration-200">
-        <DialogHeader className="text-left pb-1">
+    <ResponsiveDialog open={open} onOpenChange={(isOpen) => !isOpen && !exportingFormat && onClose()}>
+      <ResponsiveDialogContent className="w-full sm:max-w-xl max-w-[calc(100vw-2rem)] h-auto max-h-[90vh] rounded-xl bg-card border border-border p-6 shadow-2xl overflow-y-auto overflow-x-hidden transition-all duration-200">
+        <ResponsiveDialogHeader className="text-left pb-1">
           <div className="flex items-center gap-2.5">
             <span className="flex size-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
               <Download className="size-5" />
             </span>
             <div>
-              <DialogTitle className="text-lg font-semibold tracking-tight text-foreground">
+              <ResponsiveDialogTitle className="text-lg font-semibold tracking-tight text-foreground">
                 Exportar Movimientos Mensuales
-              </DialogTitle>
-              <DialogDescription className="text-xs text-muted-foreground">
+              </ResponsiveDialogTitle>
+              <ResponsiveDialogDescription className="text-xs text-muted-foreground">
                 Descargá tu reporte mensual de ingresos y gastos en Excel, PDF o Markdown.
-              </DialogDescription>
+              </ResponsiveDialogDescription>
             </div>
           </div>
-        </DialogHeader>
+        </ResponsiveDialogHeader>
 
         <div className={cn("mt-2 flex min-w-0 flex-col gap-5 transition-all duration-200", exportingFormat !== null && "pointer-events-none opacity-50 cursor-not-allowed select-none")}>
           {/* 1. Month Selector & Quick Action Pills */}
@@ -301,7 +301,7 @@ export function ExportSheet({ open, onClose }: { open: boolean; onClose: () => v
             </div>
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+      </ResponsiveDialogContent>
+    </ResponsiveDialog>
   )
 }

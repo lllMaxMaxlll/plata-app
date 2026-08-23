@@ -4,6 +4,7 @@ import { ArrowDownLeft, ArrowUpRight, ArrowLeftRight, Paperclip } from "lucide-r
 import { accountLabel, formatShort, type Transaction, transactionCurrency } from "@/lib/finance-data"
 import { useFinance } from "./finance-provider"
 import { Badge } from "@/components/ui/badge"
+import { cn, clickableRowProps, focusRing } from "@/lib/utils"
 
 function relativeDate(iso: string) {
   const d = new Date(iso)
@@ -59,8 +60,14 @@ function TransactionRow({
 
   return (
     <li
-      onClick={() => onEditTransaction?.(tx)}
-      className="flex cursor-pointer items-center gap-3 py-2.5 px-3 transition-colors hover:bg-muted/40 rounded-md border border-transparent hover:border-border -mx-1"
+      {...clickableRowProps(
+        () => onEditTransaction?.(tx),
+        `Editar movimiento ${tx.note || tx.category}`
+      )}
+      className={cn(
+        "flex cursor-pointer items-center gap-3 py-2.5 px-3 transition-colors hover:bg-muted/40 rounded-md border border-transparent hover:border-border -mx-1",
+        focusRing
+      )}
     >
       <span className={`flex size-8 shrink-0 items-center justify-center rounded-md border ${config.bg} ${config.tone}`}>
         <config.Icon className="size-4" />

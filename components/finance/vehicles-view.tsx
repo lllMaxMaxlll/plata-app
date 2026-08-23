@@ -31,6 +31,7 @@ import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
+import { cn, clickableRowProps, focusRing } from "@/lib/utils"
 
 const LOG_METADATA: Record<VehicleLogType, { label: string; Icon: any; color: string }> = {
   fuel: { label: "Combustible", Icon: Fuel, color: "text-orange-500 bg-orange-500/10 border-orange-500/20" },
@@ -217,8 +218,7 @@ export function VehiclesView({ isDesktop = false, onBack }: { isDesktop?: boolea
     setVehicleSheetOpen(true)
   }
 
-  function handleEditVehicle(v: Vehicle, e: React.MouseEvent) {
-    e.stopPropagation()
+  function handleEditVehicle(v: Vehicle) {
     setEditingVehicle(v)
     setVehicleSheetOpen(true)
   }
@@ -282,6 +282,7 @@ export function VehiclesView({ isDesktop = false, onBack }: { isDesktop?: boolea
                   key={v.id}
                   variant={active ? "default" : "outline"}
                   onClick={() => setActiveVehId(v.id)}
+                  aria-pressed={active}
                   className="flex items-center gap-2 shrink-0 rounded-2xl h-10 px-4 text-sm font-medium"
                 >
                   {getVehicleIcon(v.type)}
@@ -289,12 +290,6 @@ export function VehiclesView({ isDesktop = false, onBack }: { isDesktop?: boolea
                   <Badge variant="secondary" className="text-[10px] px-1.5 py-0.5">
                     {v.odometer} Km
                   </Badge>
-                  <span
-                    onClick={(e) => handleEditVehicle(v, e)}
-                    className="ml-1 p-0.5 rounded-full hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    <Edit2 className="size-3" />
-                  </span>
                 </Button>
               );
             })}
@@ -503,8 +498,11 @@ export function VehiclesView({ isDesktop = false, onBack }: { isDesktop?: boolea
                         return (
                           <li
                             key={l.id}
-                            onClick={() => handleEditLog(l)}
-                            className="flex cursor-pointer items-center justify-between gap-4 py-3.5 px-1 hover:bg-accent/40 rounded-xl transition-all group"
+                            {...clickableRowProps(() => handleEditLog(l), `Editar registro ${details}`)}
+                            className={cn(
+                              "flex cursor-pointer items-center justify-between gap-4 py-3.5 px-1 hover:bg-accent/40 rounded-xl transition-all group",
+                              focusRing
+                            )}
                           >
                             <div className="flex items-center gap-3 min-w-0">
                               <span className={`flex size-9 shrink-0 items-center justify-center rounded-xl border ${meta.color}`}>
@@ -576,7 +574,7 @@ export function VehiclesView({ isDesktop = false, onBack }: { isDesktop?: boolea
 
                   <Button
                     variant="outline"
-                    onClick={(e) => handleEditVehicle(activeVehicle, e)}
+                    onClick={() => handleEditVehicle(activeVehicle)}
                     className="w-full mt-2 text-xs font-bold h-10"
                   >
                     <Edit2 className="size-3.5" />

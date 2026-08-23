@@ -208,8 +208,17 @@ export function AccountsView({
                     return (
                       <li key={acc.id}>
                         <div
+                          role="button"
+                          tabIndex={0}
+                          aria-label={`Editar cuenta ${acc.name}`}
                           onClick={() => onEditAccount(acc)}
-                          className="group relative flex flex-col p-3.5 rounded-xl border border-border/50 bg-muted/20 hover:bg-muted/50 hover:border-primary/40 transition-all cursor-pointer shadow-xs space-y-2.5"
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault()
+                              onEditAccount(acc)
+                            }
+                          }}
+                          className="group relative flex flex-col p-3.5 rounded-xl border border-border/50 bg-muted/20 hover:bg-muted/50 hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-all cursor-pointer shadow-xs space-y-2.5"
                         >
                           <div className="flex items-center justify-between gap-3">
                             <div className="flex items-center gap-3 min-w-0">
@@ -241,20 +250,10 @@ export function AccountsView({
                               <p className="text-sm font-bold text-foreground tabular-nums">
                                 {formatShort(acc.balance, acc.currency)}
                               </p>
-                              <div className="flex items-center justify-end gap-1 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    onEditAccount(acc)
-                                  }}
-                                  className="size-6 text-muted-foreground hover:text-primary cursor-pointer"
-                                  title="Editar cuenta"
-                                >
-                                  <Pencil className="size-3" />
-                                </Button>
-                              </div>
+                              <span className="mt-1 flex items-center justify-end gap-1 text-[10px] text-muted-foreground group-hover:text-primary transition-colors">
+                                <Pencil aria-hidden className="size-3" />
+                                Editar
+                              </span>
                             </div>
                           </div>
 

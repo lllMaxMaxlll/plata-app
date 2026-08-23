@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from "react"
-import { Upload, Check, Calendar as CalendarIcon, AlertCircle } from "lucide-react"
+import { Upload, Check, AlertCircle } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -25,19 +25,16 @@ import {
   formatCurrency,
 } from "@/lib/finance-data"
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog"
+  ResponsiveDialog,
+  ResponsiveDialogContent,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+  ResponsiveDialogDescription,
+} from "@/components/ui/responsive-dialog"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useFinance } from "./finance-provider"
 import { toast } from "sonner"
-import { Calendar } from "@/components/ui/calendar"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { format } from "date-fns"
-import { es } from "date-fns/locale"
+import { DatePicker } from "@/components/ui/date-picker"
 
 const TABS: { value: TransactionType; label: string }[] = [
   { value: "income", label: "Ingreso" },
@@ -259,21 +256,31 @@ export function TransactionSheet({
     }
   }
 
+  // El monto es el elemento principal del formulario: se muestra grande, pero
+  // baja de escalón tipográfico a medida que suma dígitos para no desbordar.
+  const amountSize = useMemo(() => {
+    const len = amount.length
+    if (len > 12) return { value: "text-xl md:text-2xl", symbol: "text-lg" }
+    if (len > 9) return { value: "text-2xl md:text-3xl", symbol: "text-xl" }
+    if (len > 6) return { value: "text-3xl md:text-4xl", symbol: "text-2xl" }
+    return { value: "text-4xl md:text-5xl", symbol: "text-3xl" }
+  }, [amount])
+
   const isSubmitDisabled =
     submitting || (isDebit && Boolean(fromAccount && (fromAvailable <= 0 || isAmountExceeding)))
 
   return (
     <>
-      <Dialog open={open} onOpenChange={(isOpen) => !isOpen && !submitting && onClose()}>
-        <DialogContent className="max-w-lg w-full rounded-xl bg-card border border-border p-6 shadow-2xl overflow-y-auto max-h-[90vh]">
-          <DialogHeader className="text-left pb-1">
-            <DialogTitle className="text-lg font-semibold tracking-tight text-foreground">
+      <ResponsiveDialog open={open} onOpenChange={(isOpen) => !isOpen && !submitting && onClose()}>
+        <ResponsiveDialogContent className="w-full max-w-[calc(100vw-2rem)] sm:max-w-lg rounded-xl bg-card border border-border p-6 shadow-2xl overflow-y-auto max-h-[90vh]">
+          <ResponsiveDialogHeader className="text-left pb-1">
+            <ResponsiveDialogTitle className="text-lg font-semibold tracking-tight text-foreground">
               {transaction ? "Editar movimiento" : "Nuevo movimiento"}
-            </DialogTitle>
-            <DialogDescription className="text-xs text-muted-foreground">
+            </ResponsiveDialogTitle>
+            <ResponsiveDialogDescription className="text-xs text-muted-foreground">
               {transaction ? "Modificá o eliminá este movimiento." : "Registrá un ingreso, gasto o transferencia."}
-            </DialogDescription>
-          </DialogHeader>
+            </ResponsiveDialogDescription>
+          </ResponsiveDialogHeader>
 
           <div className={cn("transition-all duration-200", submitting && "pointer-events-none opacity-50 cursor-not-allowed select-none")}>
             <Tabs value={type} onValueChange={(val) => handleTab(val as TransactionType)} className="w-full mt-2">
@@ -292,8 +299,10 @@ export function TransactionSheet({
               <span className="text-xs font-medium text-muted-foreground">
                 Monto ({fromAccount?.currency ?? "ARS"})
               </span>
-              <div className="flex items-center gap-1.5">
-                <span className="text-3xl font-medium text-muted-foreground">$</span>
+              <div className="flex w-full max-w-full items-center justify-center gap-1.5">
+                <span className={cn("font-medium text-muted-foreground", amountSize.symbol)}>
+                  $
+                </span>
                 <Input
                   autoFocus
                   inputMode="decimal"
@@ -301,7 +310,10 @@ export function TransactionSheet({
                   value={amount}
                   onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, ""))}
                   placeholder="0"
-                  className="h-16 w-56 bg-transparent text-center text-xl md:text-5xl font-bold tracking-tight tabular-nums border-none shadow-none focus-visible:ring-0 placeholder:text-muted-foreground/40"
+                  className={cn(
+                    "h-16 w-auto min-w-[2ch] max-w-full border-none bg-transparent text-center font-bold tracking-tight tabular-nums field-sizing-content shadow-none focus-visible:ring-0 placeholder:text-muted-foreground/40",
+                    amountSize.value
+                  )}
                 />
               </div>
               {isAmountExceeding && (
@@ -396,33 +408,12 @@ export function TransactionSheet({
 
             {/* Date */}
             <Field label="Fecha">
-              <Popover>
-                <PopoverTrigger
-                  render={
-                    <Button
-                      type="button"
-                      variant="outline"
-                      disabled={submitting}
-                      className="w-full justify-start rounded-xl border border-input bg-transparent px-3.5 py-2 text-sm font-normal text-left outline-none hover:bg-muted/10 h-10"
-                    />
-                  }
-                >
-                  <CalendarIcon className="mr-2 size-4 text-muted-foreground" />
-                  {date ? (
-                    format(date, "PPP", { locale: es })
-                  ) : (
-                    <span className="text-muted-foreground/50">Seleccionar fecha</span>
-                  )}
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0 border border-border bg-popover rounded-xl" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={date}
-                    onSelect={setDate}
-                    locale={es}
-                  />
-                </PopoverContent>
-              </Popover>
+              <DatePicker
+                value={date}
+                onChange={setDate}
+                disabled={submitting}
+                className="bg-transparent"
+              />
             </Field>
 
             {/* Receipt upload */}
@@ -481,8 +472,8 @@ export function TransactionSheet({
             </div>
           </form>
         </div>
-      </DialogContent>
-      </Dialog>
+      </ResponsiveDialogContent>
+      </ResponsiveDialog>
 
       <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
         <AlertDialogContent>

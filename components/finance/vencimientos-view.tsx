@@ -18,6 +18,7 @@ import { PayVencimientoModal } from "./pay-vencimiento-modal"
 import { requestNotificationPermission } from "@/lib/firebase-messaging"
 import { getApiAuthHeaders } from "@/lib/supabase/client"
 import { toast } from "sonner"
+import { clickableRowProps, focusRing } from "@/lib/utils"
 import {
   Calendar as CalendarIcon,
   ListFilter,
@@ -391,8 +392,9 @@ export function VencimientosView({ isDesktop = false }: { isDesktop?: boolean })
                     </span>
                     <button
                       onClick={() => handleOpenPayModal(item)}
-                      className="size-6 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 flex items-center justify-center transition-colors cursor-pointer"
+                      className="size-9 sm:size-7 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 flex items-center justify-center transition-colors cursor-pointer"
                       title="Marcar como pagado"
+                      aria-label={`Marcar ${item.title} como pagado`}
                     >
                       <Check className="size-3.5" />
                     </button>
@@ -695,7 +697,8 @@ export function VencimientosView({ isDesktop = false }: { isDesktop?: boolean })
                   prev.setMonth(prev.getMonth() - 1)
                   setCurrentCalendarDate(prev)
                 }}
-                className="rounded-xl size-8 p-0"
+                className="rounded-xl size-10 sm:size-8 p-0"
+                aria-label="Mes anterior"
               >
                 <ChevronLeft className="size-4" />
               </Button>
@@ -717,7 +720,8 @@ export function VencimientosView({ isDesktop = false }: { isDesktop?: boolean })
                   next.setMonth(next.getMonth() + 1)
                   setCurrentCalendarDate(next)
                 }}
-                className="rounded-xl size-8 p-0"
+                className="rounded-xl size-10 sm:size-8 p-0"
+                aria-label="Mes siguiente"
               >
                 <ChevronRight className="size-4" />
               </Button>
@@ -748,12 +752,15 @@ export function VencimientosView({ isDesktop = false }: { isDesktop?: boolean })
                 return (
                   <div
                     key={idx}
-                    onClick={() => {
-                      if (day.isCurrentMonth) {
-                        setSelectedCalendarDateIso(day.dateIso)
-                      }
-                    }}
-                    className={`min-h-[72px] sm:min-h-[90px] rounded-2xl p-1.5 flex flex-col justify-between border transition-all cursor-pointer relative overflow-hidden ${!day.isCurrentMonth
+                    {...(day.isCurrentMonth
+                      ? clickableRowProps(
+                          () => setSelectedCalendarDateIso(day.dateIso),
+                          `${day.dayNumber} · ${day.items.length} ${day.items.length === 1 ? "vencimiento" : "vencimientos"}`
+                        )
+                      : { "aria-hidden": true })}
+                    aria-pressed={day.isCurrentMonth ? isSelected : undefined}
+                    aria-current={isTodayCell ? "date" : undefined}
+                    className={`${focusRing} min-h-[72px] sm:min-h-[90px] rounded-2xl p-1.5 flex flex-col justify-between border transition-all cursor-pointer relative overflow-hidden ${!day.isCurrentMonth
                         ? "opacity-25 bg-muted/10 border-transparent cursor-default"
                         : isSelected
                           ? "border-primary bg-primary/10 shadow-md shadow-primary/10"

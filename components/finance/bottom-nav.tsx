@@ -69,7 +69,16 @@ export function BottomNav({ onAdd }: { onAdd: () => void }) {
 function isTabActive(href: string, currentPath: string): boolean {
   if (href === currentPath) return true
   if (href === "/more") {
-    return ["/more", "/vehicles", "/stocks", "/activity", "/profile", "/analytics", "/dashboard/vencimientos", "/vencimientos"].includes(currentPath)
+    return [
+      "/more",
+      "/vehicles",
+      "/stocks",
+      "/activity",
+      "/profile",
+      "/analytics",
+      "/dashboard/vencimientos",
+      "/dashboard/proyecciones",
+    ].includes(currentPath)
   }
   return false
 }

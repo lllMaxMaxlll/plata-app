@@ -6,12 +6,12 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog"
+  ResponsiveDialog,
+  ResponsiveDialogContent,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+  ResponsiveDialogDescription,
+} from "@/components/ui/responsive-dialog"
 import type { Account, Currency } from "@/lib/finance-data"
 import { useFinance } from "./finance-provider"
 import { AccountIcon } from "./account-icon"
@@ -133,25 +133,25 @@ export function AddAccountSheet({
   }
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && !submitting && onClose()}>
-      <DialogContent className="w-full sm:max-w-xl max-w-[calc(100vw-2rem)] h-auto max-h-[90vh] rounded-xl bg-card border border-border p-6 shadow-2xl overflow-y-auto overflow-x-hidden transition-all duration-200">
-        <DialogHeader className="text-left pb-1">
+    <ResponsiveDialog open={open} onOpenChange={(isOpen) => !isOpen && !submitting && onClose()}>
+      <ResponsiveDialogContent className="w-full sm:max-w-xl max-w-[calc(100vw-2rem)] h-auto max-h-[90vh] rounded-xl bg-card border border-border p-6 shadow-2xl overflow-y-auto overflow-x-hidden transition-all duration-200">
+        <ResponsiveDialogHeader className="text-left pb-1">
           <div className="flex items-center gap-2.5">
             <span className="flex size-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
               <Wallet className="size-5" />
             </span>
             <div>
-              <DialogTitle className="text-lg font-semibold tracking-tight text-foreground">
+              <ResponsiveDialogTitle className="text-lg font-semibold tracking-tight text-foreground">
                 {account ? "Editar Cuenta" : "Nueva Cuenta"}
-              </DialogTitle>
-              <DialogDescription className="text-xs text-muted-foreground">
+              </ResponsiveDialogTitle>
+              <ResponsiveDialogDescription className="text-xs text-muted-foreground">
                 {account
                   ? "Modificá la información de tu cuenta o elimínala."
                   : "Agregá un banco, billetera digital, efectivo o ahorro."}
-              </DialogDescription>
+              </ResponsiveDialogDescription>
             </div>
           </div>
-        </DialogHeader>
+        </ResponsiveDialogHeader>
 
         <div className={cn("transition-all duration-200", submitting && "pointer-events-none opacity-50 cursor-not-allowed select-none")}>
           <form onSubmit={handleSubmit} className="mt-3 flex min-w-0 flex-col gap-4">
@@ -278,6 +278,7 @@ export function AddAccountSheet({
                 onClick={handleDelete}
                 className="rounded-xl shrink-0 h-11 w-11 cursor-pointer"
                 title="Eliminar cuenta"
+                aria-label="Eliminar cuenta"
               >
                 <Trash2 className="size-4" />
               </Button>
@@ -300,7 +301,7 @@ export function AddAccountSheet({
           </div>
         </form>
       </div>
-    </DialogContent>
-    </Dialog>
+    </ResponsiveDialogContent>
+    </ResponsiveDialog>
   )
 }

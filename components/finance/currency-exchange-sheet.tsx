@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { ArrowLeftRight, Calendar as CalendarIcon, AlertCircle, RefreshCw, Loader2 } from "lucide-react"
+import { ArrowLeftRight, AlertCircle, RefreshCw } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -9,18 +9,15 @@ import { Label } from "@/components/ui/label"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog"
+  ResponsiveDialog,
+  ResponsiveDialogContent,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+  ResponsiveDialogDescription,
+} from "@/components/ui/responsive-dialog"
 import { useFinance } from "./finance-provider"
 import { toast } from "sonner"
-import { Calendar } from "@/components/ui/calendar"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { format } from "date-fns"
-import { es } from "date-fns/locale"
+import { DatePicker } from "@/components/ui/date-picker"
 import { formatShort } from "@/lib/finance-data"
 
 type ExchangeDirection = "ARS_TO_USD" | "USD_TO_ARS"
@@ -43,7 +40,6 @@ export function CurrencyExchangeSheet({ open, onClose }: CurrencyExchangeSheetPr
   const [date, setDate] = useState<Date | undefined>(undefined)
   const [note, setNote] = useState("")
   const [submitting, setSubmitting] = useState(false)
-  const [calendarOpen, setCalendarOpen] = useState(false)
 
   // Filter accounts by currency
   const arsAccounts = useMemo(() => accounts.filter((a) => a.currency === "ARS"), [accounts])
@@ -208,18 +204,18 @@ export function CurrencyExchangeSheet({ open, onClose }: CurrencyExchangeSheetPr
   const targetCurrency = isBuy ? "USD" : "ARS"
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && !submitting && onClose()}>
-      <DialogContent className="w-full sm:max-w-xl max-w-[calc(100vw-2rem)] h-auto max-h-[90vh] rounded-xl bg-card border border-border p-6 shadow-2xl overflow-y-auto overflow-x-hidden transition-all duration-200">
-        <DialogHeader className="text-left pb-1">
-          <DialogTitle className="text-lg font-semibold tracking-tight text-foreground">
+    <ResponsiveDialog open={open} onOpenChange={(isOpen) => !isOpen && !submitting && onClose()}>
+      <ResponsiveDialogContent className="w-full sm:max-w-xl max-w-[calc(100vw-2rem)] h-auto max-h-[90vh] rounded-xl bg-card border border-border p-6 shadow-2xl overflow-y-auto overflow-x-hidden transition-all duration-200">
+        <ResponsiveDialogHeader className="text-left pb-1">
+          <ResponsiveDialogTitle className="text-lg font-semibold tracking-tight text-foreground">
             Cambio de Moneda
-          </DialogTitle>
-          <DialogDescription className="text-xs text-muted-foreground">
+          </ResponsiveDialogTitle>
+          <ResponsiveDialogDescription className="text-xs text-muted-foreground">
             {isBuy
               ? "Registrá una compra de dólares (ARS → USD) indicando la cotización."
               : "Registrá una venta de dólares (USD → ARS) indicando la cotización."}
-          </DialogDescription>
-        </DialogHeader>
+          </ResponsiveDialogDescription>
+        </ResponsiveDialogHeader>
 
         <div className={cn("transition-all duration-200", submitting && "pointer-events-none opacity-50 cursor-not-allowed select-none")}>
           <Tabs
@@ -459,38 +455,11 @@ export function CurrencyExchangeSheet({ open, onClose }: CurrencyExchangeSheetPr
                 <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                   Fecha
                 </Label>
-                <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
-                  <PopoverTrigger
-                    render={
-                      <Button
-                        type="button"
-                        variant="outline"
-                        disabled={submitting}
-                        className="w-full justify-start rounded-xl border-border bg-card/60 px-3.5 py-2 text-xs font-normal text-left h-10 cursor-pointer"
-                      />
-                    }
-                  >
-                    <CalendarIcon className="mr-2 size-3.5 text-muted-foreground" />
-                    {date ? (
-                      format(date, "PPP", { locale: es })
-                    ) : (
-                      <span className="text-muted-foreground/50">Seleccionar fecha</span>
-                    )}
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0 border border-border bg-popover rounded-2xl shadow-xl z-50" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={date}
-                      onSelect={(d) => {
-                        if (d) {
-                          setDate(d)
-                          setCalendarOpen(false)
-                        }
-                      }}
-                      locale={es}
-                    />
-                  </PopoverContent>
-                </Popover>
+                <DatePicker
+                  value={date}
+                  onChange={(d) => d && setDate(d)}
+                  disabled={submitting}
+                />
               </div>
 
               <Button
@@ -514,7 +483,7 @@ export function CurrencyExchangeSheet({ open, onClose }: CurrencyExchangeSheetPr
           )}
         </form>
       </div>
-    </DialogContent>
-    </Dialog>
+    </ResponsiveDialogContent>
+    </ResponsiveDialog>
   )
 }

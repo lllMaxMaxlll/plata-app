@@ -7,20 +7,18 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog"
-import { Calendar } from "@/components/ui/calendar"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+  ResponsiveDialog,
+  ResponsiveDialogContent,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+  ResponsiveDialogDescription,
+} from "@/components/ui/responsive-dialog"
+import { DatePicker } from "@/components/ui/date-picker"
 import { useFinance } from "./finance-provider"
 import { DUE_CATEGORIES, type DueItem, type DueFrequency, type Currency } from "@/lib/finance-data"
 import { toast } from "sonner"
-import { Trash2, Calendar as CalendarIcon, Loader2 } from "lucide-react"
+import { Trash2, Loader2 } from "lucide-react"
 import { format, parseISO } from "date-fns"
-import { es } from "date-fns/locale"
 import { cn } from "@/lib/utils"
 
 interface VencimientoSheetProps {
@@ -58,7 +56,6 @@ export function VencimientoSheet({ open, onClose, item }: VencimientoSheetProps)
   const [autoRenew, setAutoRenew] = useState(true)
   const [accountId, setAccountId] = useState<string>("none")
   const [submitting, setSubmitting] = useState(false)
-  const [calendarOpen, setCalendarOpen] = useState(false)
 
   useEffect(() => {
     if (open) {
@@ -166,16 +163,16 @@ export function VencimientoSheet({ open, onClose, item }: VencimientoSheetProps)
   }
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && !submitting && onClose()}>
-      <DialogContent className="w-full sm:max-w-xl max-w-[calc(100%-2rem)] h-auto rounded-xl bg-card border border-border p-6 shadow-2xl overflow-y-auto max-h-[90vh] transition-all duration-200">
-        <DialogHeader className="text-left pb-2">
-          <DialogTitle className="text-lg font-semibold tracking-tight text-foreground">
+    <ResponsiveDialog open={open} onOpenChange={(isOpen) => !isOpen && !submitting && onClose()}>
+      <ResponsiveDialogContent className="w-full sm:max-w-xl max-w-[calc(100%-2rem)] h-auto rounded-xl bg-card border border-border p-6 shadow-2xl overflow-y-auto max-h-[90vh] transition-all duration-200">
+        <ResponsiveDialogHeader className="text-left pb-2">
+          <ResponsiveDialogTitle className="text-lg font-semibold tracking-tight text-foreground">
             {item ? "Editar Vencimiento" : "Nuevo Vencimiento o Servicio"}
-          </DialogTitle>
-          <DialogDescription className="text-xs text-muted-foreground">
+          </ResponsiveDialogTitle>
+          <ResponsiveDialogDescription className="text-xs text-muted-foreground">
             Registra tus servicios periódicos (luz, agua, alquiler, etc.) para recibir alertas antes de que queden en mora.
-          </DialogDescription>
-        </DialogHeader>
+          </ResponsiveDialogDescription>
+        </ResponsiveDialogHeader>
 
         <div className={cn("transition-all duration-200", submitting && "pointer-events-none opacity-50 cursor-not-allowed select-none")}>
           <form onSubmit={handleSubmit} className="space-y-4 pt-1">
@@ -252,36 +249,12 @@ export function VencimientoSheet({ open, onClose, item }: VencimientoSheetProps)
               <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                 Fecha Vencimiento
               </Label>
-              <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
-                <PopoverTrigger
-                  render={
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className={cn(
-                        "w-full justify-start text-left font-normal rounded-xl border-border bg-card/60 h-8 text-xs",
-                        !dueDate && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 size-3.5" />
-                      {dueDate ? format(dueDate, "dd/MM/yyyy", { locale: es }) : "Seleccionar"}
-                    </Button>
-                  }
-                />
-                <PopoverContent className="w-auto p-0 z-50 rounded-2xl border border-border bg-popover shadow-xl" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={dueDate}
-                    onSelect={(d) => {
-                      if (d) {
-                        setDueDate(d)
-                        setCalendarOpen(false)
-                      }
-                    }}
-                    locale={es}
-                  />
-                </PopoverContent>
-              </Popover>
+              <DatePicker
+                value={dueDate}
+                onChange={(d) => d && setDueDate(d)}
+                placeholder="Seleccionar"
+                displayFormat="dd/MM/yyyy"
+              />
             </div>
           </div>
 
@@ -377,8 +350,9 @@ export function VencimientoSheet({ open, onClose, item }: VencimientoSheetProps)
                 size="icon"
                 onClick={handleDelete}
                 disabled={submitting}
-                className="rounded-xl shrink-0 cursor-pointer"
+                className="size-11 rounded-xl shrink-0 cursor-pointer"
                 title="Eliminar vencimiento"
+                aria-label="Eliminar vencimiento"
               >
                 <Trash2 className="size-4" />
               </Button>
@@ -403,7 +377,7 @@ export function VencimientoSheet({ open, onClose, item }: VencimientoSheetProps)
           </div>
         </form>
       </div>
-    </DialogContent>
-    </Dialog>
+    </ResponsiveDialogContent>
+    </ResponsiveDialog>
   )
 }

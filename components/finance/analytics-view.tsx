@@ -42,6 +42,7 @@ import {
 } from "@/components/ui/chart"
 import { BarChart3, LineChart as LineChartIcon } from "lucide-react"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
+import { cn, clickableRowProps, focusRing } from "@/lib/utils"
 
 interface AnalyticsViewProps {
   isDesktop?: boolean
@@ -335,7 +336,8 @@ export function AnalyticsView({ isDesktop = false, onBack, onEditTransaction }: 
             variant="outline"
             size="icon-sm"
             onClick={onBack}
-            className="rounded-full shrink-0"
+            className="size-10 sm:size-8 rounded-full shrink-0"
+            aria-label="Volver"
           >
             <ArrowLeft className="size-4" />
           </Button>
@@ -861,8 +863,15 @@ export function AnalyticsView({ isDesktop = false, onBack, onEditTransaction }: 
                     className="border-b border-border/50 last:border-b-0 pb-4 last:pb-0"
                   >
                     <div
-                      onClick={() => setExpandedCategory(isExpanded ? null : r.category)}
-                      className="flex flex-col gap-2 cursor-pointer group hover:bg-muted/30 p-2 rounded-lg transition-all"
+                      {...clickableRowProps(
+                        () => setExpandedCategory(isExpanded ? null : r.category),
+                        `${isExpanded ? "Contraer" : "Expandir"} ${r.category}`
+                      )}
+                      aria-expanded={isExpanded}
+                      className={cn(
+                        "flex flex-col gap-2 cursor-pointer group hover:bg-muted/30 p-2 rounded-lg transition-all",
+                        focusRing
+                      )}
                     >
                       <div className="flex items-center justify-between text-xs sm:text-sm">
                         <div className="flex items-center gap-2.5 min-w-0">
@@ -945,8 +954,14 @@ export function AnalyticsView({ isDesktop = false, onBack, onEditTransaction }: 
                               return (
                                 <li
                                   key={tx.id}
-                                  onClick={() => onEditTransaction(tx)}
-                                  className="flex items-center justify-between hover:bg-accent/40 p-2 rounded-lg transition-all cursor-pointer group/item text-xs"
+                                  {...clickableRowProps(
+                                    () => onEditTransaction(tx),
+                                    `Editar movimiento ${tx.note || "sin descripción"}`
+                                  )}
+                                  className={cn(
+                                    "flex items-center justify-between hover:bg-accent/40 p-2 rounded-lg transition-all cursor-pointer group/item text-xs",
+                                    focusRing
+                                  )}
                                 >
                                   <div className="min-w-0 flex-1 pr-4">
                                     <p className="font-semibold truncate group-hover/item:text-primary transition-colors">

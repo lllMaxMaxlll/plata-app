@@ -5,12 +5,12 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog"
+  ResponsiveDialog,
+  ResponsiveDialogContent,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+  ResponsiveDialogDescription,
+} from "@/components/ui/responsive-dialog"
 import type { Vehicle, VehicleType } from "@/lib/finance-data"
 import { useFinance } from "./finance-provider"
 import { toast } from "sonner"
@@ -131,16 +131,16 @@ export function AddVehicleSheet({
   }
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && !submitting && onClose()}>
-      <DialogContent className="w-full sm:max-w-xl max-w-[calc(100%-2rem)] h-auto rounded-xl bg-card border border-border p-6 shadow-2xl overflow-y-auto max-h-[90vh] transition-all duration-200">
-        <DialogHeader className="text-left pb-1">
-          <DialogTitle className="text-lg font-semibold tracking-tight text-foreground">
+    <ResponsiveDialog open={open} onOpenChange={(isOpen) => !isOpen && !submitting && onClose()}>
+      <ResponsiveDialogContent className="w-full sm:max-w-xl max-w-[calc(100%-2rem)] h-auto rounded-xl bg-card border border-border p-6 shadow-2xl overflow-y-auto max-h-[90vh] transition-all duration-200">
+        <ResponsiveDialogHeader className="text-left pb-1">
+          <ResponsiveDialogTitle className="text-lg font-semibold tracking-tight text-foreground">
             {vehicle ? "Editar Vehículo" : "Nuevo Vehículo"}
-          </DialogTitle>
-          <DialogDescription className="text-xs text-muted-foreground">
+          </ResponsiveDialogTitle>
+          <ResponsiveDialogDescription className="text-xs text-muted-foreground">
             {vehicle ? "Modificá la ficha del vehículo" : "Registrá un nuevo vehículo en tu garaje"}
-          </DialogDescription>
-        </DialogHeader>
+          </ResponsiveDialogDescription>
+        </ResponsiveDialogHeader>
 
         <div className={cn("transition-all duration-200", submitting && "pointer-events-none opacity-50 cursor-not-allowed select-none")}>
           <form onSubmit={handleSubmit} className="mt-2 flex flex-col gap-4">
@@ -325,7 +325,7 @@ export function AddVehicleSheet({
           </div>
         </form>
       </div>
-    </DialogContent>
-    </Dialog>
+    </ResponsiveDialogContent>
+    </ResponsiveDialog>
   )
 }

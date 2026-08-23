@@ -1,8 +1,5 @@
-"use client"
+import { redirect } from "next/navigation"
 
-import { VencimientosView } from "@/components/finance/vencimientos-view"
-
-export default function VencimientosAliasPage() {
-  return <VencimientosView />
+export default function VencimientosRedirectPage() {
+  redirect("/dashboard/vencimientos")
 }
-

@@ -33,7 +33,8 @@ export function ProfileView({
             variant="outline"
             size="icon-sm"
             onClick={onBack}
-            className="rounded-xl shrink-0"
+            className="size-10 sm:size-8 rounded-xl shrink-0"
+            aria-label="Volver"
           >
             <ArrowLeft className="size-4" />
           </Button>

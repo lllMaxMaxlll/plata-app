@@ -2,17 +2,18 @@
 
 import { useState, useEffect } from "react"
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog"
+  ResponsiveDialog,
+  ResponsiveDialogContent,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+  ResponsiveDialogDescription,
+} from "@/components/ui/responsive-dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useFinance } from "./finance-provider"
 import { formatShort } from "@/lib/finance-data"
 import { toast } from "sonner"
 import { Input } from "@/components/ui/input"
+import { DateStringPicker } from "@/components/ui/date-picker"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { TrendingUp, AlertTriangle, Loader2 } from "lucide-react"
@@ -136,23 +137,23 @@ export function StockTradeModal({
   const selectedHoldingItem = holdings.find((h) => h.symbol === symbol)
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && !loading && onClose()}>
-      <DialogContent className="w-full sm:max-w-xl max-w-[calc(100vw-2rem)] h-auto max-h-[90vh] rounded-xl bg-card border border-border p-6 shadow-2xl overflow-y-auto overflow-x-hidden transition-all duration-200">
-        <DialogHeader className="text-left pb-1">
+    <ResponsiveDialog open={open} onOpenChange={(isOpen) => !isOpen && !loading && onClose()}>
+      <ResponsiveDialogContent className="w-full sm:max-w-xl max-w-[calc(100vw-2rem)] h-auto max-h-[90vh] rounded-xl bg-card border border-border p-6 shadow-2xl overflow-y-auto overflow-x-hidden transition-all duration-200">
+        <ResponsiveDialogHeader className="text-left pb-1">
           <div className="flex items-center gap-2.5">
             <span className="flex size-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
               <TrendingUp className="size-5" />
             </span>
             <div>
-              <DialogTitle className="text-lg font-semibold tracking-tight text-foreground">
+              <ResponsiveDialogTitle className="text-lg font-semibold tracking-tight text-foreground">
                 {type === "buy" ? "Comprar Acción" : "Vender Acción"}
-              </DialogTitle>
-              <DialogDescription className="text-xs text-muted-foreground">
+              </ResponsiveDialogTitle>
+              <ResponsiveDialogDescription className="text-xs text-muted-foreground">
                 Registrá una operación y actualizá tu portafolio de inversión.
-              </DialogDescription>
+              </ResponsiveDialogDescription>
             </div>
           </div>
-        </DialogHeader>
+        </ResponsiveDialogHeader>
 
         <div className={cn("transition-all duration-200", loading && "pointer-events-none opacity-50 cursor-not-allowed select-none")}>
           <form onSubmit={handleSubmit} className="mt-2 flex min-w-0 flex-col gap-4">
@@ -355,13 +356,15 @@ export function StockTradeModal({
             <Label htmlFor="date" className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
               Fecha de operación
             </Label>
-            <Input
+            <DateStringPicker
               id="date"
-              type="date"
               value={date}
-              onChange={(e) => setDate(e.target.value)}
+              onChange={setDate}
               required
-              className="h-10 text-sm rounded-xl border-border bg-card/60 font-semibold"
+              displayFormat="dd MMM yyyy"
+              endMonth={new Date()}
+              disabledDates={{ after: new Date() }}
+              className="font-semibold"
             />
           </div>
 
@@ -413,7 +416,7 @@ export function StockTradeModal({
           </Button>
         </form>
       </div>
-    </DialogContent>
-    </Dialog>
+    </ResponsiveDialogContent>
+    </ResponsiveDialog>
   )
 }

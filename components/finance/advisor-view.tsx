@@ -536,6 +536,7 @@ export function AdvisorView({ isDesktop = false }: { isDesktop?: boolean }) {
             onClick={handleClearChat}
             className="text-muted-foreground hover:text-destructive"
             title="Borrar chat"
+            aria-label="Borrar chat"
           >
             <Trash2 className="size-4" />
           </Button>
@@ -766,6 +767,7 @@ export function AdvisorView({ isDesktop = false }: { isDesktop?: boolean }) {
             size="icon-sm"
             disabled={!input.trim() || isSending}
             className="absolute right-2 size-9 rounded-xl"
+            aria-label="Enviar mensaje"
           >
             <Send className="size-4" />
           </Button>

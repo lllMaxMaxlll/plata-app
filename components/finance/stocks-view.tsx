@@ -23,6 +23,7 @@ import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { getApiAuthHeaders } from "@/lib/supabase/client"
+import { cn, clickableRowProps, focusRing } from "@/lib/utils"
 
 export function StocksView({ onBack }: { onBack?: () => void }) {
   const {
@@ -114,7 +115,8 @@ export function StocksView({ onBack }: { onBack?: () => void }) {
               variant="outline"
               size="icon-sm"
               onClick={onBack}
-              className="rounded-xl shrink-0"
+              className="size-10 sm:size-8 rounded-xl shrink-0"
+              aria-label="Volver"
             >
               <ArrowLeft className="size-4" />
             </Button>
@@ -358,8 +360,11 @@ export function StocksView({ onBack }: { onBack?: () => void }) {
                     <li key={w.symbol}>
                       <Card className="flex items-center gap-3 p-3.5 shadow-sm">
                         <div
-                          className="min-w-0 flex-1 cursor-pointer"
-                          onClick={() => handleOpenTrade(w.symbol, "buy")}
+                          {...clickableRowProps(
+                            () => handleOpenTrade(w.symbol, "buy"),
+                            `Comprar ${w.symbol}`
+                          )}
+                          className={cn("min-w-0 flex-1 cursor-pointer rounded-md", focusRing)}
                         >
                           <div className="flex items-center gap-2">
                             <span className="text-sm font-bold">{w.symbol}</span>

@@ -7,12 +7,12 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card } from "@/components/ui/card"
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog"
+  ResponsiveDialog,
+  ResponsiveDialogContent,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+  ResponsiveDialogDescription,
+} from "@/components/ui/responsive-dialog"
 import { useFinance } from "./finance-provider"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
@@ -128,23 +128,23 @@ export function SecuritySheet({ open, onClose }: { open: boolean; onClose: () =>
   }
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && !submitting && onClose()}>
-      <DialogContent className="w-full sm:max-w-xl max-w-[calc(100vw-2rem)] h-auto max-h-[90vh] rounded-xl bg-card border border-border p-6 shadow-2xl overflow-y-auto overflow-x-hidden transition-all duration-200">
-        <DialogHeader className="text-left pb-1">
+    <ResponsiveDialog open={open} onOpenChange={(isOpen) => !isOpen && !submitting && onClose()}>
+      <ResponsiveDialogContent className="w-full sm:max-w-xl max-w-[calc(100vw-2rem)] h-auto max-h-[90vh] rounded-xl bg-card border border-border p-6 shadow-2xl overflow-y-auto overflow-x-hidden transition-all duration-200">
+        <ResponsiveDialogHeader className="text-left pb-1">
           <div className="flex items-center gap-2.5">
             <span className="flex size-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
               <ShieldAlert className="size-5" />
             </span>
             <div>
-              <DialogTitle className="text-lg font-semibold tracking-tight text-foreground">
+              <ResponsiveDialogTitle className="text-lg font-semibold tracking-tight text-foreground">
                 Seguridad y Accesos
-              </DialogTitle>
-              <DialogDescription className="text-xs text-muted-foreground">
+              </ResponsiveDialogTitle>
+              <ResponsiveDialogDescription className="text-xs text-muted-foreground">
                 Gestioná la seguridad de tu cuenta, tu contraseña y métodos de inicio de sesión.
-              </DialogDescription>
+              </ResponsiveDialogDescription>
             </div>
           </div>
-        </DialogHeader>
+        </ResponsiveDialogHeader>
 
         <div className={cn("mt-2 flex min-w-0 flex-col gap-5 transition-all duration-200", submitting && "pointer-events-none opacity-50 cursor-not-allowed select-none")}>
           {/* User Profile Summary Header */}
@@ -328,7 +328,7 @@ export function SecuritySheet({ open, onClose }: { open: boolean; onClose: () =>
             )}
           </section>
         </div>
-      </DialogContent>
-    </Dialog>
+      </ResponsiveDialogContent>
+    </ResponsiveDialog>
   )
 }

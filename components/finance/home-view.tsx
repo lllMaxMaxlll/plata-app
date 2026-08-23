@@ -31,21 +31,23 @@ export function HomeView({
 
   return (
     <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 pt-4 pb-12 font-sans space-y-6">
-      {/* 2-Column Responsive Layout: Left 8 cols for Main Metrics & Analytics, Right 4 cols for Wallet & Shortcuts */}
+      {/* Una sola instancia de cada bloque: la grilla reordena en lg en vez de
+          montar WalletCards dos veces (una oculta por CSS). */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Left Column: Hero Header, Expense Chart, Recent Transactions */}
-        <div className="lg:col-span-7 xl:col-span-8 space-y-6">
+        <div className="lg:col-span-7 xl:col-span-8">
           <DashboardHeader
             onOpenExchange={onOpenExchange}
             onAddAccount={onAddAccount}
             onAddTransaction={handleAddTx}
           />
+        </div>
 
-          {/* Mobile-only Wallet Cards position right under Header */}
-          <div className="lg:hidden">
-            <WalletCards onAddAccount={onAddAccount} />
-          </div>
+        {/* En mobile queda justo debajo del header; en lg pasa a la columna derecha. */}
+        <div className="lg:col-span-5 xl:col-span-4 lg:row-span-2 lg:sticky lg:top-6">
+          <WalletCards onAddAccount={onAddAccount} />
+        </div>
 
+        <div className="lg:col-span-7 xl:col-span-8 space-y-6">
           <ExpenseChart onSeeAnalytics={onSeeAnalytics} className="w-full" />
 
           <section className="rounded-xl border border-border/60 bg-card p-5 shadow-sm">
@@ -64,11 +66,6 @@ export function HomeView({
               <TransactionList transactions={recent} onEditTransaction={onEditTransaction} />
             </div>
           </section>
-        </div>
-
-        {/* Right Column (Desktop/Tablet): Wallet Cards Sidebar */}
-        <div className="hidden lg:block lg:col-span-5 xl:col-span-4 space-y-6 sticky top-6">
-          <WalletCards onAddAccount={onAddAccount} />
         </div>
       </div>
     </div>

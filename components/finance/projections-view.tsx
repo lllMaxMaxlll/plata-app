@@ -341,7 +341,7 @@ export function ProjectionsView({ isDesktop = false }: ProjectionsViewProps) {
                           size="icon"
                           disabled={idx === 0}
                           onClick={() => handleMovePriority(idx, "up")}
-                          className="size-7 text-muted-foreground hover:text-foreground cursor-pointer disabled:opacity-30"
+                          className="size-9 sm:size-7 text-muted-foreground hover:text-foreground cursor-pointer disabled:opacity-30"
                           title="Subir prioridad"
                         >
                           <ArrowUp className="size-3.5" />
@@ -352,7 +352,7 @@ export function ProjectionsView({ isDesktop = false }: ProjectionsViewProps) {
                           size="icon"
                           disabled={idx === goals.length - 1}
                           onClick={() => handleMovePriority(idx, "down")}
-                          className="size-7 text-muted-foreground hover:text-foreground cursor-pointer disabled:opacity-30"
+                          className="size-9 sm:size-7 text-muted-foreground hover:text-foreground cursor-pointer disabled:opacity-30"
                           title="Bajar prioridad"
                         >
                           <ArrowDown className="size-3.5" />
@@ -362,7 +362,7 @@ export function ProjectionsView({ isDesktop = false }: ProjectionsViewProps) {
                           variant="ghost"
                           size="icon"
                           onClick={() => handleOpenEditGoal(goal)}
-                          className="size-7 text-muted-foreground hover:text-primary cursor-pointer"
+                          className="size-9 sm:size-7 text-muted-foreground hover:text-primary cursor-pointer"
                           title="Editar"
                         >
                           <Pencil className="size-3.5" />
@@ -372,7 +372,7 @@ export function ProjectionsView({ isDesktop = false }: ProjectionsViewProps) {
                           variant="ghost"
                           size="icon"
                           onClick={() => handleRemoveGoal(goal.id)}
-                          className="size-7 text-muted-foreground hover:text-destructive cursor-pointer"
+                          className="size-9 sm:size-7 text-muted-foreground hover:text-destructive cursor-pointer"
                           title="Eliminar"
                         >
                           <Trash2 className="size-3.5" />

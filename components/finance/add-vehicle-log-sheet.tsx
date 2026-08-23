@@ -4,14 +4,15 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { DateStringPicker } from "@/components/ui/date-picker"
 import { Switch } from "@/components/ui/switch"
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog"
+  ResponsiveDialog,
+  ResponsiveDialogContent,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+  ResponsiveDialogDescription,
+} from "@/components/ui/responsive-dialog"
 import type { Vehicle, VehicleLog, VehicleLogType } from "@/lib/finance-data"
 import { useFinance } from "./finance-provider"
 import { toast } from "sonner"
@@ -134,7 +135,7 @@ export function AddVehicleLogSheet({
       const data: any = {
         vehicleId: vehicle.id,
         type,
-        date: new Date(date).toISOString(),
+        date: new Date(`${date}T12:00:00`).toISOString(),
         odometer: parsedOdometer,
         amount: parsedAmount,
         accountId: accountId || undefined,
@@ -153,7 +154,7 @@ export function AddVehicleLogSheet({
         data.serviceType = serviceType.trim() || undefined
         data.provider = provider.trim() || undefined
         data.nextServiceOdometer = nextServiceOdometer ? parseInt(nextServiceOdometer) || undefined : undefined
-        data.nextServiceDate = nextServiceDate ? new Date(nextServiceDate).toISOString() : undefined
+        data.nextServiceDate = nextServiceDate ? new Date(`${nextServiceDate}T12:00:00`).toISOString() : undefined
         data.itemName = undefined
         data.note = undefined
       } else if (type === "part" || type === "gear" || type === "insurance" || type === "other") {
@@ -200,16 +201,16 @@ export function AddVehicleLogSheet({
   }
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && !submitting && onClose()}>
-      <DialogContent className="max-w-lg w-full rounded-xl bg-card border border-border p-6 shadow-2xl overflow-y-auto max-h-[90vh]">
-        <DialogHeader className="text-left pb-1">
-          <DialogTitle className="text-lg font-semibold tracking-tight text-foreground">
+    <ResponsiveDialog open={open} onOpenChange={(isOpen) => !isOpen && !submitting && onClose()}>
+      <ResponsiveDialogContent className="w-full max-w-[calc(100vw-2rem)] sm:max-w-lg rounded-xl bg-card border border-border p-6 shadow-2xl overflow-y-auto max-h-[90vh]">
+        <ResponsiveDialogHeader className="text-left pb-1">
+          <ResponsiveDialogTitle className="text-lg font-semibold tracking-tight text-foreground">
             {log ? "Editar Registro" : "Nuevo Registro"}
-          </DialogTitle>
-          <DialogDescription className="text-xs text-muted-foreground">
+          </ResponsiveDialogTitle>
+          <ResponsiveDialogDescription className="text-xs text-muted-foreground">
             {log ? "Modificá los detalles del registro" : `Registrar evento para ${vehicle.name}`}
-          </DialogDescription>
-        </DialogHeader>
+          </ResponsiveDialogDescription>
+        </ResponsiveDialogHeader>
 
         <div className={cn("transition-all duration-200", submitting && "pointer-events-none opacity-50 cursor-not-allowed select-none")}>
           <form onSubmit={handleSubmit} className="mt-2 flex flex-col gap-4">
@@ -243,13 +244,14 @@ export function AddVehicleLogSheet({
               <Label htmlFor="log-date" className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
                 Fecha
               </Label>
-              <Input
+              <DateStringPicker
                 id="log-date"
-                type="date"
                 required
                 value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className="h-10 text-sm rounded-xl border-border bg-card/60"
+                onChange={setDate}
+                displayFormat="dd MMM yyyy"
+                endMonth={new Date()}
+                disabledDates={{ after: new Date() }}
               />
             </div>
 
@@ -380,12 +382,12 @@ export function AddVehicleLogSheet({
                   <Label htmlFor="next-service-date" className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
                     Próximo Service (Fecha)
                   </Label>
-                  <Input
+                  <DateStringPicker
                     id="next-service-date"
-                    type="date"
                     value={nextServiceDate}
-                    onChange={(e) => setNextServiceDate(e.target.value)}
-                    className="h-10 text-sm rounded-xl border-border bg-card/60"
+                    onChange={setNextServiceDate}
+                    placeholder="Seleccionar"
+                    displayFormat="dd MMM yyyy"
                   />
                 </div>
               </div>
@@ -495,7 +497,7 @@ export function AddVehicleLogSheet({
           </div>
         </form>
       </div>
-    </DialogContent>
-    </Dialog>
+    </ResponsiveDialogContent>
+    </ResponsiveDialog>
   )
 }

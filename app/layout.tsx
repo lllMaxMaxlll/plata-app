@@ -30,10 +30,11 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   colorScheme: 'dark',
   themeColor: '#0e1015',
-  userScalable: false,
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
+  // Sin `userScalable: false` ni `maximumScale`: la app muestra muchos importes
+  // en cuerpos chicos y bloquear el zoom incumple WCAG 1.4.4.
+  viewportFit: 'cover',
 }
 
 export default function RootLayout({

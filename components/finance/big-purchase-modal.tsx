@@ -2,11 +2,13 @@
 
 import React, { useState, useEffect } from "react"
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
+  ResponsiveDialog,
+  ResponsiveDialogContent,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+  ResponsiveDialogDescription,
+} from "@/components/ui/responsive-dialog"
+import {
   DialogFooter,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
@@ -93,17 +95,17 @@ export function BigPurchaseModal({
   }
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && !submitting && onOpenChange(false)}>
-      <DialogContent className="sm:max-w-[440px] border-border/50 bg-card/95 backdrop-blur-2xl">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-base font-semibold">
+    <ResponsiveDialog open={open} onOpenChange={(isOpen) => !isOpen && !submitting && onOpenChange(false)}>
+      <ResponsiveDialogContent className="sm:max-w-[440px] border-border/50 bg-card/95 backdrop-blur-2xl">
+        <ResponsiveDialogHeader>
+          <ResponsiveDialogTitle className="flex items-center gap-2 text-base font-semibold">
             <Sparkles className="size-4.5 text-purple-400" />
             {currentGoal ? "Editar Meta Secuencial" : "Nueva Meta en la Secuencia"}
-          </DialogTitle>
-          <DialogDescription className="text-xs">
+          </ResponsiveDialogTitle>
+          <ResponsiveDialogDescription className="text-xs">
             Define tu objetivo. La aplicación calculará en qué fecha proyectada llegarás en base a tu capacidad de ahorro libre.
-          </DialogDescription>
-        </DialogHeader>
+          </ResponsiveDialogDescription>
+        </ResponsiveDialogHeader>
 
         <div className={cn("transition-all duration-200", submitting && "pointer-events-none opacity-50 cursor-not-allowed select-none")}>
           <form onSubmit={handleSave} className="space-y-4 py-2">
@@ -237,8 +239,8 @@ export function BigPurchaseModal({
             </DialogFooter>
           </form>
         </div>
-      </DialogContent>
-    </Dialog>
+      </ResponsiveDialogContent>
+    </ResponsiveDialog>
   )
 }
 

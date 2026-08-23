@@ -7,12 +7,12 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog"
+  ResponsiveDialog,
+  ResponsiveDialogContent,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+  ResponsiveDialogDescription,
+} from "@/components/ui/responsive-dialog"
 import { useFinance } from "./finance-provider"
 import { DEFAULT_COLORS, type Category } from "@/lib/finance-data"
 import { toast } from "sonner"
@@ -96,23 +96,23 @@ export function ManageCategoriesSheet({
   }
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && !submitting && onClose()}>
-      <DialogContent className="w-full sm:max-w-xl max-w-[calc(100vw-2rem)] h-auto max-h-[90vh] rounded-xl bg-card border border-border p-6 shadow-2xl overflow-y-auto overflow-x-hidden transition-all duration-200">
-        <DialogHeader className="text-left pb-1">
+    <ResponsiveDialog open={open} onOpenChange={(isOpen) => !isOpen && !submitting && onClose()}>
+      <ResponsiveDialogContent className="w-full sm:max-w-xl max-w-[calc(100vw-2rem)] h-auto max-h-[90vh] rounded-xl bg-card border border-border p-6 shadow-2xl overflow-y-auto overflow-x-hidden transition-all duration-200">
+        <ResponsiveDialogHeader className="text-left pb-1">
           <div className="flex items-center gap-2.5">
             <span className="flex size-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
               <Tag className="size-5" />
             </span>
             <div>
-              <DialogTitle className="text-lg font-semibold tracking-tight text-foreground">
+              <ResponsiveDialogTitle className="text-lg font-semibold tracking-tight text-foreground">
                 Categorías de Movimientos
-              </DialogTitle>
-              <DialogDescription className="text-xs text-muted-foreground">
+              </ResponsiveDialogTitle>
+              <ResponsiveDialogDescription className="text-xs text-muted-foreground">
                 Gestioná y personalizá tus categorías de ingresos y gastos.
-              </DialogDescription>
+              </ResponsiveDialogDescription>
             </div>
           </div>
-        </DialogHeader>
+        </ResponsiveDialogHeader>
 
         <div className={cn("mt-2 flex min-w-0 flex-col gap-4 transition-all duration-200", submitting && "pointer-events-none opacity-50 cursor-not-allowed select-none")}>
           {/* Type Tabs */}
@@ -237,7 +237,9 @@ export function ManageCategoriesSheet({
                         type="button"
                         disabled={submitting}
                         onClick={() => setSelectedColor(c)}
-                        className={`size-6 rounded-full border border-black/20 relative transition-all active:scale-90 cursor-pointer ${active
+                        aria-label={`Usar el color ${c}`}
+                        aria-pressed={active}
+                        className={`size-8 rounded-full border border-black/20 relative transition-all active:scale-90 cursor-pointer ${active
                             ? "ring-2 ring-primary ring-offset-2 ring-offset-background scale-110 shadow-md"
                             : "hover:scale-105 opacity-80 hover:opacity-100"
                           }`}
@@ -268,7 +270,7 @@ export function ManageCategoriesSheet({
             </form>
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+      </ResponsiveDialogContent>
+    </ResponsiveDialog>
   )
 }

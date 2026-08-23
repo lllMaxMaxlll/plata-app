@@ -143,7 +143,8 @@ export function ActivityView({
               variant="outline"
               size="icon"
               onClick={onBack}
-              className="size-8 rounded-lg shrink-0 border-border bg-card hover:bg-accent cursor-pointer"
+              className="size-10 sm:size-8 rounded-lg shrink-0 border-border bg-card hover:bg-accent cursor-pointer"
+              aria-label="Volver"
             >
               <ArrowLeft className="size-4" />
             </Button>

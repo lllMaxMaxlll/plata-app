@@ -7,12 +7,12 @@ import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog"
+  ResponsiveDialog,
+  ResponsiveDialogContent,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+  ResponsiveDialogDescription,
+} from "@/components/ui/responsive-dialog"
 import { useFinance } from "./finance-provider"
 import { formatCurrency, type DueItem } from "@/lib/finance-data"
 import { toast } from "sonner"
@@ -104,16 +104,16 @@ export function PayVencimientoModal({ open, onClose, item }: PayVencimientoModal
   const selectedAccount = eligibleAccounts.find((a) => a.id === selectedAccountId)
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && !submitting && onClose()}>
-      <DialogContent className="max-w-lg w-full rounded-xl bg-card border border-border p-6 shadow-2xl overflow-y-auto max-h-[90vh]">
-        <DialogHeader className="text-left pb-1">
-          <DialogTitle className="text-lg font-semibold tracking-tight text-foreground">
+    <ResponsiveDialog open={open} onOpenChange={(isOpen) => !isOpen && !submitting && onClose()}>
+      <ResponsiveDialogContent className="w-full max-w-[calc(100vw-2rem)] sm:max-w-lg rounded-xl bg-card border border-border p-6 shadow-2xl overflow-y-auto max-h-[90vh]">
+        <ResponsiveDialogHeader className="text-left pb-1">
+          <ResponsiveDialogTitle className="text-lg font-semibold tracking-tight text-foreground">
             Marcar como Pagado
-          </DialogTitle>
-          <DialogDescription className="text-xs text-muted-foreground">
+          </ResponsiveDialogTitle>
+          <ResponsiveDialogDescription className="text-xs text-muted-foreground">
             Confirmar el pago de &ldquo;{item.title}&rdquo; ({formatCurrency(item.amount, item.currency)}).
-          </DialogDescription>
-        </DialogHeader>
+          </ResponsiveDialogDescription>
+        </ResponsiveDialogHeader>
 
         <div className={cn("flex flex-col gap-4 pt-1 transition-all duration-200", submitting && "pointer-events-none opacity-50 cursor-not-allowed select-none")}>
           {/* Detail Box */}
@@ -250,7 +250,7 @@ export function PayVencimientoModal({ open, onClose, item }: PayVencimientoModal
             </Button>
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+      </ResponsiveDialogContent>
+    </ResponsiveDialog>
   )
 }
