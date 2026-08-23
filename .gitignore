@@ -11,6 +11,7 @@ __v0_jsx-dev-runtime.ts
 
 # Secrets: service accounts, service_role keys — never commit
 .secrets/
+/export/
 *-firebase-adminsdk-*.json
 
 # Common ignores
