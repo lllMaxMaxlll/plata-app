@@ -289,6 +289,9 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     // Sync stock transactions subcollection (ordered by date descending)
     const stockTxsRef = collection(db, "users", user.uid, "stockTransactions")
     const stockTxsQuery = query(stockTxsRef, orderBy("date", "desc"))
+    // If the ordered query fails (missing index), listen unordered and sort here.
+    // The fallback listener is tracked so the cleanup below can detach it too.
+    let unsubscribeStockTxsFallback: (() => void) | null = null
     const unsubscribeStockTxs = onSnapshot(
       stockTxsQuery,
       (snapshot) => {
@@ -300,7 +303,8 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       },
       (err) => {
         console.warn("Stock transactions query error, falling back:", err)
-        return onSnapshot(stockTxsRef, (snapshot) => {
+        unsubscribeStockTxsFallback?.()
+        unsubscribeStockTxsFallback = onSnapshot(stockTxsRef, (snapshot) => {
           const stList: StockTransaction[] = []
           snapshot.forEach((doc) => {
             stList.push({ id: doc.id, ...doc.data() } as StockTransaction)
@@ -358,6 +362,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       unsubscribeCategories()
       unsubscribeWatchlist()
       unsubscribeStockTxs()
+      unsubscribeStockTxsFallback?.()
       unsubscribeVehicles()
       unsubscribeVehicleLogs()
       unsubscribeDueItems()
