@@ -54,28 +54,29 @@ function clientAddress(request: Request) {
   return forwarded || request.headers.get("x-real-ip")?.trim() || "unknown"
 }
 
-export async function requireFirebaseUser(request: Request) {
+export async function requireSupabaseUser(request: Request) {
   const authorization = request.headers.get("authorization")
   const token = authorization?.startsWith("Bearer ")
     ? authorization.slice("Bearer ".length).trim()
     : ""
-  const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY
 
-  if (!token || !apiKey) return null
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key =
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  if (!token || !url || !key) return null
 
   try {
-    const response = await fetch(
-      `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${encodeURIComponent(apiKey)}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ idToken: token }),
-        cache: "no-store",
-      }
-    )
+    // Le preguntamos a GoTrue en vez de verificar la firma acá: no hay que
+    // manejar el secreto del JWT ni rotar claves a mano, y además detecta las
+    // sesiones revocadas, que una verificación local por firma no ve.
+    const response = await fetch(`${url}/auth/v1/user`, {
+      headers: { apikey: key, Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    })
     if (!response.ok) return null
-    const data = (await response.json()) as { users?: Array<{ localId?: string }> }
-    return data.users?.[0]?.localId || null
+    const user = (await response.json()) as { id?: string }
+    return user.id || null
   } catch {
     return null
   }
@@ -102,7 +103,7 @@ export async function authorizeApiRequest(
   const addressLimited = consume(`${scope}:ip:${clientAddress(request)}`, limit * 5, windowMs)
   if (addressLimited) return { userId: null, error: addressLimited }
 
-  const userId = await requireFirebaseUser(request)
+  const userId = await requireSupabaseUser(request)
   if (!userId) {
     return {
       userId: null,

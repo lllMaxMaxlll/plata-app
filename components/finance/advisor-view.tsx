@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { getApiAuthHeaders } from "@/lib/firebase"
+import { getApiAuthHeaders } from "@/lib/supabase/client"
 import { readUserScoped, writeUserScoped } from "@/lib/user-storage"
 
 interface Message {
