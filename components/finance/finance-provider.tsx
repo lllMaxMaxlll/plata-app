@@ -20,6 +20,7 @@ import {
   type DueItemStatus,
 } from "@/lib/finance-data"
 import { auth, db, getApiAuthHeaders } from "@/lib/firebase"
+import { clearUserScopedStorage } from "@/lib/user-storage"
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -440,6 +441,9 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(async () => {
     await signOut(auth)
+    // Chat history and the OpenRouter key live in localStorage and would otherwise
+    // outlive the session on a shared device
+    clearUserScopedStorage()
   }, [])
 
   const sendPasswordResetLink = useCallback(async (email: string) => {
