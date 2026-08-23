@@ -165,6 +165,37 @@ function fail(error: { message?: string } | null, fallback: string): never {
   throw new Error(error?.message || fallback)
 }
 
+const isJwtError = (error: { message?: string; code?: string } | null) =>
+  Boolean(error && (/jwt/i.test(error.message ?? "") || error.code === "PGRST301"))
+
+/**
+ * Reintenta una lectura cuando el token es rechazado.
+ *
+ * El token lo emite GoTrue y lo valida PostgREST: son servicios distintos, y si
+ * el que valida va unos segundos atrás, un token recién emitido le parece "del
+ * futuro" y lo rechaza. Dura lo que tarda en alinearse, pero sin reintento deja
+ * una tabla vacía hasta el próximo evento de realtime — en una app de finanzas,
+ * una pantalla a medio cargar es peor que una lenta.
+ *
+ * Si el token está vencido hay que pedir uno nuevo; si es del futuro, pedir otro
+ * lo empeora (vendría con una fecha todavía más adelantada), así que sólo se
+ * espera y se reintenta con el mismo.
+ */
+async function withAuthRetry<T>(
+  supabase: ReturnType<typeof getSupabase>,
+  run: () => PromiseLike<{ data: T; error: any }>
+): Promise<{ data: T; error: any }> {
+  const first = await run()
+  if (!isJwtError(first.error)) return first
+
+  if (/expired/i.test(first.error?.message ?? "")) {
+    await supabase.auth.refreshSession()
+  } else {
+    await new Promise((resolve) => setTimeout(resolve, 1200))
+  }
+  return run()
+}
+
 export function FinanceProvider({ children }: { children: ReactNode }) {
   const supabase = getSupabase()
 
@@ -249,65 +280,74 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   // ---------------------------------------------------------------------------
 
   const loadAccounts = useCallback(async () => {
-    const { data, error } = await supabase.from("account_balances").select("*").order("name")
+    const { data, error } = await withAuthRetry(supabase, () =>
+      supabase.from("account_balances").select("*").order("name")
+    )
     if (error) return console.error("No se pudieron leer las cuentas:", error.message)
     setAccounts((data ?? []).map(toAccount))
   }, [supabase])
 
   const loadTransactions = useCallback(async () => {
-    const { data, error } = await supabase
-      .from("transactions")
-      .select("*")
-      .order("occurred_at", { ascending: false })
+    const { data, error } = await withAuthRetry(supabase, () =>
+      supabase.from("transactions").select("*").order("occurred_at", { ascending: false })
+    )
     if (error) return console.error("No se pudieron leer los movimientos:", error.message)
     setTransactions((data ?? []).map(toTransaction))
   }, [supabase])
 
   const loadCategories = useCallback(async () => {
-    const { data, error } = await supabase.from("categories").select("*").order("name")
+    const { data, error } = await withAuthRetry(supabase, () =>
+      supabase.from("categories").select("*").order("name")
+    )
     if (error) return console.error("No se pudieron leer las categorías:", error.message)
     setCategories((data ?? []).map(toCategory))
     return data ?? []
   }, [supabase])
 
   const loadVehicles = useCallback(async () => {
-    const { data, error } = await supabase.from("vehicles").select("*").order("created_at", { ascending: false })
+    const { data, error } = await withAuthRetry(supabase, () =>
+      supabase.from("vehicles").select("*").order("created_at", { ascending: false })
+    )
     if (error) return console.error("No se pudieron leer los vehículos:", error.message)
     setVehicles((data ?? []).map(toVehicle))
   }, [supabase])
 
   const loadVehicleLogs = useCallback(async () => {
-    const { data, error } = await supabase
-      .from("vehicle_logs")
-      .select("*")
-      .order("occurred_at", { ascending: false })
+    const { data, error } = await withAuthRetry(supabase, () =>
+      supabase.from("vehicle_logs").select("*").order("occurred_at", { ascending: false })
+    )
     if (error) return console.error("No se pudieron leer los registros de vehículo:", error.message)
     setVehicleLogs((data ?? []).map(toVehicleLog))
   }, [supabase])
 
   const loadDueItems = useCallback(async () => {
-    const { data, error } = await supabase.from("due_items").select("*").order("due_date")
+    const { data, error } = await withAuthRetry(supabase, () =>
+      supabase.from("due_items").select("*").order("due_date")
+    )
     if (error) return console.error("No se pudieron leer los vencimientos:", error.message)
     setDueItems((data ?? []).map(toDueItem))
   }, [supabase])
 
   const loadStockTrades = useCallback(async () => {
-    const { data, error } = await supabase
-      .from("stock_trades")
-      .select("*")
-      .order("occurred_at", { ascending: false })
+    const { data, error } = await withAuthRetry(supabase, () =>
+      supabase.from("stock_trades").select("*").order("occurred_at", { ascending: false })
+    )
     if (error) return console.error("No se pudieron leer las operaciones:", error.message)
     setStockTransactions((data ?? []).map(toStockTransaction))
   }, [supabase])
 
   const loadWatchlist = useCallback(async () => {
-    const { data, error } = await supabase.from("watchlist").select("*").order("symbol")
+    const { data, error } = await withAuthRetry(supabase, () =>
+      supabase.from("watchlist").select("*").order("symbol")
+    )
     if (error) return console.error("No se pudo leer la watchlist:", error.message)
     setWatchlist((data ?? []).map(toWatchlistStock))
   }, [supabase])
 
   const loadSettings = useCallback(async () => {
-    const { data, error } = await supabase.from("user_settings").select("*").maybeSingle()
+    const { data, error } = await withAuthRetry(supabase, () =>
+      supabase.from("user_settings").select("*").maybeSingle()
+    )
     if (error) return console.error("No se pudieron leer las preferencias:", error.message)
     if (data) setMacroSettings((prev) => ({ ...prev, ...toMacroSettings(data) }))
   }, [supabase])
