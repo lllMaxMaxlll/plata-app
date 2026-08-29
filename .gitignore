@@ -23,3 +23,8 @@ firebase-debug.log
 .agents/
 # Claude Code: config local y skills materializadas (el lock sí se versiona)
 .claude/skills/
+
+# Cloudflare Workers / OpenNext
+.open-next/
+.wrangler/
+.dev.vars

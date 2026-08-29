@@ -1,0 +1,17 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  // Debe coincidir EXACTAMENTE con el nombre del Worker en el dashboard de
+  // Cloudflare: OpenNext crea un service binding WORKER_SELF_REFERENCE contra
+  // este nombre y el deploy falla con 10143 si no existe.
+  "name": "plata-app",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-08-28",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "observability": {
+    "enabled": true
+  }
+}
