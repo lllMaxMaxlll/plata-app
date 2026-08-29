@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// Domain types — kept framework-agnostic so they map cleanly to Firestore docs
+// Domain types — kept framework-agnostic so they map cleanly to the Supabase rows
 // ---------------------------------------------------------------------------
 
 export type Currency = "ARS" | "USD"

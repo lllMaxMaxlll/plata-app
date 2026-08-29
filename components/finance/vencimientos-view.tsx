@@ -15,7 +15,6 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { VencimientoSheet } from "./vencimiento-sheet"
 import { PayVencimientoModal } from "./pay-vencimiento-modal"
-import { requestNotificationPermission } from "@/lib/firebase-messaging"
 import { getApiAuthHeaders } from "@/lib/supabase/client"
 import { toast } from "sonner"
 import { clickableRowProps, focusRing } from "@/lib/utils"
@@ -26,8 +25,6 @@ import {
   AlertTriangle,
   Clock,
   CheckCircle2,
-  Bell,
-  BellOff,
   BellRing,
   ChevronLeft,
   ChevronRight,
@@ -41,7 +38,7 @@ import {
 } from "lucide-react"
 
 export function VencimientosView({ isDesktop = false }: { isDesktop?: boolean }) {
-  const { dueItems, markDueItemAsPending, saveFCMToken } = useFinance()
+  const { dueItems, markDueItemAsPending } = useFinance()
 
   const [activeTab, setActiveTab] = useState<"list" | "calendar">("list")
   const [statusFilter, setStatusFilter] = useState<string>("all")
@@ -54,13 +51,6 @@ export function VencimientosView({ isDesktop = false }: { isDesktop?: boolean })
   const [payModalOpen, setPayModalOpen] = useState(false)
   const [payingItem, setPayingItem] = useState<DueItem | null>(null)
 
-  // Notification setup state
-  const [pushStatus, setPushStatus] = useState<"unknown" | "granted" | "denied">(() => {
-    if (typeof window !== "undefined" && "Notification" in window) {
-      return Notification.permission as any
-    }
-    return "unknown"
-  })
   const [testingNotification, setTestingNotification] = useState(false)
 
   // Calendar month state (0-indexed month)
@@ -185,16 +175,6 @@ export function VencimientosView({ isDesktop = false }: { isDesktop?: boolean })
   function handleOpenPayModal(item: DueItem) {
     setPayingItem(item)
     setPayModalOpen(true)
-  }
-
-  async function handleEnablePush() {
-    const result = await requestNotificationPermission(saveFCMToken)
-    if (result.success) {
-      setPushStatus("granted")
-      toast.success("Notificaciones Push activadas en este dispositivo.")
-    } else {
-      toast.error(result.error || "No se pudo activar las notificaciones.")
-    }
   }
 
   async function handleTestNotificationCheck() {
@@ -451,43 +431,30 @@ export function VencimientosView({ isDesktop = false }: { isDesktop?: boolean })
         </div>
       </div>
 
-      {/* Push Notification Banner */}
+      {/* Comprobación de vencimientos bajo demanda */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border border-primary/20 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-4">
         <div className="flex items-center gap-3">
           <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-md shadow-primary/20">
             <BellRing className="size-5" />
           </span>
           <div>
-            <h3 className="text-sm font-bold text-foreground">Alertas Push PWA de Vencimiento</h3>
+            <h3 className="text-sm font-bold text-foreground">Alertas de Vencimiento</h3>
             <p className="text-xs text-muted-foreground">
-              {pushStatus === "granted"
-                ? "Las notificaciones automáticas están activas en tu navegador."
-                : "Activá las alertas tempranas para que PLATA te notifique antes del vencimiento."}
+              Revisá qué servicios entran en ventana de aviso según los días de recordatorio de cada uno.
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
-          {pushStatus !== "granted" ? (
-            <Button
-              onClick={handleEnablePush}
-              variant="outline"
-              className="rounded-xl text-xs font-semibold border-primary/40 text-primary hover:bg-primary/10"
-            >
-              <Bell className="size-3.5 mr-1.5" />
-              Activar Notificaciones
-            </Button>
-          ) : (
-            <Button
-              onClick={handleTestNotificationCheck}
-              variant="secondary"
-              disabled={testingNotification}
-              className="rounded-xl text-xs font-semibold bg-primary/10 hover:bg-primary/20 text-primary"
-            >
-              <Zap className="size-3.5 mr-1.5" />
-              {testingNotification ? "Comprobando..." : "Probar Alertas"}
-            </Button>
-          )}
+          <Button
+            onClick={handleTestNotificationCheck}
+            variant="secondary"
+            disabled={testingNotification}
+            className="rounded-xl text-xs font-semibold bg-primary/10 hover:bg-primary/20 text-primary"
+          >
+            <Zap className="size-3.5 mr-1.5" />
+            {testingNotification ? "Comprobando..." : "Comprobar Ahora"}
+          </Button>
         </div>
       </div>
 

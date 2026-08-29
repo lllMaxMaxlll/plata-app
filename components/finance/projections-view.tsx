@@ -63,7 +63,7 @@ export function ProjectionsView({ isDesktop = false }: ProjectionsViewProps) {
     syncMacroFromApi,
   } = useFinance()
 
-  // Auto-calculated real balances from Firestore
+  // Auto-calculated real balances from the user's accounts
   const realARSBalance = totalsByCurrency.ARS || 0
   const realUSDBalance = (totalsByCurrency.USD || 0) + (portfolioTotalValue || 0)
 
@@ -89,7 +89,7 @@ export function ProjectionsView({ isDesktop = false }: ProjectionsViewProps) {
 
   const [isSyncingMacro, setIsSyncingMacro] = useState<boolean>(false)
 
-  // Load from Firestore macroSettings when updated
+  // Load from the stored macroSettings when updated
   useEffect(() => {
     if (macroSettings.exchangeRate) setExchangeRate(macroSettings.exchangeRate)
     if (macroSettings.annualInflation) setAnnualInflation(macroSettings.annualInflation)

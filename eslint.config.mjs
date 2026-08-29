@@ -11,5 +11,5 @@ export default defineConfig([
       "react-hooks/set-state-in-effect": "off",
     },
   },
-  globalIgnores([".next/**", ".vercel/**", "out/**", "build/**", "next-env.d.ts", "public/firebase-messaging-sw.js"]),
+  globalIgnores([".next/**", ".vercel/**", ".open-next/**", "out/**", "build/**", "next-env.d.ts"]),
 ])

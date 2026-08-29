@@ -5,7 +5,7 @@ export async function GET(request: Request) {
   const authResult = await authorizeApiRequest(request, "due-date-check", 10)
   if (authResult.error) return authResult.error
   return NextResponse.json(
-    { error: "La ejecución programada requiere Firebase Admin/FCM y todavía no está configurada." },
+    { error: "La ejecución programada necesita un proveedor de push, que la app ya no tiene configurado." },
     { status: 501 }
   )
 }

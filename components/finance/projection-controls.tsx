@@ -34,7 +34,7 @@ export interface ProjectionControlsProps {
   isRealTerms: boolean
   onRealTermsChange: (real: boolean) => void
 
-  // Auto-sync with Firestore accounts
+  // Auto-sync with the accounts stored in Supabase
   useRealAccounts: boolean
   onUseRealAccountsChange: (useReal: boolean) => void
 
@@ -207,7 +207,7 @@ export function ProjectionControls({
           {/* Initial Net Worth Inputs */}
           <div>
             <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">
-              Patrimonio Actual {useRealAccounts && "(Calculado desde Firestore)"}
+              Patrimonio Actual {useRealAccounts && "(Calculado desde tus cuentas)"}
             </Label>
             <div className="grid grid-cols-2 gap-3">
               <div>

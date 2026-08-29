@@ -1,10 +1,10 @@
 /**
  * Traducción entre las filas de Postgres y los tipos de dominio de la app.
  *
- * Existe para que la migración no se filtre hacia arriba: los 31 componentes que
- * consumen useFinance() siguen viendo `Account`, `Transaction`, `DueItem`, etc.
- * exactamente como los definía finance-data.ts en la época de Firestore. Postgres
- * usa snake_case y la app camelCase; la costura vive acá y en ningún otro lado.
+ * Existe para que el esquema no se filtre hacia arriba: los 31 componentes que
+ * consumen useFinance() ven `Account`, `Transaction`, `DueItem`, etc. tal como
+ * los define finance-data.ts. Postgres usa snake_case y la app camelCase; la
+ * costura vive acá y en ningún otro lado.
  */
 
 import type {

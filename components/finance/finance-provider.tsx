@@ -130,7 +130,6 @@ interface FinanceContextValue {
     registerTx?: { accountId: string; amount?: number; category?: string; note?: string }
   ) => Promise<void>
   markDueItemAsPending: (id: string) => Promise<void>
-  saveFCMToken: (token: string) => Promise<void>
 
   macroSettings: MacroSettings
   updateMacroSettings: (settings: Partial<MacroSettings>) => Promise<void>
@@ -995,19 +994,6 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   // Preferencias y notificaciones
   // ---------------------------------------------------------------------------
 
-  const saveFCMToken = useCallback(
-    async (token: string) => {
-      if (!uid || !token) return
-      await supabase.from("push_tokens").upsert({
-        token,
-        user_id: uid,
-        user_agent: typeof navigator !== "undefined" ? navigator.userAgent : null,
-        updated_at: new Date().toISOString(),
-      })
-    },
-    [supabase, uid]
-  )
-
   const updateMacroSettings = useCallback(
     async (settings: Partial<MacroSettings>) => {
       const updated = { ...macroSettings, ...settings, lastUpdated: new Date().toISOString() }
@@ -1110,7 +1096,6 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       deleteDueItem,
       markDueItemAsPaid,
       markDueItemAsPending,
-      saveFCMToken,
       macroSettings,
       updateMacroSettings,
       syncMacroFromApi,
@@ -1162,7 +1147,6 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       deleteDueItem,
       markDueItemAsPaid,
       markDueItemAsPending,
-      saveFCMToken,
       macroSettings,
       updateMacroSettings,
       syncMacroFromApi,
