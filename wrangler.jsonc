@@ -14,6 +14,10 @@
   },
   // Índice de embeddings para la búsqueda semántica del historial. Hay que
   // crearlo una sola vez con la CLI (ver README): el binding solo no lo crea.
+  //
+  // `wrangler vectorize create` agrega por su cuenta un binding llamado
+  // VECTORIZE contra el mismo índice. Se borra: el código lee TRANSACTIONS_INDEX
+  // y dejar los dos sólo deja config muerta que confunde más adelante.
   "vectorize": [
     {
       "binding": "TRANSACTIONS_INDEX",
