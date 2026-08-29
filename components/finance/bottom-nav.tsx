@@ -5,16 +5,6 @@ import { usePathname } from "next/navigation"
 import { Home, Wallet, Plus, ReceiptText, LayoutGrid } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
-export type View =
-  | "home"
-  | "accounts"
-  | "vehicles"
-  | "stocks"
-  | "activity"
-  | "profile"
-  | "more"
-  | "analytics"
-
 const ITEMS: { href: string; label: string; Icon: typeof Home }[] = [
   { href: "/", label: "Inicio", Icon: Home },
   { href: "/accounts", label: "Cuentas", Icon: Wallet },
