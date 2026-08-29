@@ -70,6 +70,7 @@ function isTabActive(href: string, currentPath: string): boolean {
   if (href === "/more") {
     return [
       "/more",
+      "/search",
       "/vehicles",
       "/stocks",
       "/profile",

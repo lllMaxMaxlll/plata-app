@@ -17,6 +17,7 @@ import {
   ArrowLeftRight,
   Download,
   Plus,
+  Search,
   type LucideIcon,
 } from "lucide-react"
 import { useFinance } from "./finance-provider"
@@ -102,6 +103,18 @@ export function MoreView() {
       </div>
 
       <Section title="Análisis y planificación">
+        <Row
+          href="/search"
+          Icon={Search}
+          tone="bg-primary/10 text-primary border-primary/20"
+          title="Búsqueda Inteligente"
+          description="Preguntá en tus palabras: “cuánto gasté en el auto el verano pasado”"
+          trailing={
+            <Badge variant="outline" className="border-primary/30 text-[10px] font-bold text-primary">
+              Nuevo
+            </Badge>
+          }
+        />
         <Row
           href="/analytics"
           Icon={PieChart}

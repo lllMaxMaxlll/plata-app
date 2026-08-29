@@ -12,6 +12,14 @@
   "ai": {
     "binding": "AI"
   },
+  // Índice de embeddings para la búsqueda semántica del historial. Hay que
+  // crearlo una sola vez con la CLI (ver README): el binding solo no lo crea.
+  "vectorize": [
+    {
+      "binding": "TRANSACTIONS_INDEX",
+      "index_name": "plata-transactions"
+    }
+  ],
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"

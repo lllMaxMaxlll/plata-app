@@ -5,8 +5,8 @@
  *
  * Keys are namespaced with the uid so a second account on the same device never
  * reads the previous one's data, and everything under the PLATA prefix is wiped
- * on logout — the AI chat history quotes balances and spending, and the
- * OpenRouter key is a credential.
+ * on logout — el estado del índice de búsqueda revela qué movimientos existen,
+ * y no tiene por qué sobrevivir a un cambio de cuenta.
  */
 
 const PREFIX = "plata_"

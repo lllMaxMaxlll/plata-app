@@ -35,6 +35,7 @@ import {
   ChevronRight,
   Shield,
   Activity,
+  Search,
 } from "lucide-react"
 import { formatShort } from "@/lib/finance-data"
 import { useIsDesktop } from "@/lib/use-is-desktop"
@@ -51,6 +52,7 @@ const NAV_GROUPS = [
   {
     title: "ANALYTICS",
     items: [
+      { href: "/search", label: "Búsqueda", Icon: Search },
       { href: "/analytics", label: "Análisis", Icon: TrendingUp },
       { href: "/dashboard/proyecciones", label: "Proyecciones", Icon: Target },
     ],
@@ -117,6 +119,8 @@ export function AppShell({ children }: { children: ReactNode }) {
         return "Historial de Eventos"
       case "/profile":
         return "Configuración de Cuenta"
+      case "/search":
+        return "Búsqueda Inteligente"
       case "/analytics":
         return "Análisis & Métricas"
       case "/more":
