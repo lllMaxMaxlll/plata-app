@@ -56,14 +56,29 @@ const RELATIVE_MARGIN = 0.04
 /** Tope de resultados: con puntajes tan planos, sin esto se vuelca medio índice. */
 const MAX_RESULTS = 30
 
+/**
+ * Por qué una búsqueda no devolvió resultados semánticos.
+ *
+ * Existe porque la primera versión colapsaba tres causas muy distintas en un
+ * `available: false` sin log, y desde afuera "no está configurado" tapaba a
+ * "la llamada falló". Cada caso se loguea, y la UI puede decir la verdad.
+ */
+type Unavailable = "no-binding" | "embedding-failed" | "index-error"
+
 interface SearchResponse {
   matches: SearchMatch[]
   dateRange: DateRange | null
   available: boolean
+  reason?: Unavailable
 }
 
 function respond(body: SearchResponse, status = 200) {
   return NextResponse.json(body, { status })
+}
+
+function unavailable(reason: Unavailable, dateRange: DateRange | null, detail?: unknown) {
+  console.error(`[search] no disponible (${reason})`, detail ?? "")
+  return respond({ matches: [], dateRange, available: false, reason })
 }
 
 export async function POST(request: Request) {
@@ -91,21 +106,26 @@ export async function POST(request: Request) {
 
   const env = getBindings()
   if (!env?.AI || !env.TRANSACTIONS_INDEX) {
-    return respond({ matches: [], dateRange, available: false })
+    return unavailable("no-binding", dateRange, {
+      ai: Boolean(env?.AI),
+      index: Boolean(env?.TRANSACTIONS_INDEX),
+    })
   }
 
   try {
     // Se embebe sólo el "qué": la parte temporal ya la resolvió parseDateRange
     // y dejarla en el texto sólo le quita señal al embedding.
     const [vector] = (await embedTexts([stripTemporalPhrases(query)])) ?? []
-    if (!vector) return respond({ matches: [], dateRange, available: false })
+    if (!vector) return unavailable("embedding-failed", dateRange)
 
     const result = await env.TRANSACTIONS_INDEX.query(vector, {
       topK: TOP_K,
       // Sin este filtro un usuario vería los movimientos de otro. El userId
       // viene del JWT verificado, no del cuerpo del request.
       filter: { userId },
-      returnMetadata: false,
+      // "none", no `false`: la API v2 espera este enum de strings y con el
+      // booleano viejo tira error, que antes se veía como "no configurado".
+      returnMetadata: "none",
     })
 
     // Vectorize devuelve ordenado por score descendente.
@@ -124,7 +144,6 @@ export async function POST(request: Request) {
 
     return respond({ matches, dateRange, available: true })
   } catch (err) {
-    console.error("[search] Vectorize falló:", err)
-    return respond({ matches: [], dateRange, available: false })
+    return unavailable("index-error", dateRange, err)
   }
 }

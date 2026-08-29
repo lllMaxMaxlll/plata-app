@@ -21,7 +21,11 @@
   "vectorize": [
     {
       "binding": "TRANSACTIONS_INDEX",
-      "index_name": "plata-transactions"
+      "index_name": "plata-transactions",
+      // Vectorize no tiene emulación local: sin esto, en `next dev` el binding
+      // existe pero falla con "needs to be run remotely". En el deploy no
+      // cambia nada, el binding siempre es el real.
+      "remote": true
     }
   ],
   "assets": {

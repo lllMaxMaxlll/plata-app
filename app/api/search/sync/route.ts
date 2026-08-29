@@ -63,7 +63,11 @@ export async function POST(request: Request) {
   const env = getBindings()
   if (!env?.AI || !env.TRANSACTIONS_INDEX) {
     // Sin índice la app funciona igual, sólo que sin búsqueda semántica.
-    return NextResponse.json({ indexed: 0, available: false })
+    console.error("[search-sync] no disponible (no-binding)", {
+      ai: Boolean(env?.AI),
+      index: Boolean(env?.TRANSACTIONS_INDEX),
+    })
+    return NextResponse.json({ indexed: 0, available: false, reason: "no-binding" })
   }
 
   let indexed = 0
@@ -71,7 +75,10 @@ export async function POST(request: Request) {
     for (let start = 0; start < items.length; start += BATCH_SIZE) {
       const batch = items.slice(start, start + BATCH_SIZE)
       const vectors = await embedTexts(batch.map((item) => item.text))
-      if (!vectors) return NextResponse.json({ indexed, available: false })
+      if (!vectors) {
+        console.error("[search-sync] no disponible (embedding-failed)")
+        return NextResponse.json({ indexed, available: false, reason: "embedding-failed" })
+      }
 
       await env.TRANSACTIONS_INDEX.upsert(
         batch.map((item, position) => ({
@@ -86,8 +93,8 @@ export async function POST(request: Request) {
       indexed += batch.length
     }
   } catch (err) {
-    console.error("[search-sync] no se pudo indexar:", err)
-    return NextResponse.json({ indexed, available: false }, { status: 200 })
+    console.error("[search-sync] no disponible (index-error)", err)
+    return NextResponse.json({ indexed, available: false, reason: "index-error" }, { status: 200 })
   }
 
   return NextResponse.json({ indexed, available: true })

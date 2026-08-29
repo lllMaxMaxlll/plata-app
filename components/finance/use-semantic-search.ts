@@ -31,6 +31,9 @@ function readIndexState(uid: string | undefined): IndexState {
   }
 }
 
+/** Por qué no hay búsqueda semántica. Lo informa el servidor. */
+export type UnavailableReason = "no-binding" | "embedding-failed" | "index-error"
+
 export interface SearchResult {
   transactions: Transaction[]
   dateRange: DateRange | null
@@ -63,8 +66,9 @@ export function useSemanticSearch({
   const [searching, setSearching] = useState(false)
   const [syncing, setSyncing] = useState(false)
   const [pending, setPending] = useState(0)
-  /** `false` cuando el backend avisa que no hay índice configurado. */
+  /** `false` cuando el backend avisa que la búsqueda semántica no responde. */
   const [available, setAvailable] = useState(true)
+  const [reason, setReason] = useState<UnavailableReason | null>(null)
 
   const abortRef = useRef<AbortController | null>(null)
 
@@ -120,9 +124,14 @@ export function useSemanticSearch({
           })
           if (!response.ok) throw new Error(`sync: HTTP ${response.status}`)
 
-          const data = (await response.json()) as { indexed?: number; available?: boolean }
+          const data = (await response.json()) as {
+            indexed?: number
+            available?: boolean
+            reason?: UnavailableReason
+          }
           if (data.available === false) {
             setAvailable(false)
+            setReason(data.reason ?? "no-binding")
             return
           }
 
@@ -134,6 +143,7 @@ export function useSemanticSearch({
           setPending((current) => Math.max(0, current - confirmed.length))
         }
         setAvailable(true)
+        setReason(null)
       } catch (error) {
         console.warn("[search] no se pudo indexar:", error)
       } finally {
@@ -168,8 +178,10 @@ export function useSemanticSearch({
           matches?: SearchMatch[]
           dateRange?: DateRange | null
           available?: boolean
+          reason?: UnavailableReason
         }
         setAvailable(data.available !== false)
+        setReason(data.available === false ? (data.reason ?? "no-binding") : null)
 
         // Los ids se resuelven contra los movimientos que ya tiene el cliente.
         // Un vector huérfano — de algo borrado después de indexarlo — no
@@ -210,5 +222,5 @@ export function useSemanticSearch({
     setResult(null)
   }, [])
 
-  return { result, search, clear, sync, searching, syncing, pending, available }
+  return { result, search, clear, sync, searching, syncing, pending, available, reason }
 }

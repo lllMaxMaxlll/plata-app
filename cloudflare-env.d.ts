@@ -57,7 +57,8 @@ interface VectorizeBinding {
     options?: {
       topK?: number
       filter?: Record<string, unknown>
-      returnMetadata?: boolean | "all" | "indexed"
+      /** La API v2 usa este enum de strings; el booleano viejo la hace fallar. */
+      returnMetadata?: "none" | "indexed" | "all"
       returnValues?: boolean
     }
   ): Promise<{ matches: VectorizeMatch[] }>

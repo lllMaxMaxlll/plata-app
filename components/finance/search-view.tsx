@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { formatCurrency, type Currency, type Transaction } from "@/lib/finance-data"
 import { useFinance } from "./finance-provider"
-import { useSemanticSearch } from "./use-semantic-search"
+import { useSemanticSearch, type UnavailableReason } from "./use-semantic-search"
 import { TransactionList } from "./transaction-list"
 import { cn } from "@/lib/utils"
 
@@ -26,7 +26,7 @@ export function SearchView({
   const { user, transactions, accounts, vehicles } = useFinance()
   const [query, setQuery] = useState("")
 
-  const { result, search, clear, sync, searching, syncing, pending, available } =
+  const { result, search, clear, sync, searching, syncing, pending, available, reason } =
     useSemanticSearch({
       uid: user?.uid,
       transactions,
@@ -111,6 +111,7 @@ export function SearchView({
 
       <IndexStatus
         available={available}
+        reason={reason}
         pending={pending}
         syncing={syncing}
         onSync={() => void sync()}
@@ -171,13 +172,25 @@ export function SearchView({
  * Estado del índice. Sólo aparece cuando hay algo que decir: si todo está
  * indexado y el índice existe, no ocupa lugar en la pantalla.
  */
+const UNAVAILABLE_COPY: Record<UnavailableReason, string> = {
+  // Es lo esperable corriendo en local sin credenciales de Cloudflare.
+  "no-binding":
+    "La búsqueda semántica no está configurada en este entorno. El filtro por fecha sigue funcionando.",
+  "embedding-failed":
+    "No se pudo procesar la consulta (el modelo no respondió). Probá de nuevo en un momento.",
+  "index-error":
+    "El índice de búsqueda no respondió. Probá de nuevo; si sigue igual, mirá los logs del Worker.",
+}
+
 function IndexStatus({
   available,
+  reason,
   pending,
   syncing,
   onSync,
 }: {
   available: boolean
+  reason: UnavailableReason | null
   pending: number
   syncing: boolean
   onSync: () => void
@@ -186,10 +199,7 @@ function IndexStatus({
     return (
       <p className="mt-4 flex items-start gap-2 rounded-lg border border-dashed border-border bg-muted/30 p-3 text-xs text-muted-foreground">
         <Info className="mt-0.5 size-3.5 shrink-0" />
-        <span>
-          La búsqueda semántica no está configurada en este entorno. El filtro por fecha sigue
-          funcionando.
-        </span>
+        <span>{UNAVAILABLE_COPY[reason ?? "no-binding"]}</span>
       </p>
     )
   }
