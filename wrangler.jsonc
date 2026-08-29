@@ -7,6 +7,11 @@
   "main": ".open-next/worker.js",
   "compatibility_date": "2026-08-28",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  // Workers AI: la categorización automática de movimientos corre acá, sin API
+  // key propia y facturada por neurons contra la cuenta del Worker.
+  "ai": {
+    "binding": "AI"
+  },
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"

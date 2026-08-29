@@ -13,6 +13,7 @@ PLATA es una aplicación web progresiva (PWA) de finanzas personales diseñada e
   - Historial detallado de gastos categorizados en: *combustible*, *mantenimiento (service)*, *repuestos*, *seguro/patentes*, e *indumentaria*.
   - Estadísticas de consumo inteligente: cálculo de kilómetros por litro promedio (km/L) entre tanques llenos y estimación de costo directo por kilómetro recorrido.
   - Alertas automáticas y dinámicas de servicios vencidos o próximos a vencer en base al kilometraje (odómetro) y fechas cargadas.
+- **Categorización Automática de Movimientos:** Al escribir la nota de un gasto o ingreso, la app propone la categoría sola. Resuelve primero con reglas locales (comercios argentinos frecuentes: YPF, Carrefour, Edenor…), que son instantáneas y funcionan sin conexión, y sólo consulta a **Cloudflare Workers AI** cuando no reconoce la descripción. La sugerencia se aplica sola pero cualquier elección manual la desactiva, y si el modelo no responde el formulario sigue funcionando igual.
 - **Portafolio de Inversiones (Stocks):** Simulación de trading en tiempo real utilizando cotizaciones reales y seguimiento del rendimiento del portafolio (ganancias y pérdidas acumuladas).
 - **Seguridad e Identidad:** Autenticación con Supabase Auth: registro e inicio de sesión con correo y contraseña, verificación de email, recuperación y cambio seguro de contraseña.
 - **Sincronización en Tiempo Real:** Base de datos Postgres gestionada por Supabase, con Row Level Security y Realtime.
@@ -26,6 +27,7 @@ PLATA es una aplicación web progresiva (PWA) de finanzas personales diseñada e
 - **Lenguaje:** TypeScript
 - **Estilos:** Tailwind CSS v4 & Iconos por Lucide React
 - **Base de Datos & Auth:** Supabase (Postgres + Auth, vía `@supabase/ssr`)
+- **IA:** Cloudflare Workers AI (`@cf/meta/llama-3.1-8b-instruct-fast`) a través del binding `AI` declarado en `wrangler.jsonc`. No necesita API key propia: se factura por neurons contra la cuenta del Worker.
 - **Entorno y Gestor de Paquetes:** [Bun](https://bun.sh/) (gestor rápido y moderno)
 
 ---

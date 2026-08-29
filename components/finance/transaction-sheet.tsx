@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from "react"
-import { Upload, Check, AlertCircle } from "lucide-react"
+import { Upload, Check, AlertCircle, Sparkles } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -35,6 +35,7 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectVa
 import { useFinance } from "./finance-provider"
 import { toast } from "sonner"
 import { DatePicker } from "@/components/ui/date-picker"
+import { useCategorySuggestion } from "./use-category-suggestion"
 
 const TABS: { value: TransactionType; label: string }[] = [
   { value: "income", label: "Ingreso" },
@@ -65,6 +66,9 @@ export function TransactionSheet({
   const [receipt, setReceipt] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+  // Una vez que el usuario elige categoría a mano, dejamos de sugerir: su
+  // decisión no se pisa con la del modelo.
+  const [categoryTouched, setCategoryTouched] = useState(false)
 
   const fromAccount = accounts.find((a) => a.id === accountId)
   const toAccount = accounts.find((a) => a.id === toAccountId)
@@ -74,6 +78,29 @@ export function TransactionSheet({
   const categoriesList = useMemo(() => {
     return categories.filter((c) => c.type === (type === "income" ? "income" : "expense"))
   }, [categories, type])
+
+  const categoryNames = useMemo(() => categoriesList.map((c) => c.name), [categoriesList])
+
+  const { suggestion, loading: suggestionLoading } = useCategorySuggestion({
+    note,
+    type,
+    categories: categoryNames,
+    enabled: open && !categoryTouched,
+  })
+
+  // Se aplica sola para que el caso habitual sea cero taps; cualquier click en
+  // un chip la desactiva para el resto de la carga.
+  // Depende de `category` a propósito: el efecto que resetea el formulario
+  // corre de nuevo cuando cambian las cuentas (realtime) y pisaría la
+  // sugerencia. Mientras el usuario no elija a mano, la sugerencia se reimpone.
+  useEffect(() => {
+    if (!suggestion || categoryTouched) return
+    if (category === suggestion.category) return
+    setCategory(suggestion.category)
+  }, [suggestion, categoryTouched, category])
+
+  const isSuggested =
+    !categoryTouched && suggestion !== null && category === suggestion.category
 
   const toAmountPreview = useMemo(() => {
     if (!crossCurrency) return null
@@ -114,6 +141,8 @@ export function TransactionSheet({
   useEffect(() => {
     if (open) {
       if (transaction) {
+        // Editar: la categoría guardada ya es una decisión tomada.
+        setCategoryTouched(true)
         setType(transaction.type)
         setAmount(String(transaction.amount))
         setAccountId(transaction.accountId)
@@ -124,6 +153,7 @@ export function TransactionSheet({
         setReceipt(transaction.receiptName ?? null)
         setDate(new Date(transaction.date))
       } else {
+        setCategoryTouched(false)
         setAmount("")
         setNote("")
         setRate("")
@@ -145,6 +175,9 @@ export function TransactionSheet({
 
   function handleTab(val: TransactionType) {
     setType(val)
+    // Las categorías de ingreso y de gasto son listas distintas: lo elegido
+    // para una no dice nada sobre la otra.
+    if (!transaction) setCategoryTouched(false)
     if (val === "income") {
       const first = categories.find((c) => c.type === "income")
       if (first) setCategory(first.name)
@@ -379,14 +412,39 @@ export function TransactionSheet({
 
             {/* Categories (not for transfer) */}
             {type !== "transfer" && (
-              <Field label="Categoría">
+              <Field
+                label={
+                  <span className="flex items-center gap-2">
+                    Categoría
+                    {suggestionLoading && (
+                      <span className="flex items-center gap-1 font-normal text-muted-foreground">
+                        <span className="size-2.5 animate-spin rounded-full border border-current border-t-transparent" />
+                        Analizando…
+                      </span>
+                    )}
+                    {isSuggested && (
+                      <span className="flex items-center gap-1 text-primary animate-in fade-in">
+                        <Sparkles className="size-3 shrink-0" />
+                        Sugerido
+                      </span>
+                    )}
+                  </span>
+                }
+              >
                 <div className="flex flex-wrap gap-2">
                   {categoriesList.map((c) => (
                     <Badge
                       key={c.id}
                       variant={category === c.name ? "default" : "outline"}
-                      className="cursor-pointer px-3 py-1 text-xs font-medium"
-                      onClick={() => !submitting && setCategory(c.name)}
+                      className={cn(
+                        "cursor-pointer px-3 py-1 text-xs font-medium transition-all",
+                        isSuggested && category === c.name && "ring-2 ring-primary/30"
+                      )}
+                      onClick={() => {
+                        if (submitting) return
+                        setCategoryTouched(true)
+                        setCategory(c.name)
+                      }}
                     >
                       {c.name}
                     </Badge>
@@ -504,7 +562,7 @@ export function TransactionSheet({
   )
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({ label, children }: { label: React.ReactNode; children: React.ReactNode }) {
   return (
     <div className="space-y-1.5">
       <Label className="text-xs font-semibold text-muted-foreground">{label}</Label>
