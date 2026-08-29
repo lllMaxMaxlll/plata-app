@@ -1,6 +1,6 @@
 # PLATA — Finanzas Personales ARS & USD
 
-PLATA es una aplicación web progresiva (PWA) de finanzas personales diseñada especialmente para el contexto financiero argentino. Permite consolidar y gestionar de manera unificada cuentas en pesos (ARS) y dólares (USD), registrar transacciones, simular trading de acciones en mercados reales, realizar un control exhaustivo de vehículos y sus gastos, e interactuar con un asesor financiero inteligente potenciado por inteligencia artificial.
+PLATA es una aplicación web progresiva (PWA) de finanzas personales diseñada especialmente para el contexto financiero argentino. Permite consolidar y gestionar de manera unificada cuentas en pesos (ARS) y dólares (USD), registrar transacciones, simular trading de acciones en mercados reales y realizar un control exhaustivo de vehículos y sus gastos.
 
 ---
 
@@ -14,7 +14,6 @@ PLATA es una aplicación web progresiva (PWA) de finanzas personales diseñada e
   - Estadísticas de consumo inteligente: cálculo de kilómetros por litro promedio (km/L) entre tanques llenos y estimación de costo directo por kilómetro recorrido.
   - Alertas automáticas y dinámicas de servicios vencidos o próximos a vencer en base al kilometraje (odómetro) y fechas cargadas.
 - **Portafolio de Inversiones (Stocks):** Simulación de trading en tiempo real utilizando cotizaciones reales y seguimiento del rendimiento del portafolio (ganancias y pérdidas acumuladas).
-- **PLATA AI (Asistente Financiero):** Integración nativa con la API de Gemini para responder preguntas, analizar tus gastos y brindar recomendaciones personalizadas de ahorro y presupuestos en base a tu contexto real de transacciones.
 - **Seguridad e Identidad:** Autenticación con Supabase Auth: registro e inicio de sesión con correo y contraseña, verificación de email, recuperación y cambio seguro de contraseña.
 - **Sincronización en Tiempo Real:** Base de datos Postgres gestionada por Supabase, con Row Level Security y Realtime.
 - **Diseño Moderno e Inmersivo (Glassmorphism):** Interfaz fluida optimizada tanto para móviles como para computadoras de escritorio, con un diseño oscuro pulido, colores HSL armonizados y micro-animaciones dinámicas.
@@ -27,7 +26,6 @@ PLATA es una aplicación web progresiva (PWA) de finanzas personales diseñada e
 - **Lenguaje:** TypeScript
 - **Estilos:** Tailwind CSS v4 & Iconos por Lucide React
 - **Base de Datos & Auth:** Supabase (Postgres + Auth, vía `@supabase/ssr`)
-- **Motor de IA:** Google Gemini API (a través del backend de Next.js)
 - **Entorno y Gestor de Paquetes:** [Bun](https://bun.sh/) (gestor rápido y moderno)
 
 ---
@@ -36,7 +34,6 @@ PLATA es una aplicación web progresiva (PWA) de finanzas personales diseñada e
 
 - Tener instalado [Bun](https://bun.sh/).
 - Un proyecto de Supabase (Postgres + Auth).
-- Una API Key de Gemini (obtenida desde Google AI Studio).
 - Una API Key de Finnhub (para cotizaciones de mercado en tiempo real).
 
 ---
@@ -55,7 +52,6 @@ Copia el archivo de ejemplo `.env.example` y renómbralo a `.env.local`:
 cp .env.example .env.local
 ```
 Completa las claves necesarias en `.env.local`:
-- `GEMINI_API_KEY`: Tu API Key de Google Studio para PLATA AI.
 - `FINNHUB_API_KEY`: API Key para obtener cotizaciones de mercado en tiempo real.
 - `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`: las credenciales públicas de tu proyecto de Supabase.
 

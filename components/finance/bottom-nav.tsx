@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Home, Wallet, Plus, Sparkles, LayoutGrid } from "lucide-react"
+import { Home, Wallet, Plus, ReceiptText, LayoutGrid } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 export type View =
@@ -12,14 +12,13 @@ export type View =
   | "stocks"
   | "activity"
   | "profile"
-  | "advisor"
   | "more"
   | "analytics"
 
 const ITEMS: { href: string; label: string; Icon: typeof Home }[] = [
   { href: "/", label: "Inicio", Icon: Home },
   { href: "/accounts", label: "Cuentas", Icon: Wallet },
-  { href: "/advisor", label: "PLATA AI", Icon: Sparkles },
+  { href: "/activity", label: "Actividad", Icon: ReceiptText },
   { href: "/more", label: "Más", Icon: LayoutGrid },
 ]
 
@@ -73,7 +72,6 @@ function isTabActive(href: string, currentPath: string): boolean {
       "/more",
       "/vehicles",
       "/stocks",
-      "/activity",
       "/profile",
       "/analytics",
       "/dashboard/vencimientos",

@@ -17,7 +17,6 @@ import { DesktopView } from "./desktop-view"
 import { LoadingSkeleton } from "./loading-skeleton"
 import { ManageCategoriesSheet } from "./manage-categories-sheet"
 import { SecuritySheet } from "./security-sheet"
-import { AdvisorView } from "./advisor-view"
 import { AnalyticsView } from "./analytics-view"
 import { CurrencyExchangeSheet } from "./currency-exchange-sheet"
 import { ExportSheet } from "./export-sheet"
@@ -102,9 +101,6 @@ export function FinanceApp() {
           )}
           {view === "more" && (
             <MoreView />
-          )}
-          {view === "advisor" && (
-            <AdvisorView />
           )}
           {view === "analytics" && (
             <AnalyticsView onBack={() => setView("home")} onEditTransaction={handleEditTransaction} />

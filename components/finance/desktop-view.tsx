@@ -13,7 +13,6 @@ import {
   ArrowLeftRight,
   LineChart,
   TrendingUp,
-  Sparkles,
   Bike,
   Globe,
   Target,
@@ -26,7 +25,6 @@ import { ActivityView } from "./activity-view"
 import { ProfileView } from "./profile-view"
 import { StocksView } from "./stocks-view"
 import { VehiclesView } from "./vehicles-view"
-import { AdvisorView } from "./advisor-view"
 import { AnalyticsView } from "./analytics-view"
 import { MoreView } from "./more-view"
 import { ProjectionsView } from "./projections-view"
@@ -41,7 +39,6 @@ export type DesktopViewType =
   | "stocks"
   | "activity"
   | "profile"
-  | "advisor"
   | "analytics"
   | "projections"
   | "more"
@@ -80,7 +77,6 @@ export function DesktopView({
     { id: "home", label: "Overview", Icon: Home },
     { id: "accounts", label: "Cuentas", Icon: Wallet },
     { id: "vehicles", label: "Vehículos", Icon: Bike },
-    { id: "advisor", label: "PLATA AI", Icon: Sparkles, badge: "AI" },
     { id: "stocks", label: "Portafolio", Icon: LineChart },
     { id: "projections", label: "Proyecciones", Icon: Target },
     { id: "analytics", label: "Análisis", Icon: TrendingUp },
@@ -129,7 +125,6 @@ export function DesktopView({
                     <item.Icon className={`size-4 shrink-0 ${active ? "text-primary" : "text-muted-foreground"}`} />
                     <span className="truncate">{item.label}</span>
                   </div>
-                  {item.badge && <Badge variant="secondary" className="text-[9px] px-1 py-0 h-4 font-mono bg-primary/20 text-primary">{item.badge}</Badge>}
                 </button>
               )
             })}
@@ -156,7 +151,6 @@ export function DesktopView({
                 {view === "home" && "Overview Dashboard"}
                 {view === "accounts" && "Mis Cuentas & Activos"}
                 {view === "vehicles" && "Mis Vehículos & Flota"}
-                {view === "advisor" && "Workers AI Advisor"}
                 {view === "stocks" && "Portafolio de Inversiones"}
                 {view === "projections" && "Proyección Financiera"}
                 {view === "activity" && "Historial de Eventos"}
@@ -224,10 +218,6 @@ export function DesktopView({
               onManageSecurity={onManageSecurity}
               onBack={() => setView("home")}
             />
-          )}
-
-          {view === "advisor" && (
-            <AdvisorView />
           )}
 
           {view === "analytics" && (

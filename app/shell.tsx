@@ -15,7 +15,6 @@ import { SecuritySheet } from "@/components/finance/security-sheet"
 import { CurrencyExchangeSheet } from "@/components/finance/currency-exchange-sheet"
 import { ExportSheet } from "@/components/finance/export-sheet"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { AppIcon } from "@/components/finance/app-icon"
 import {
   Wallet,
@@ -29,7 +28,6 @@ import {
   ArrowLeftRight,
   LineChart,
   TrendingUp,
-  Sparkles,
   Bike,
   CalendarClock,
   Target,
@@ -51,10 +49,9 @@ const NAV_GROUPS = [
     ],
   },
   {
-    title: "ANALYTICS & AI",
+    title: "ANALYTICS",
     items: [
       { href: "/analytics", label: "Análisis", Icon: TrendingUp },
-      { href: "/advisor", label: "PLATA AI", Icon: Sparkles, badge: "AI" },
       { href: "/dashboard/proyecciones", label: "Proyecciones", Icon: Target },
     ],
   },
@@ -114,8 +111,6 @@ export function AppShell({ children }: { children: ReactNode }) {
         return "Calendario de Vencimientos"
       case "/vehicles":
         return "Vehículos & Mantenimiento"
-      case "/advisor":
-        return "Workers AI Advisor"
       case "/stocks":
         return "Portafolio de Inversiones"
       case "/activity":
@@ -205,11 +200,6 @@ export function AppShell({ children }: { children: ReactNode }) {
                               />
                               <span className="truncate">{item.label}</span>
                             </div>
-                            {item.badge && (
-                              <Badge variant="secondary" className="text-[9px] px-1 py-0 h-4 font-mono bg-primary/20 text-primary">
-                                {item.badge}
-                              </Badge>
-                            )}
                           </Link>
                         )
                       })}
