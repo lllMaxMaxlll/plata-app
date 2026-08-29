@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server"
 import { authorizeApiRequest } from "@/lib/server-api"
 import { getBindings, embedTexts } from "@/lib/workers-ai"
-import { parseDateRange, type DateRange, type SearchMatch } from "@/lib/semantic-search"
+import {
+  parseDateRange,
+  stripTemporalPhrases,
+  type DateRange,
+  type SearchMatch,
+} from "@/lib/semantic-search"
 
 /**
  * Resuelve una consulta en lenguaje natural sobre el historial de movimientos.
@@ -18,14 +23,38 @@ const MAX_QUERY_LENGTH = 200
 const MIN_QUERY_LENGTH = 2
 
 /** Se piden de más porque después se filtra por fecha del lado del cliente. */
-const TOP_K = 50
+const TOP_K = 100
 
 /**
- * Piso de similitud. bge-m3 devuelve coseno en [0,1] y por debajo de esto los
- * resultados son ruido: preferimos "no encontré nada" antes que una lista de
- * movimientos que no tienen nada que ver con lo que se preguntó.
+ * Cómo se separa lo relevante del ruido.
+ *
+ * Un umbral absoluto de similitud no sirve acá, y vale la pena explicar por qué:
+ * todos los movimientos se embeben con la misma estructura ("Gasto · Comida ·
+ * nota · cuenta"), así que quedan muy agrupados entre sí. Medido contra el
+ * índice real, dos movimientos sin relación entre sí ya dan 0.72, y una
+ * consulta en lenguaje natural contra el movimiento MÁS parecido da apenas
+ * 0.46–0.58 — la banda útil entera mide menos de 0.15.
+ *
+ * Entonces el corte es relativo al mejor resultado de cada consulta, no un
+ * número fijo. Números medidos sobre 196 movimientos reales:
+ *
+ *   consulta (ya sin la parte temporal)   mejor   dentro de 0.04
+ *   "cuanto gaste en el auto"             0.5713    4
+ *   "salidas a comer"                     0.5830   19
+ *   "compras del super"                   0.4896    4
+ *   "nafta"                               0.4798    4
+ *   "servicios de la casa"                0.4599    6
+ *   "xyzzy qwerty asdf"                   0.3780    — (basura, se descarta)
+ *
+ * El piso absoluto sólo mira el mejor resultado y existe para el último caso:
+ * una consulta que no se parece a nada tiene que devolver la lista vacía en vez
+ * de los movimientos menos malos.
  */
-const MIN_SCORE = 0.45
+const MIN_TOP_SCORE = 0.4
+const RELATIVE_MARGIN = 0.04
+
+/** Tope de resultados: con puntajes tan planos, sin esto se vuelca medio índice. */
+const MAX_RESULTS = 30
 
 interface SearchResponse {
   matches: SearchMatch[]
@@ -66,7 +95,9 @@ export async function POST(request: Request) {
   }
 
   try {
-    const [vector] = (await embedTexts([query])) ?? []
+    // Se embebe sólo el "qué": la parte temporal ya la resolvió parseDateRange
+    // y dejarla en el texto sólo le quita señal al embedding.
+    const [vector] = (await embedTexts([stripTemporalPhrases(query)])) ?? []
     if (!vector) return respond({ matches: [], dateRange, available: false })
 
     const result = await env.TRANSACTIONS_INDEX.query(vector, {
@@ -77,8 +108,18 @@ export async function POST(request: Request) {
       returnMetadata: false,
     })
 
-    const matches = (result?.matches ?? [])
-      .filter((match) => match.score >= MIN_SCORE)
+    // Vectorize devuelve ordenado por score descendente.
+    const ranked = result?.matches ?? []
+    const best = ranked[0]?.score ?? 0
+
+    // Nada se pareció lo suficiente: mejor lista vacía que resultados al azar.
+    if (best < MIN_TOP_SCORE) {
+      return respond({ matches: [], dateRange, available: true })
+    }
+
+    const matches = ranked
+      .filter((match) => match.score >= best - RELATIVE_MARGIN)
+      .slice(0, MAX_RESULTS)
       .map((match) => ({ id: match.id, score: match.score }))
 
     return respond({ matches, dateRange, available: true })
