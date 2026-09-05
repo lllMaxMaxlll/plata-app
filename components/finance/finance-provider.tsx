@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react"
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import {
   type Account,
   type Currency,
@@ -13,6 +13,7 @@ import {
   type Vehicle,
   type VehicleLog,
   type DueItem,
+  type Goal,
 } from "@/lib/finance-data"
 import { getApiAuthHeaders, getSupabase } from "@/lib/supabase/client"
 import {
@@ -22,7 +23,11 @@ import {
   toAccount,
   toCategory,
   toDueItem,
+  toGoal,
+  fromGoal,
   toMacroSettings,
+  toProjectionSettings,
+  fromProjectionSettings,
   toStockTransaction,
   toTransaction,
   toVehicle,
@@ -64,6 +69,21 @@ export interface MacroSettings {
     mep: number
     ccl: number
   }
+}
+
+/** Parámetros del simulador de Proyecciones. Uno por usuario, en user_settings. */
+export interface ProjectionSettings {
+  horizonMonths: number
+  displayCurrency: Currency
+  isRealTerms: boolean
+  useRealAccounts: boolean
+  monthlySavingsARS: number
+  monthlySavingsUSD: number
+  /** null = todavía no lo tocó; la UI cae al saldo real de las cuentas. */
+  manualInitialARS: number | null
+  manualInitialUSD: number | null
+  annualReturnARS: number
+  annualReturnUSD: number
 }
 
 interface FinanceContextValue {
@@ -132,11 +152,37 @@ interface FinanceContextValue {
   markDueItemAsPending: (id: string) => Promise<void>
 
   macroSettings: MacroSettings
+  /** true una vez que se leyó user_settings; antes, macroSettings son defaults. */
+  settingsLoaded: boolean
   updateMacroSettings: (settings: Partial<MacroSettings>) => Promise<void>
   syncMacroFromApi: () => Promise<MacroSettings>
+
+  projectionSettings: ProjectionSettings
+  updateProjectionSettings: (settings: Partial<ProjectionSettings>) => void
+
+  goals: Goal[]
+  addGoal: (goal: Omit<Goal, "id" | "priority">) => Promise<void>
+  updateGoal: (id: string, changes: Partial<Goal>) => Promise<void>
+  deleteGoal: (id: string) => Promise<void>
+  reorderGoals: (orderedIds: string[]) => Promise<void>
 }
 
 const FinanceContext = createContext<FinanceContextValue | null>(null)
+
+const SETTINGS_PERSIST_DELAY_MS = 600
+
+const DEFAULT_PROJECTION_SETTINGS: ProjectionSettings = {
+  horizonMonths: 36,
+  displayCurrency: "USD",
+  isRealTerms: true,
+  useRealAccounts: true,
+  monthlySavingsARS: 0,
+  monthlySavingsUSD: 0,
+  manualInitialARS: null,
+  manualInitialUSD: null,
+  annualReturnARS: 45,
+  annualReturnUSD: 8,
+}
 
 const DEFAULT_MACRO_SETTINGS: MacroSettings = {
   exchangeRate: 1250,
@@ -210,8 +256,36 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const [vehicleLogs, setVehicleLogs] = useState<VehicleLog[]>([])
   const [dueItems, setDueItems] = useState<DueItem[]>([])
   const [macroSettings, setMacroSettings] = useState<MacroSettings>(DEFAULT_MACRO_SETTINGS)
+  const [settingsLoaded, setSettingsLoaded] = useState(false)
+  const [projectionSettings, setProjectionSettings] = useState<ProjectionSettings>(
+    DEFAULT_PROJECTION_SETTINGS
+  )
+  const [goals, setGoals] = useState<Goal[]>([])
+
+  // Espejo síncrono de las preferencias. La fila que sube a Supabase se arma a
+  // partir del estado anterior; leyéndolo del closure, dos cambios seguidos (un
+  // slider, por ejemplo) subían el segundo pisando al primero.
+  const macroSettingsRef = useRef<MacroSettings>(DEFAULT_MACRO_SETTINGS)
+  const projectionSettingsRef = useRef<ProjectionSettings>(DEFAULT_PROJECTION_SETTINGS)
+
+  const applyMacroSettings = useCallback((next: MacroSettings) => {
+    macroSettingsRef.current = next
+    setMacroSettings(next)
+  }, [])
+
+  const applyProjectionSettings = useCallback((next: ProjectionSettings) => {
+    projectionSettingsRef.current = next
+    setProjectionSettings(next)
+  }, [])
 
   const uid = user?.uid
+
+  // persistSettings corre desde un timer y desde el cleanup del efecto de
+  // visibilidad, donde el closure puede estar viejo.
+  const uidRef = useRef<string | undefined>(uid)
+  useEffect(() => {
+    uidRef.current = uid
+  }, [uid])
 
   // ---------------------------------------------------------------------------
   // Autenticación
@@ -348,7 +422,23 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       supabase.from("user_settings").select("*").maybeSingle()
     )
     if (error) return console.error("No se pudieron leer las preferencias:", error.message)
-    if (data) setMacroSettings((prev) => ({ ...prev, ...toMacroSettings(data) }))
+    if (data) {
+      applyMacroSettings({ ...macroSettingsRef.current, ...toMacroSettings(data) })
+      applyProjectionSettings(toProjectionSettings(data))
+    }
+    setSettingsLoaded(true)
+  }, [supabase, applyMacroSettings, applyProjectionSettings])
+
+  const loadGoals = useCallback(async () => {
+    const { data, error } = await withAuthRetry(supabase, () =>
+      supabase
+        .from("goals")
+        .select("*")
+        .order("priority", { ascending: true })
+        .order("created_at", { ascending: true })
+    )
+    if (error) return console.error("No se pudieron leer las metas:", error.message)
+    setGoals((data ?? []).map(toGoal))
   }, [supabase])
 
   // Alta de las categorías por defecto la primera vez
@@ -372,7 +462,10 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       setVehicles([])
       setVehicleLogs([])
       setDueItems([])
-      setMacroSettings(DEFAULT_MACRO_SETTINGS)
+      applyMacroSettings(DEFAULT_MACRO_SETTINGS)
+      applyProjectionSettings(DEFAULT_PROJECTION_SETTINGS)
+      setGoals([])
+      setSettingsLoaded(false)
       return
     }
 
@@ -388,6 +481,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       loadStockTrades(),
       loadWatchlist(),
       loadSettings(),
+      loadGoals(),
     ]).then((results) => {
       if (!alive) return
       const cats = results[2] as unknown as any[] | undefined
@@ -408,7 +502,10 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     loadStockTrades,
     loadWatchlist,
     loadSettings,
+    loadGoals,
     seedCategories,
+    applyMacroSettings,
+    applyProjectionSettings,
   ])
 
   // ---------------------------------------------------------------------------
@@ -994,47 +1091,176 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   // Preferencias y notificaciones
   // ---------------------------------------------------------------------------
 
+  // La fila de user_settings se arma siempre entera a partir de los dos refs.
+  // Si todavía no existe, el upsert la inserta completa en vez de dejar que las
+  // columnas que no mandamos caigan en el default y pisen lo que hay en memoria.
+  const persistSettings = useCallback(async () => {
+    if (!uidRef.current) return
+    const macro = macroSettingsRef.current
+    const { error } = await supabase.from("user_settings").upsert({
+      user_id: uidRef.current,
+      exchange_rate: macro.exchangeRate,
+      annual_inflation: macro.annualInflation,
+      annual_devaluation: macro.annualDevaluation,
+      annual_return: macro.annualReturn,
+      rates: macro.rates ?? null,
+      updated_at: macro.lastUpdated || new Date().toISOString(),
+      ...fromProjectionSettings(projectionSettingsRef.current),
+    })
+    if (error) console.error("No se pudieron guardar las preferencias:", error.message)
+  }, [supabase])
+
+  // Arrastrar un slider dispara un onChange por paso. Sin esto, mover la
+  // inflación de 45 a 120 eran ~75 upserts.
+  const persistTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const flushSettings = useCallback(() => {
+    if (persistTimerRef.current === null) return
+    clearTimeout(persistTimerRef.current)
+    persistTimerRef.current = null
+    void persistSettings()
+  }, [persistSettings])
+
+  const schedulePersistSettings = useCallback(() => {
+    if (persistTimerRef.current !== null) clearTimeout(persistTimerRef.current)
+    persistTimerRef.current = setTimeout(() => {
+      persistTimerRef.current = null
+      void persistSettings()
+    }, SETTINGS_PERSIST_DELAY_MS)
+  }, [persistSettings])
+
+  // Que cerrar la pestaña o mandar la PWA al fondo no se coma el último cambio.
+  useEffect(() => {
+    const onHide = () => {
+      if (document.visibilityState === "hidden") flushSettings()
+    }
+    document.addEventListener("visibilitychange", onHide)
+    window.addEventListener("pagehide", flushSettings)
+    return () => {
+      document.removeEventListener("visibilitychange", onHide)
+      window.removeEventListener("pagehide", flushSettings)
+      flushSettings()
+    }
+  }, [flushSettings])
+
   const updateMacroSettings = useCallback(
     async (settings: Partial<MacroSettings>) => {
-      const updated = { ...macroSettings, ...settings, lastUpdated: new Date().toISOString() }
-      setMacroSettings(updated)
-      if (!uid) return
-
-      const { error } = await supabase.from("user_settings").upsert({
-        user_id: uid,
-        exchange_rate: updated.exchangeRate,
-        annual_inflation: updated.annualInflation,
-        annual_devaluation: updated.annualDevaluation,
-        annual_return: updated.annualReturn,
-        rates: updated.rates ?? null,
-        updated_at: updated.lastUpdated,
+      applyMacroSettings({
+        ...macroSettingsRef.current,
+        ...settings,
+        lastUpdated: new Date().toISOString(),
       })
-      if (error) console.error("No se pudieron guardar las preferencias:", error.message)
+      schedulePersistSettings()
     },
-    [supabase, uid, macroSettings]
+    [applyMacroSettings, schedulePersistSettings]
   )
 
+  const updateProjectionSettings = useCallback(
+    (settings: Partial<ProjectionSettings>) => {
+      applyProjectionSettings({ ...projectionSettingsRef.current, ...settings })
+      schedulePersistSettings()
+    },
+    [applyProjectionSettings, schedulePersistSettings]
+  )
+
+  // Trae del mercado sólo lo que es un dato observado: la cotización del dólar.
+  // La inflación, la devaluación y el retorno son supuestos de planificación que
+  // elige el usuario; /api/macro los devuelve nada más que como sugerencia, y
+  // escribirlos acá le borraba su configuración cada vez que entraba a
+  // Proyecciones (la página sincronizaba sola al montar).
   const syncMacroFromApi = useCallback(async (): Promise<MacroSettings> => {
     try {
       const res = await fetch("/api/macro", { headers: await getApiAuthHeaders() })
       if (res.ok) {
         const data = await res.json()
-        const next: MacroSettings = {
-          exchangeRate: data.recommendedExchangeRate ?? 1250,
-          annualInflation: data.annualInflation ?? 45,
-          annualDevaluation: data.annualDevaluation ?? 40,
-          annualReturn: data.annualReturn ?? 12,
-          lastUpdated: data.lastUpdated || new Date().toISOString(),
-          rates: data.rates,
-        }
+        const next: Partial<MacroSettings> = {}
+
+        const rate = Number(data.recommendedExchangeRate)
+        if (Number.isFinite(rate) && rate > 0) next.exchangeRate = rate
+        if (data.rates) next.rates = data.rates
+
         await updateMacroSettings(next)
-        return next
       }
     } catch (err) {
       console.error("Error syncing macro data from API:", err)
     }
-    return macroSettings
-  }, [macroSettings, updateMacroSettings])
+    return macroSettingsRef.current
+  }, [updateMacroSettings])
+
+  // ---------------------------------------------------------------------------
+  // Metas del planificador
+  // ---------------------------------------------------------------------------
+
+  const addGoal = useCallback(
+    async (input: Omit<Goal, "id" | "priority">) => {
+      if (!uid) throw new Error("Usuario no autenticado.")
+      // Al final de la cascada: la meta nueva se persigue después de las que ya
+      // están cargadas.
+      const nextPriority = goals.reduce((max, g) => Math.max(max, g.priority), 0) + 1
+      const { error } = await supabase.from("goals").insert({
+        user_id: uid,
+        name: input.name,
+        amount: input.amount,
+        currency: input.currency,
+        kind: input.kind,
+        priority: nextPriority,
+      })
+      if (error) fail(error, "No se pudo crear la meta.")
+      await loadGoals()
+    },
+    [supabase, uid, goals, loadGoals]
+  )
+
+  const updateGoal = useCallback(
+    async (id: string, changes: Partial<Goal>) => {
+      const { error } = await supabase
+        .from("goals")
+        .update({ ...fromGoal(changes), updated_at: new Date().toISOString() })
+        .eq("id", id)
+      if (error) fail(error, "No se pudo actualizar la meta.")
+      await loadGoals()
+    },
+    [supabase, loadGoals]
+  )
+
+  const deleteGoal = useCallback(
+    async (id: string) => {
+      const { error } = await supabase.from("goals").delete().eq("id", id)
+      if (error) fail(error, "No se pudo eliminar la meta.")
+      await loadGoals()
+    },
+    [supabase, loadGoals]
+  )
+
+  /** Reescribe las prioridades para que queden densas y en el orden recibido. */
+  const reorderGoals = useCallback(
+    async (orderedIds: string[]) => {
+      const byId = new Map(goals.map((g) => [g.id, g]))
+      const changed = orderedIds
+        .map((id, index) => ({ goal: byId.get(id), priority: index + 1 }))
+        .filter((entry): entry is { goal: Goal; priority: number } =>
+          Boolean(entry.goal) && entry.goal!.priority !== entry.priority
+        )
+      if (changed.length === 0) return
+
+      // Pintamos el orden nuevo antes de ir a la red: reordenar tiene que
+      // sentirse instantáneo aunque la escritura tarde.
+      setGoals(orderedIds.map((id, index) => ({ ...byId.get(id)!, priority: index + 1 })))
+
+      const updatedAt = new Date().toISOString()
+      const results = await Promise.all(
+        changed.map(({ goal, priority }) =>
+          supabase.from("goals").update({ priority, updated_at: updatedAt }).eq("id", goal.id)
+        )
+      )
+      const failed = results.find((r) => r.error)
+      if (failed?.error) {
+        await loadGoals()
+        fail(failed.error, "No se pudo reordenar las metas.")
+      }
+    },
+    [supabase, goals, loadGoals]
+  )
 
   const totalsByCurrency = useMemo(
     () =>
@@ -1097,8 +1323,16 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       markDueItemAsPaid,
       markDueItemAsPending,
       macroSettings,
+      settingsLoaded,
       updateMacroSettings,
       syncMacroFromApi,
+      projectionSettings,
+      updateProjectionSettings,
+      goals,
+      addGoal,
+      updateGoal,
+      deleteGoal,
+      reorderGoals,
     }),
     [
       user,
@@ -1148,8 +1382,16 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       markDueItemAsPaid,
       markDueItemAsPending,
       macroSettings,
+      settingsLoaded,
       updateMacroSettings,
       syncMacroFromApi,
+      projectionSettings,
+      updateProjectionSettings,
+      goals,
+      addGoal,
+      updateGoal,
+      deleteGoal,
+      reorderGoals,
     ]
   )
 

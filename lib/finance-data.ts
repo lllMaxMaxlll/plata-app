@@ -97,6 +97,42 @@ export function formatShort(amount: number, currency: Currency): string {
   return `${amount < 0 ? "-" : ""}${symbol}${formatted}`
 }
 
+/**
+ * Formato abreviado para ejes y etiquetas apretadas: 1,2 M, 153 M, 4,5 k.
+ *
+ * formatShort, pese al nombre, escribe el número entero: en el eje del gráfico
+ * de proyecciones las etiquetas en pesos quedaban como "$153.044.309" dentro de
+ * 57 px y se pisaban entre sí.
+ */
+export function formatCompact(amount: number, currency: Currency): string {
+  const symbol = currency === "USD" ? "US$" : "$"
+  const abs = Math.abs(amount)
+  const sign = amount < 0 ? "-" : ""
+
+  const units: [number, string][] = [
+    [1e12, " B"],
+    [1e9, " MM"],
+    [1e6, " M"],
+    [1e3, " k"],
+  ]
+
+  for (const [size, suffix] of units) {
+    if (abs >= size) {
+      const value = abs / size
+      // Una cifra decimal sólo mientras aporte algo: 1,2 M sí, 153,0 M no.
+      const digits = value < 10 ? 1 : 0
+      return `${sign}${symbol}${value.toLocaleString("es-AR", {
+        minimumFractionDigits: digits,
+        maximumFractionDigits: digits,
+      })}${suffix}`
+    }
+  }
+
+  return `${sign}${symbol}${abs.toLocaleString("es-AR", {
+    maximumFractionDigits: abs < 100 && currency === "USD" ? 2 : 0,
+  })}`
+}
+
 export const ACCENT_BY_KIND: Record<Account["kind"], string> = {
   bank: "oklch(0.7 0.13 230)",
   wallet: "oklch(0.78 0.15 75)",
@@ -199,6 +235,25 @@ export interface VehicleLog {
 // ---------------------------------------------------------------------------
 // Due Dates and Recurring Services Data Types
 // ---------------------------------------------------------------------------
+
+export type GoalKind = "reserve" | "purchase"
+
+/**
+ * Meta del planificador de proyecciones. `reserve` inmoviliza capital (un fondo
+ * de emergencia que no se gasta); `purchase` lo descuenta del patrimonio.
+ * Se resuelven en cascada, por `priority` ascendente.
+ */
+export interface Goal {
+  id: string
+  name: string
+  amount: number
+  currency: Currency
+  kind: GoalKind
+  priority: number
+  achievedAt?: string | null
+  createdAt?: string
+  updatedAt?: string
+}
 
 export type DueFrequency = "monthly" | "yearly" | "biweekly" | "one_time"
 export type DueItemStatus = "pending" | "paid"

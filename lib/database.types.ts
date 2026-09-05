@@ -157,6 +157,45 @@ export type Database = {
           },
         ]
       }
+      goals: {
+        Row: {
+          achieved_at: string | null
+          amount: number
+          created_at: string
+          currency: Database["public"]["Enums"]["currency"]
+          id: string
+          kind: Database["public"]["Enums"]["goal_kind"]
+          name: string
+          priority: number
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          achieved_at?: string | null
+          amount: number
+          created_at?: string
+          currency: Database["public"]["Enums"]["currency"]
+          id?: string
+          kind: Database["public"]["Enums"]["goal_kind"]
+          name: string
+          priority: number
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          achieved_at?: string | null
+          amount?: number
+          created_at?: string
+          currency?: Database["public"]["Enums"]["currency"]
+          id?: string
+          kind?: Database["public"]["Enums"]["goal_kind"]
+          name?: string
+          priority?: number
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       push_tokens: {
         Row: {
           token: string
@@ -324,7 +363,17 @@ export type Database = {
           annual_devaluation: number
           annual_inflation: number
           annual_return: number
+          annual_return_ars: number
+          annual_return_usd: number
           exchange_rate: number
+          manual_initial_ars: number | null
+          manual_initial_usd: number | null
+          monthly_savings_ars: number
+          monthly_savings_usd: number
+          projection_display_currency: Database["public"]["Enums"]["currency"]
+          projection_horizon_months: number
+          projection_real_terms: boolean
+          projection_use_real_accounts: boolean
           rates: Json | null
           updated_at: string
           user_id: string
@@ -333,7 +382,17 @@ export type Database = {
           annual_devaluation?: number
           annual_inflation?: number
           annual_return?: number
+          annual_return_ars?: number
+          annual_return_usd?: number
           exchange_rate?: number
+          manual_initial_ars?: number | null
+          manual_initial_usd?: number | null
+          monthly_savings_ars?: number
+          monthly_savings_usd?: number
+          projection_display_currency?: Database["public"]["Enums"]["currency"]
+          projection_horizon_months?: number
+          projection_real_terms?: boolean
+          projection_use_real_accounts?: boolean
           rates?: Json | null
           updated_at?: string
           user_id: string
@@ -342,7 +401,17 @@ export type Database = {
           annual_devaluation?: number
           annual_inflation?: number
           annual_return?: number
+          annual_return_ars?: number
+          annual_return_usd?: number
           exchange_rate?: number
+          manual_initial_ars?: number | null
+          manual_initial_usd?: number | null
+          monthly_savings_ars?: number
+          monthly_savings_usd?: number
+          projection_display_currency?: Database["public"]["Enums"]["currency"]
+          projection_horizon_months?: number
+          projection_real_terms?: boolean
+          projection_use_real_accounts?: boolean
           rates?: Json | null
           updated_at?: string
           user_id?: string
@@ -725,6 +794,7 @@ export type Database = {
       currency: "ARS" | "USD"
       due_frequency: "monthly" | "yearly" | "biweekly" | "one_time"
       due_status: "pending" | "paid"
+      goal_kind: "reserve" | "purchase"
       trade_side: "buy" | "sell"
       transaction_type: "income" | "expense" | "transfer"
       vehicle_log_type:

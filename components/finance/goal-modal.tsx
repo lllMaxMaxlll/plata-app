@@ -16,43 +16,50 @@ import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Sparkles, Trash2, Check, Loader2, ShieldCheck, ShoppingBag } from "lucide-react"
-import { type SequentialGoal, type Currency } from "@/lib/simulation-engine"
+import { type Currency, type Goal, type GoalKind } from "@/lib/finance-data"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 
-export interface BigPurchaseModalProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  currentGoal?: SequentialGoal | null
-  onSaveGoal: (goal: SequentialGoal) => void
-  onRemoveGoal: () => void
-  priorityCount?: number
+export interface GoalDraft {
+  name: string
+  amount: number
+  currency: Currency
+  kind: GoalKind
 }
 
-export function BigPurchaseModal({
+export interface GoalModalProps {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  currentGoal?: Goal | null
+  onSaveGoal: (goal: GoalDraft) => Promise<void>
+  onRemoveGoal: () => Promise<void>
+}
+
+export function GoalModal({
   open,
   onOpenChange,
   currentGoal,
   onSaveGoal,
   onRemoveGoal,
-  priorityCount = 1,
-}: BigPurchaseModalProps) {
-  const [name, setName] = useState("Fondo de Reserva")
-  const [amount, setAmount] = useState<number>(2000)
+}: GoalModalProps) {
+  const [name, setName] = useState("")
+  const [amount, setAmount] = useState<number>(0)
   const [currency, setCurrency] = useState<Currency>("USD")
-  const [type, setType] = useState<"reserve" | "purchase">("reserve")
+  const [kind, setKind] = useState<GoalKind>("reserve")
   const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
+    if (!open) return
     if (currentGoal) {
       setName(currentGoal.name)
       setAmount(currentGoal.amount)
       setCurrency(currentGoal.currency)
-      setType(currentGoal.type || "reserve")
+      setKind(currentGoal.kind)
     } else {
-      setName("Fondo de Reserva")
-      setAmount(currency === "USD" ? 2000 : 7000000)
-      setType("reserve")
+      setName("")
+      setAmount(0)
+      setCurrency("USD")
+      setKind("reserve")
     }
   }, [currentGoal, open])
 
@@ -62,19 +69,13 @@ export function BigPurchaseModal({
 
     setSubmitting(true)
     try {
-      onSaveGoal({
-        id: currentGoal?.id || String(Date.now()),
-        name: name.trim(),
-        amount,
-        currency,
-        type,
-        priority: currentGoal?.priority || priorityCount + 1,
-      })
+      // Esperamos de verdad a que la meta se guarde. Antes el modal mostraba
+      // "meta agregada" tras un setTimeout de 300 ms y nada llegaba a la base.
+      await onSaveGoal({ name: name.trim(), amount, currency, kind })
       toast.success(currentGoal ? "Meta actualizada." : "Nueva meta agregada a la secuencia.")
-      await new Promise((resolve) => setTimeout(resolve, 300))
       onOpenChange(false)
-    } catch (err: any) {
-      toast.error("Error al guardar la meta.")
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Error al guardar la meta.")
     } finally {
       setSubmitting(false)
     }
@@ -83,12 +84,11 @@ export function BigPurchaseModal({
   const handleRemove = async () => {
     setSubmitting(true)
     try {
-      onRemoveGoal()
+      await onRemoveGoal()
       toast.success("Meta eliminada.")
-      await new Promise((resolve) => setTimeout(resolve, 300))
       onOpenChange(false)
-    } catch (err: any) {
-      toast.error("Error al eliminar la meta.")
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Error al eliminar la meta.")
     } finally {
       setSubmitting(false)
     }
@@ -164,9 +164,9 @@ export function BigPurchaseModal({
               <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
-                  onClick={() => setType("reserve")}
+                  onClick={() => setKind("reserve")}
                   className={`flex flex-col items-start gap-1 p-3 rounded-lg border text-left transition-all cursor-pointer ${
-                    type === "reserve"
+                    kind === "reserve"
                       ? "border-primary bg-primary/10 text-foreground"
                       : "border-border/60 bg-muted/30 text-muted-foreground hover:bg-muted/60"
                   }`}
@@ -182,9 +182,9 @@ export function BigPurchaseModal({
 
                 <button
                   type="button"
-                  onClick={() => setType("purchase")}
+                  onClick={() => setKind("purchase")}
                   className={`flex flex-col items-start gap-1 p-3 rounded-lg border text-left transition-all cursor-pointer ${
-                    type === "purchase"
+                    kind === "purchase"
                       ? "border-primary bg-primary/10 text-foreground"
                       : "border-border/60 bg-muted/30 text-muted-foreground hover:bg-muted/60"
                   }`}

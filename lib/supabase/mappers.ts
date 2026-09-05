@@ -12,13 +12,14 @@ import type {
   Category,
   Currency,
   DueItem,
+  Goal,
   StockTransaction,
   Transaction,
   Vehicle,
   VehicleLog,
   WatchlistStock,
 } from "@/lib/finance-data"
-import type { MacroSettings } from "@/components/finance/finance-provider"
+import type { MacroSettings, ProjectionSettings } from "@/components/finance/finance-provider"
 import type { Database } from "@/lib/database.types"
 
 type Updates<T extends keyof Database["public"]["Tables"]> = Database["public"]["Tables"][T]["Update"]
@@ -149,6 +150,35 @@ export function toDueItem(row: Row): DueItem {
   }
 }
 
+export function toProjectionSettings(row: Row): ProjectionSettings {
+  return {
+    horizonMonths: Number(row.projection_horizon_months ?? 36),
+    displayCurrency: (row.projection_display_currency ?? "USD") as Currency,
+    isRealTerms: Boolean(row.projection_real_terms ?? true),
+    useRealAccounts: Boolean(row.projection_use_real_accounts ?? true),
+    monthlySavingsARS: Number(row.monthly_savings_ars ?? 0),
+    monthlySavingsUSD: Number(row.monthly_savings_usd ?? 0),
+    manualInitialARS: nullableNumber(row.manual_initial_ars) ?? null,
+    manualInitialUSD: nullableNumber(row.manual_initial_usd) ?? null,
+    annualReturnARS: Number(row.annual_return_ars ?? 45),
+    annualReturnUSD: Number(row.annual_return_usd ?? row.annual_return ?? 8),
+  }
+}
+
+export function toGoal(row: Row): Goal {
+  return {
+    id: row.id,
+    name: row.name,
+    amount: Number(row.amount),
+    currency: row.currency as Currency,
+    kind: row.kind,
+    priority: Number(row.priority),
+    achievedAt: row.achieved_at ?? null,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at ?? undefined,
+  }
+}
+
 export function toMacroSettings(row: Row): MacroSettings {
   return {
     exchangeRate: Number(row.exchange_rate),
@@ -177,6 +207,34 @@ export function fromDueItem(input: Partial<DueItem>): Updates<"due_items"> {
   if (input.autoRenew !== undefined) row.auto_renew = input.autoRenew
   if (input.accountId !== undefined) row.account_id = input.accountId || null
   if (input.paidAt !== undefined) row.paid_at = input.paidAt
+  return row
+}
+
+export function fromProjectionSettings(
+  input: ProjectionSettings
+): Omit<Updates<"user_settings">, "user_id"> {
+  return {
+    projection_horizon_months: input.horizonMonths,
+    projection_display_currency: input.displayCurrency,
+    projection_real_terms: input.isRealTerms,
+    projection_use_real_accounts: input.useRealAccounts,
+    monthly_savings_ars: input.monthlySavingsARS,
+    monthly_savings_usd: input.monthlySavingsUSD,
+    manual_initial_ars: input.manualInitialARS,
+    manual_initial_usd: input.manualInitialUSD,
+    annual_return_ars: input.annualReturnARS,
+    annual_return_usd: input.annualReturnUSD,
+  }
+}
+
+export function fromGoal(input: Partial<Goal>): Updates<"goals"> {
+  const row: Row = {}
+  if (input.name !== undefined) row.name = input.name
+  if (input.amount !== undefined) row.amount = input.amount
+  if (input.currency !== undefined) row.currency = input.currency
+  if (input.kind !== undefined) row.kind = input.kind
+  if (input.priority !== undefined) row.priority = input.priority
+  if (input.achievedAt !== undefined) row.achieved_at = input.achievedAt
   return row
 }
 

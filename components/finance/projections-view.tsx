@@ -1,16 +1,13 @@
 "use client"
 
-import React, { useState, useMemo, useEffect } from "react"
+import React, { useState, useMemo, useEffect, useRef } from "react"
 import { useFinance } from "./finance-provider"
 import { ProjectionControls } from "./projection-controls"
 import { ProjectionChart } from "./projection-chart"
 import { ProjectionKPIs } from "./projection-kpis"
-import { BigPurchaseModal } from "./big-purchase-modal"
-import {
-  runSimulation,
-  type Currency,
-  type SequentialGoal,
-} from "@/lib/simulation-engine"
+import { GoalModal, type GoalDraft } from "./goal-modal"
+import { runSimulation } from "@/lib/simulation-engine"
+import { estimateMonthlySavings, sumOverdueLiabilities } from "@/lib/savings-capacity"
 import {
   TrendingUp,
   Sparkles,
@@ -21,125 +18,136 @@ import {
   ShieldCheck,
   ShoppingBag,
   Plus,
-  CheckCircle2,
-  Clock,
   Calendar,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Progress } from "@/components/ui/progress"
-import { formatCurrency, formatShort } from "@/lib/finance-data"
+import { Skeleton } from "@/components/ui/skeleton"
+import { formatShort, type Goal } from "@/lib/finance-data"
 
-export interface ProjectionsViewProps {
-  isDesktop?: boolean
-}
-
-const DEFAULT_GOALS: SequentialGoal[] = [
-  {
-    id: "goal-reserve",
-    name: "Fondo de Reserva de Emergencia",
-    amount: 2000,
-    currency: "USD",
-    type: "reserve",
-    priority: 1,
-  },
-  {
-    id: "goal-moto",
-    name: "Compra de Moto 0km",
-    amount: 7000000,
-    currency: "ARS",
-    type: "purchase",
-    priority: 2,
-  },
-]
-
-export function ProjectionsView({ isDesktop = false }: ProjectionsViewProps) {
+export function ProjectionsView() {
   const {
     totalsByCurrency,
     portfolioTotalValue,
+    loading,
+    accounts,
+    transactions,
+    dueItems,
     macroSettings,
+    settingsLoaded,
     updateMacroSettings,
     syncMacroFromApi,
+    projectionSettings,
+    updateProjectionSettings,
+    goals,
+    addGoal,
+    updateGoal,
+    deleteGoal,
+    reorderGoals,
   } = useFinance()
 
-  // Auto-calculated real balances from the user's accounts
+  // Saldos reales, calculados desde las cuentas del usuario. La cartera va
+  // aparte: suma al patrimonio, pero no es plata con la que se pueda pagar una
+  // meta sin vender antes.
   const realARSBalance = totalsByCurrency.ARS || 0
-  const realUSDBalance = (totalsByCurrency.USD || 0) + (portfolioTotalValue || 0)
+  const realLiquidUSD = totalsByCurrency.USD || 0
+  const portfolioUSD = portfolioTotalValue || 0
 
-  // Simulation Parameters State
-  const [horizonMonths, setHorizonMonths] = useState<number>(36) // 3 years by default
-  const [displayCurrency, setDisplayCurrency] = useState<Currency>("USD")
-  const [isRealTerms, setIsRealTerms] = useState<boolean>(true)
-  const [useRealAccounts, setUseRealAccounts] = useState<boolean>(true)
+  // Lo que ya se debe sale del patrimonio: sin esto, "patrimonio neto" no era
+  // neto. Los vencimientos futuros no se restan porque ya los absorbe el ahorro
+  // mensual, y contarlos acá sería contarlos dos veces.
+  const overdue = useMemo(() => sumOverdueLiabilities(dueItems), [dueItems])
+  const netARSBalance = Math.max(0, realARSBalance - overdue.ARS)
+  const netLiquidUSD = Math.max(0, realLiquidUSD - overdue.USD)
 
-  // Initial Net Worth (Manual or Synced)
-  const [manualInitialARS, setManualInitialARS] = useState<number>(5000000)
-  const [manualInitialUSD, setManualInitialUSD] = useState<number>(10000)
+  // Capacidad de ahorro deducida de los movimientos reales, para no depender de
+  // un número escrito a mano.
+  const savingsEstimate = useMemo(
+    () => estimateMonthlySavings(transactions, accounts),
+    [transactions, accounts]
+  )
 
-  // Monthly Savings Capacity
-  const [savingsARS, setSavingsARS] = useState<number>(300000)
-  const [savingsUSD, setSavingsUSD] = useState<number>(500)
+  const {
+    horizonMonths,
+    displayCurrency,
+    isRealTerms,
+    useRealAccounts,
+    monthlySavingsARS,
+    monthlySavingsUSD,
+    manualInitialARS,
+    manualInitialUSD,
+    annualReturnARS,
+    annualReturnUSD,
+  } = projectionSettings
 
-  // Economic Variables
+  // Variables macro: estado local espejado contra user_settings, porque los
+  // sliders necesitan responder en el mismo frame.
   const [annualInflation, setAnnualInflation] = useState<number>(macroSettings.annualInflation ?? 45)
   const [annualDevaluation, setAnnualDevaluation] = useState<number>(macroSettings.annualDevaluation ?? 40)
-  const [annualReturn, setAnnualReturn] = useState<number>(macroSettings.annualReturn ?? 12)
   const [exchangeRate, setExchangeRate] = useState<number>(macroSettings.exchangeRate ?? 1250)
 
   const [isSyncingMacro, setIsSyncingMacro] = useState<boolean>(false)
 
-  // Load from the stored macroSettings when updated
+  // Bajamos lo guardado en user_settings al estado local. Va con Number.isFinite
+  // y no con un chequeo truthy: 0 es un valor válido (retorno 0%, devaluación 0%)
+  // y antes se descartaba, así que la pantalla mostraba el default mientras la
+  // base tenía un 0 guardado.
   useEffect(() => {
-    if (macroSettings.exchangeRate) setExchangeRate(macroSettings.exchangeRate)
-    if (macroSettings.annualInflation) setAnnualInflation(macroSettings.annualInflation)
-    if (macroSettings.annualDevaluation) setAnnualDevaluation(macroSettings.annualDevaluation)
-    if (macroSettings.annualReturn) setAnnualReturn(macroSettings.annualReturn)
+    if (Number.isFinite(macroSettings.exchangeRate)) setExchangeRate(macroSettings.exchangeRate)
+    if (Number.isFinite(macroSettings.annualInflation)) setAnnualInflation(macroSettings.annualInflation)
+    if (Number.isFinite(macroSettings.annualDevaluation)) setAnnualDevaluation(macroSettings.annualDevaluation)
   }, [macroSettings])
 
-  // Auto-sync on mount if empty or stale
+  // Primera cotización para quien todavía no tiene preferencias guardadas.
+  // Espera a settingsLoaded: al montar, macroSettings son los defaults del
+  // provider (lastUpdated vacío), así que sin esa guarda la condición daba
+  // siempre verdadera y se sincronizaba en cada visita.
+  const didAutoSync = useRef(false)
   useEffect(() => {
-    if (!macroSettings.lastUpdated) {
-      syncMacroFromApi()
-    }
-  }, [])
+    if (!settingsLoaded || didAutoSync.current) return
+    didAutoSync.current = true
+    if (!macroSettings.lastUpdated) syncMacroFromApi()
+  }, [settingsLoaded, macroSettings.lastUpdated, syncMacroFromApi])
 
   async function handleSyncMacro() {
     setIsSyncingMacro(true)
     try {
       const res = await syncMacroFromApi()
-      if (res.exchangeRate) setExchangeRate(res.exchangeRate)
-      if (res.annualInflation) setAnnualInflation(res.annualInflation)
-      if (res.annualDevaluation) setAnnualDevaluation(res.annualDevaluation)
-      if (res.annualReturn) setAnnualReturn(res.annualReturn)
+      if (Number.isFinite(res.exchangeRate)) setExchangeRate(res.exchangeRate)
     } finally {
       setIsSyncingMacro(false)
     }
   }
 
-  // Sequential Goals State
-  const [goals, setGoals] = useState<SequentialGoal[]>(DEFAULT_GOALS)
-  const [editingGoal, setEditingGoal] = useState<SequentialGoal | null>(null)
+  const [editingGoal, setEditingGoal] = useState<Goal | null>(null)
   const [isGoalModalOpen, setIsGoalModalOpen] = useState<boolean>(false)
 
-  // Effective initial net worth based on sync switch
-  const effectiveInitialARS = useRealAccounts ? realARSBalance : manualInitialARS
-  const effectiveInitialUSD = useRealAccounts ? realUSDBalance : manualInitialUSD
+  // Con el switch de sincronización apagado usamos el patrimonio manual; si el
+  // usuario todavía no cargó ninguno, arrancamos del saldo real en vez de un
+  // número inventado.
+  const effectiveInitialARS = useRealAccounts ? netARSBalance : manualInitialARS ?? netARSBalance
+  const effectiveInitialUSD = useRealAccounts ? netLiquidUSD : manualInitialUSD ?? netLiquidUSD
+  const effectivePortfolioUSD = useRealAccounts ? portfolioUSD : 0
 
-  // Real-time reactive simulation calculation
   const simulationResult = useMemo(() => {
     return runSimulation({
       initialNetWorth: {
         ARS: effectiveInitialARS,
         USD: effectiveInitialUSD,
       },
+      illiquidNetWorth: {
+        ARS: 0,
+        USD: effectivePortfolioUSD,
+      },
       monthlySavings: {
-        ARS: savingsARS,
-        USD: savingsUSD,
+        ARS: monthlySavingsARS,
+        USD: monthlySavingsUSD,
       },
       annualInflationRate: annualInflation,
       annualDevaluationRate: annualDevaluation,
-      annualInvestmentReturnRate: annualReturn,
+      annualReturnARS,
+      annualReturnUSD,
       horizonMonths,
       displayCurrency,
       initialExchangeRate: exchangeRate,
@@ -149,11 +157,13 @@ export function ProjectionsView({ isDesktop = false }: ProjectionsViewProps) {
   }, [
     effectiveInitialARS,
     effectiveInitialUSD,
-    savingsARS,
-    savingsUSD,
+    effectivePortfolioUSD,
+    monthlySavingsARS,
+    monthlySavingsUSD,
     annualInflation,
     annualDevaluation,
-    annualReturn,
+    annualReturnARS,
+    annualReturnUSD,
     horizonMonths,
     displayCurrency,
     exchangeRate,
@@ -161,43 +171,61 @@ export function ProjectionsView({ isDesktop = false }: ProjectionsViewProps) {
     isRealTerms,
   ])
 
-  // Sequential Goal Actions
   const handleOpenAddGoal = () => {
     setEditingGoal(null)
     setIsGoalModalOpen(true)
   }
 
-  const handleOpenEditGoal = (g: SequentialGoal) => {
+  const handleOpenEditGoal = (g: Goal) => {
     setEditingGoal(g)
     setIsGoalModalOpen(true)
   }
 
-  const handleSaveGoal = (goalToSave: SequentialGoal) => {
-    setGoals((prev) => {
-      const exists = prev.some((g) => g.id === goalToSave.id)
-      if (exists) {
-        return prev.map((g) => (g.id === goalToSave.id ? goalToSave : g))
-      }
-      return [...prev, goalToSave]
-    })
+  const handleSaveGoal = async (draft: GoalDraft) => {
+    if (editingGoal) await updateGoal(editingGoal.id, draft)
+    else await addGoal(draft)
   }
 
-  const handleRemoveGoal = (idToRemove: string) => {
-    setGoals((prev) => prev.filter((g) => g.id !== idToRemove))
+  const handleRemoveGoal = async (idToRemove: string) => {
+    await deleteGoal(idToRemove)
   }
 
   const handleMovePriority = (index: number, direction: "up" | "down") => {
     const targetIndex = direction === "up" ? index - 1 : index + 1
     if (targetIndex < 0 || targetIndex >= goals.length) return
 
-    const newGoals = [...goals]
-    const temp = newGoals[index]
-    newGoals[index] = newGoals[targetIndex]
-    newGoals[targetIndex] = temp
+    const orderedIds = goals.map((g) => g.id)
+    const temp = orderedIds[index]
+    orderedIds[index] = orderedIds[targetIndex]
+    orderedIds[targetIndex] = temp
 
-    // Reassign priorities
-    const reordered = newGoals.map((g, idx) => ({ ...g, priority: idx + 1 }))
-    setGoals(reordered)
+    void reorderGoals(orderedIds)
+  }
+
+  // Sin esto, el primer render simulaba con las cuentas todavía vacías: se veía
+  // un patrimonio de $0 y un gráfico plano que un instante después pegaba un
+  // salto.
+  if (loading || !settingsLoaded) {
+    return (
+      <div
+        className="w-full max-w-7xl mx-auto px-4 sm:px-6 pt-4 pb-12 space-y-6"
+        aria-busy="true"
+        aria-live="polite"
+      >
+        <span className="sr-only">Cargando tu proyección…</span>
+        <Skeleton className="h-16 rounded-xl" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-24 rounded-xl" />
+          ))}
+        </div>
+        <Skeleton className="h-40 rounded-xl" />
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <Skeleton className="lg:col-span-7 xl:col-span-8 h-80 rounded-xl" />
+          <Skeleton className="lg:col-span-5 xl:col-span-4 h-80 rounded-xl" />
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -253,14 +281,7 @@ export function ProjectionsView({ isDesktop = false }: ProjectionsViewProps) {
                 Las metas se completan una detrás de otra. Al cumplir una, tus ahorros libres se reorientan automáticamente a la siguiente.
               </p>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleOpenAddGoal}
-              className="h-7 text-xs gap-1 border-purple-500/40 text-purple-300 hover:bg-purple-500/10 cursor-pointer"
-            >
-              <Plus className="size-3.5" /> Nueva Meta
-            </Button>
+
           </div>
         </CardHeader>
 
@@ -276,7 +297,7 @@ export function ProjectionsView({ isDesktop = false }: ProjectionsViewProps) {
                 onClick={handleOpenAddGoal}
                 className="h-8 text-xs font-semibold text-primary hover:bg-primary/10 cursor-pointer"
               >
-                + Crear primera meta (ej. Fondo de Reserva de $2.000 USD)
+                + Crear mi primera meta
               </Button>
             </div>
           ) : (
@@ -304,10 +325,10 @@ export function ProjectionsView({ isDesktop = false }: ProjectionsViewProps) {
                             {goal.name}
                           </span>
                           <Badge
-                            variant={goal.type === "reserve" ? "secondary" : "outline"}
+                            variant={goal.kind === "reserve" ? "secondary" : "outline"}
                             className="text-[10px] font-mono gap-1"
                           >
-                            {goal.type === "reserve" ? (
+                            {goal.kind === "reserve" ? (
                               <>
                                 <ShieldCheck className="size-3 text-emerald-500" /> Reserva
                               </>
@@ -319,15 +340,29 @@ export function ProjectionsView({ isDesktop = false }: ProjectionsViewProps) {
                           </Badge>
                         </div>
 
-                        <div className="flex items-center gap-3 text-xs text-muted-foreground font-mono">
+                        <div className="flex items-center gap-x-3 gap-y-1 text-xs text-muted-foreground font-mono flex-wrap">
                           <span>
                             Monto: <strong className="text-foreground">{formatShort(goal.amount, goal.currency)}</strong>
                           </span>
-                          <span>•</span>
+                          <span aria-hidden>•</span>
                           <span className="flex items-center gap-1 text-primary font-semibold">
                             <Calendar className="size-3" />
                             {estimatedDateLabel}
                           </span>
+                          {isAchievedInHorizon && goal.currency !== displayCurrency && (
+                            <>
+                              <span aria-hidden>•</span>
+                              <span title="Costo estimado al momento de alcanzarla, ya inflacionado y al tipo de cambio proyectado">
+                                ≈ {formatShort(costInDisplayCurrency, displayCurrency)} de ese momento
+                              </span>
+                            </>
+                          )}
+                          {!isAchievedInHorizon && (
+                            <>
+                              <span aria-hidden>•</span>
+                              <span>{coveragePercent}% cubierto</span>
+                            </>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -402,21 +437,33 @@ export function ProjectionsView({ isDesktop = false }: ProjectionsViewProps) {
         <div className="lg:col-span-5 xl:col-span-4">
           <ProjectionControls
             horizonMonths={horizonMonths}
-            onHorizonChange={setHorizonMonths}
+            onHorizonChange={(months) => updateProjectionSettings({ horizonMonths: months })}
             displayCurrency={displayCurrency}
-            onCurrencyChange={setDisplayCurrency}
+            onCurrencyChange={(currency) => updateProjectionSettings({ displayCurrency: currency })}
             isRealTerms={isRealTerms}
-            onRealTermsChange={setIsRealTerms}
+            onRealTermsChange={(real) => updateProjectionSettings({ isRealTerms: real })}
             useRealAccounts={useRealAccounts}
-            onUseRealAccountsChange={setUseRealAccounts}
+            onUseRealAccountsChange={(useReal) =>
+              updateProjectionSettings({
+                useRealAccounts: useReal,
+                // Al pasar a manual arrancamos del saldo real, para no tirar al
+                // usuario a un número inventado que no es su patrimonio.
+                ...(useReal
+                  ? {}
+                  : {
+                      manualInitialARS: manualInitialARS ?? netARSBalance,
+                      manualInitialUSD: manualInitialUSD ?? netLiquidUSD,
+                    }),
+              })
+            }
             initialARS={effectiveInitialARS}
-            onInitialARSChange={setManualInitialARS}
+            onInitialARSChange={(val) => updateProjectionSettings({ manualInitialARS: val })}
             initialUSD={effectiveInitialUSD}
-            onInitialUSDChange={setManualInitialUSD}
-            savingsARS={savingsARS}
-            onSavingsARSChange={setSavingsARS}
-            savingsUSD={savingsUSD}
-            onSavingsUSDChange={setSavingsUSD}
+            onInitialUSDChange={(val) => updateProjectionSettings({ manualInitialUSD: val })}
+            savingsARS={monthlySavingsARS}
+            onSavingsARSChange={(val) => updateProjectionSettings({ monthlySavingsARS: val })}
+            savingsUSD={monthlySavingsUSD}
+            onSavingsUSDChange={(val) => updateProjectionSettings({ monthlySavingsUSD: val })}
             annualInflation={annualInflation}
             onAnnualInflationChange={(val) => {
               setAnnualInflation(val)
@@ -427,18 +474,25 @@ export function ProjectionsView({ isDesktop = false }: ProjectionsViewProps) {
               setAnnualDevaluation(val)
               updateMacroSettings({ annualDevaluation: val })
             }}
-            annualReturn={annualReturn}
-            onAnnualReturnChange={(val) => {
-              setAnnualReturn(val)
-              updateMacroSettings({ annualReturn: val })
-            }}
+            annualReturnARS={annualReturnARS}
+            onAnnualReturnARSChange={(val) => updateProjectionSettings({ annualReturnARS: val })}
+            annualReturnUSD={annualReturnUSD}
+            onAnnualReturnUSDChange={(val) => updateProjectionSettings({ annualReturnUSD: val })}
+            portfolioUSD={effectivePortfolioUSD}
+            overdueARS={useRealAccounts ? overdue.ARS : 0}
+            overdueUSD={useRealAccounts ? overdue.USD : 0}
+            savingsEstimate={savingsEstimate}
+            onUseEstimatedSavings={() =>
+              updateProjectionSettings({
+                monthlySavingsARS: savingsEstimate.ARS,
+                monthlySavingsUSD: savingsEstimate.USD,
+              })
+            }
             exchangeRate={exchangeRate}
             onExchangeRateChange={(val) => {
               setExchangeRate(val)
               updateMacroSettings({ exchangeRate: val })
             }}
-            onOpenGoalModal={handleOpenAddGoal}
-            onRemoveGoal={() => setGoals([])}
             onSyncMacro={handleSyncMacro}
             isSyncingMacro={isSyncingMacro}
             lastMacroSyncDate={macroSettings.lastUpdated}
@@ -448,13 +502,14 @@ export function ProjectionsView({ isDesktop = false }: ProjectionsViewProps) {
       </div>
 
       {/* Modal Dialog to Create or Edit Sequential Goals */}
-      <BigPurchaseModal
+      <GoalModal
         open={isGoalModalOpen}
         onOpenChange={setIsGoalModalOpen}
         currentGoal={editingGoal}
         onSaveGoal={handleSaveGoal}
-        onRemoveGoal={() => editingGoal && handleRemoveGoal(editingGoal.id)}
-        priorityCount={goals.length}
+        onRemoveGoal={async () => {
+          if (editingGoal) await handleRemoveGoal(editingGoal.id)
+        }}
       />
     </div>
   )

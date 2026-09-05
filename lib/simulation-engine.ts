@@ -1,23 +1,32 @@
 // ---------------------------------------------------------------------------
-// Pure TypeScript Financial Simulation Engine for PLATA
+// Motor de simulación financiera de PLATA. TypeScript puro, sin dependencias:
+// se puede testear sin montar React ni Supabase.
+//
+// Convenciones del modelo:
+//   - Los aportes son de fin de mes (renta ordinaria): el rendimiento del mes
+//     se aplica al saldo de apertura y recién después entra el ahorro. Sumarlo
+//     antes le regalaba un mes entero de interés a plata que todavía no estaba.
+//   - Los escenarios NO mueven la devaluación. Más devaluación sube el
+//     patrimonio nominal en pesos de quien tiene dólares, así que usarla como
+//     eje pesimista/optimista hacía que la línea "pesimista" quedara por encima
+//     de la "optimista" en la vista en ARS. Los escenarios se separan por
+//     inflación y rendimiento, que sí empujan siempre para el mismo lado.
+//   - El poder adquisitivo se descuenta con la inflación de la moneda que se
+//     está mostrando: pesos con inflación en pesos, dólares con inflación en
+//     dólares.
+//   - El capital ilíquido (la cartera de acciones) suma al patrimonio pero no
+//     financia metas.
 // ---------------------------------------------------------------------------
 
 export type Currency = "ARS" | "USD"
-
-export interface BigPurchaseGoal {
-  id?: string
-  name: string
-  amount: number
-  currency: Currency
-  targetMonth: number // 1 to 60
-}
 
 export interface SequentialGoal {
   id: string
   name: string
   amount: number
   currency: Currency
-  type: "reserve" | "purchase" // 'reserve' (reserva de capital) | 'purchase' (gasto/compra)
+  /** 'reserve' inmoviliza capital; 'purchase' lo descuenta. */
+  kind: "reserve" | "purchase"
   priority: number
 }
 
@@ -26,30 +35,34 @@ export interface SequentialGoalResult {
   estimatedMonthNeutral?: number
   estimatedMonthPessimistic?: number
   estimatedMonthOptimistic?: number
-  estimatedDateLabel?: string // e.g. "Marzo 2027 (en 7 meses)"
+  /** "Marzo 2027 (en 7 meses)", o el aviso de que no entra en el horizonte. */
+  estimatedDateLabel: string
   isAchievedInHorizon: boolean
+  /** Qué parte de la secuencia hasta esta meta cubre el capital líquido de hoy. */
   coveragePercent: number
+  /** Costo ya inflacionado al mes en que se alcanza (o de hoy, si no se alcanza). */
   costInDisplayCurrency: number
 }
 
 export interface SimulationParams {
-  initialNetWorth: {
-    ARS: number
-    USD: number
-  }
-  monthlySavings: {
-    ARS: number
-    USD: number
-  }
-  annualInflationRate: number // e.g. 50 (%)
-  annualDevaluationRate: number // e.g. 50 (%)
-  annualInvestmentReturnRate: number // e.g. 15 (%)
-  horizonMonths: number // 12, 24, 36, 60
+  /** Capital líquido: es el que financia las metas. */
+  initialNetWorth: { ARS: number; USD: number }
+  /** Capital que suma al patrimonio pero no se toca para las metas (cartera). */
+  illiquidNetWorth?: { ARS: number; USD: number }
+  monthlySavings: { ARS: number; USD: number }
+  /** Inflación anual en pesos, en % (ej. 45). */
+  annualInflationRate: number
+  /** Inflación anual en dólares, en % (ej. 2.5). */
+  annualUsdInflationRate?: number
+  annualDevaluationRate: number
+  annualReturnARS: number
+  annualReturnUSD: number
+  horizonMonths: number
   displayCurrency: Currency
-  initialExchangeRate: number // ARS per USD, e.g. 1250
-  bigPurchaseGoal?: BigPurchaseGoal | null
+  /** ARS por USD (ej. 1250). */
+  initialExchangeRate: number
   sequentialGoals?: SequentialGoal[]
-  isRealTerms?: boolean // If true, adjusts by inflation discount factor
+  isRealTerms?: boolean
 }
 
 export interface ScenarioPoint {
@@ -57,47 +70,29 @@ export interface ScenarioPoint {
   label: string
   exchangeRate: number
 
-  // Values in displayCurrency
   pessimistic: number
   neutral: number
   optimistic: number
 
-  // Values excluding big purchase deduction (for clean trajectory reference)
+  /** Trayectoria sin descontar las compras, como referencia. */
   pessimisticPreGoal: number
   neutralPreGoal: number
   optimisticPreGoal: number
 
-  // Goal cost at this month in display currency
-  goalCostInDisplayCurrency?: number
-  achievedGoalNames?: string[]
+  achievedGoalNames: string[]
 }
 
 export interface ScenarioResultSummary {
   finalNominal: number
   finalReal: number
+  /** Aportes acumulados, en la moneda de vista al tipo de cambio de hoy. */
   totalSaved: number
+  /** Rendimientos acumulados, en la moneda de vista al tipo de cambio de hoy. */
   totalReturns: number
-}
-
-export interface GoalViability {
-  isViablePessimistic: boolean
-  isViableNeutral: boolean
-  isViableOptimistic: boolean
-  coveragePercentPessimistic: number
-  coveragePercentNeutral: number
-  coveragePercentOptimistic: number
-  estimatedMonthPessimistic?: number
-  estimatedMonthNeutral?: number
-  estimatedMonthOptimistic?: number
-  statusBadge: {
-    label: string
-    variant: "success" | "warning" | "destructive" | "secondary"
-  }
 }
 
 export interface SimulationResult {
   timeline: ScenarioPoint[]
-  goalViability: GoalViability | null
   sequentialGoalResults: SequentialGoalResult[]
   nextGoal: SequentialGoalResult | null
   finalNetWorth: {
@@ -111,17 +106,21 @@ export interface SimulationResult {
 export type ScenarioType = "pessimistic" | "neutral" | "optimistic"
 
 interface ScenarioConfig {
-  inflationRate: number
-  devaluationRate: number
-  returnRate: number
+  inflationARS: number
+  inflationUSD: number
+  devaluation: number
+  returnARS: number
+  returnUSD: number
 }
 
-/**
- * Calculate monthly rate from annual percentage
- */
+export const DEFAULT_USD_INFLATION = 2.5
+
+/** Pasa una tasa anual en % a su equivalente mensual compuesto. */
 function getMonthlyRate(annualPercent: number): number {
   const annualDecimal = annualPercent / 100
-  if (annualDecimal <= -1) return -0.99
+  // Una caída anual del 100% o más deja el capital en cero; el equivalente
+  // mensual es -1, no un número imaginario.
+  if (annualDecimal <= -1) return -1
   return Math.pow(1 + annualDecimal, 1 / 12) - 1
 }
 
@@ -134,206 +133,162 @@ function getFutureMonthLabel(monthIndex: number): string {
   return `${capitalizedMonth} ${year} (en ${monthIndex} ${monthIndex === 1 ? "mes" : "meses"})`
 }
 
-/**
- * Generates monthly projection for a given scenario with sequential cascading goals
- */
-function calculateScenarioTimeline(
-  params: SimulationParams,
-  config: ScenarioConfig
-) {
+interface ScenarioPointRaw {
+  month: number
+  label: string
+  exchangeRate: number
+  netWorthWithGoal: number
+  netWorthWithoutGoal: number
+  netWorthWithGoalReal: number
+  netWorthWithoutGoalReal: number
+  achievedGoalNames: string[]
+}
+
+/** Proyección mensual de un escenario, con las metas resolviéndose en cascada. */
+function calculateScenarioTimeline(params: SimulationParams, config: ScenarioConfig) {
   const {
     initialNetWorth,
+    illiquidNetWorth,
     monthlySavings,
     horizonMonths,
     displayCurrency,
     initialExchangeRate,
-    bigPurchaseGoal,
     sequentialGoals = [],
   } = params
 
-  const iMonthly = getMonthlyRate(config.inflationRate)
-  const dMonthly = getMonthlyRate(config.devaluationRate)
-  const rMonthly = getMonthlyRate(config.returnRate)
+  const iArsMonthly = getMonthlyRate(config.inflationARS)
+  const iUsdMonthly = getMonthlyRate(config.inflationUSD)
+  const dMonthly = getMonthlyRate(config.devaluation)
+  const rArsMonthly = getMonthlyRate(config.returnARS)
+  const rUsdMonthly = getMonthlyRate(config.returnUSD)
 
-  let balanceARS = Math.max(0, initialNetWorth.ARS)
-  let balanceUSD = Math.max(0, initialNetWorth.USD)
+  // Capital líquido: el único que puede pagar una meta.
+  let liquidARS = Math.max(0, initialNetWorth.ARS)
+  let liquidUSD = Math.max(0, initialNetWorth.USD)
+  // Trayectoria paralela que nunca descuenta compras.
+  let liquidARSNoGoal = liquidARS
+  let liquidUSDNoGoal = liquidUSD
+  // Cartera: suma al patrimonio, no financia metas.
+  let illiquidARS = Math.max(0, illiquidNetWorth?.ARS ?? 0)
+  let illiquidUSD = Math.max(0, illiquidNetWorth?.USD ?? 0)
 
-  let fxRate = Math.max(1, initialExchangeRate)
-  let totalSavedInDisplayCurrency = 0
+  const fx0 = Math.max(1, initialExchangeRate)
+  let fxRate = fx0
 
-  // Track sequential goals state
+  let totalContributed = 0
+  let totalReturns = 0
+
   const sortedGoals = [...sequentialGoals].sort((a, b) => a.priority - b.priority)
   let currentGoalIdx = 0
   let lockedReserveUSD = 0
 
   const goalAchievementMonths = new Map<string, number>()
-  const goalAchievementNamesPerMonth = new Map<number, string[]>()
+  const goalAchievementFx = new Map<string, number>()
 
-  const points: {
-    month: number
-    label: string
-    exchangeRate: number
-    netWorthWithGoal: number
-    netWorthWithoutGoal: number
-    netWorthWithGoalReal: number
-    netWorthWithoutGoalReal: number
-    goalCostInDisplay: number
-    achievedGoalNames: string[]
-  }[] = []
+  const toDisplay = (ars: number, usd: number, fx: number) =>
+    displayCurrency === "ARS" ? ars + usd * fx : usd + ars / fx
 
-  // Month 0 (Initial state)
-  const initNominal =
-    displayCurrency === "ARS"
-      ? balanceARS + balanceUSD * fxRate
-      : balanceUSD + balanceARS / fxRate
+  const points: ScenarioPointRaw[] = []
 
+  const initialNominal = toDisplay(liquidARS + illiquidARS, liquidUSD + illiquidUSD, fxRate)
   points.push({
     month: 0,
     label: "Actual",
     exchangeRate: fxRate,
-    netWorthWithGoal: initNominal,
-    netWorthWithoutGoal: initNominal,
-    netWorthWithGoalReal: initNominal,
-    netWorthWithoutGoalReal: initNominal,
-    goalCostInDisplay: 0,
+    netWorthWithGoal: initialNominal,
+    netWorthWithoutGoal: initialNominal,
+    netWorthWithGoalReal: initialNominal,
+    netWorthWithoutGoalReal: initialNominal,
     achievedGoalNames: [],
   })
 
-  let balanceARSNoGoal = balanceARS
-  let balanceUSDNoGoal = balanceUSD
-
   for (let m = 1; m <= horizonMonths; m++) {
-    // Update Exchange rate
     fxRate = fxRate * (1 + dMonthly)
 
-    // Add monthly savings
-    balanceARS += monthlySavings.ARS
-    balanceUSD += monthlySavings.USD
+    // 1. Rendimiento sobre el saldo de apertura.
+    const returnARS = liquidARS * rArsMonthly
+    const returnUSD = liquidUSD * rUsdMonthly
+    liquidARS += returnARS
+    liquidUSD += returnUSD
+    liquidARSNoGoal *= 1 + rArsMonthly
+    liquidUSDNoGoal *= 1 + rUsdMonthly
+    illiquidARS *= 1 + rArsMonthly
+    illiquidUSD *= 1 + rUsdMonthly
+    totalReturns += displayCurrency === "ARS" ? returnARS + returnUSD * fx0 : returnUSD + returnARS / fx0
 
-    balanceARSNoGoal += monthlySavings.ARS
-    balanceUSDNoGoal += monthlySavings.USD
-
-    // Track total savings added
-    const savingsThisMonthInDisplay =
+    // 2. Aporte de fin de mes.
+    liquidARS += monthlySavings.ARS
+    liquidUSD += monthlySavings.USD
+    liquidARSNoGoal += monthlySavings.ARS
+    liquidUSDNoGoal += monthlySavings.USD
+    totalContributed +=
       displayCurrency === "ARS"
-        ? monthlySavings.ARS + monthlySavings.USD * fxRate
-        : monthlySavings.USD + monthlySavings.ARS / fxRate
-    totalSavedInDisplayCurrency += savingsThisMonthInDisplay
+        ? monthlySavings.ARS + monthlySavings.USD * fx0
+        : monthlySavings.USD + monthlySavings.ARS / fx0
 
-    // Investment returns
-    balanceARS = balanceARS * (1 + rMonthly)
-    balanceUSD = balanceUSD * (1 + rMonthly)
+    // 3. La reserva ya bloqueada mantiene su poder adquisitivo.
+    lockedReserveUSD *= 1 + iUsdMonthly
 
-    balanceARSNoGoal = balanceARSNoGoal * (1 + rMonthly)
-    balanceUSDNoGoal = balanceUSDNoGoal * (1 + rMonthly)
-
-    let goalCostInDisplay = 0
+    // 4. Metas en cascada.
     const achievedNames: string[] = []
-
-    // 1. Single Legacy Big Purchase Goal
-    if (bigPurchaseGoal && m === bigPurchaseGoal.targetMonth) {
-      if (bigPurchaseGoal.currency === "ARS") {
-        goalCostInDisplay =
-          displayCurrency === "ARS"
-            ? bigPurchaseGoal.amount
-            : bigPurchaseGoal.amount / fxRate
-        if (balanceARS >= bigPurchaseGoal.amount) {
-          balanceARS -= bigPurchaseGoal.amount
-        } else {
-          const deficit = bigPurchaseGoal.amount - balanceARS
-          balanceARS = 0
-          balanceUSD = Math.max(0, balanceUSD - deficit / fxRate)
-        }
-      } else {
-        goalCostInDisplay =
-          displayCurrency === "USD"
-            ? bigPurchaseGoal.amount
-            : bigPurchaseGoal.amount * fxRate
-        if (balanceUSD >= bigPurchaseGoal.amount) {
-          balanceUSD -= bigPurchaseGoal.amount
-        } else {
-          const deficit = bigPurchaseGoal.amount - balanceUSD
-          balanceUSD = 0
-          balanceARS = Math.max(0, balanceARS - deficit * fxRate)
-        }
-      }
-      achievedNames.push(bigPurchaseGoal.name)
-    }
-
-    // 2. Sequential Cascading Goals Check
     while (currentGoalIdx < sortedGoals.length) {
       const activeGoal = sortedGoals[currentGoalIdx]
+
+      // El precio de la meta acompaña a la inflación de su moneda: una moto de
+      // $7.000.000 de hoy no vale $7.000.000 dentro de tres años.
+      const inflatedAmount =
+        activeGoal.amount *
+        Math.pow(1 + (activeGoal.currency === "ARS" ? iArsMonthly : iUsdMonthly), m)
       const goalCostUSD =
-        activeGoal.currency === "USD"
-          ? activeGoal.amount
-          : activeGoal.amount / fxRate
+        activeGoal.currency === "USD" ? inflatedAmount : inflatedAmount / fxRate
 
-      // Total net worth available in USD equivalent
-      const netWorthUSD = balanceUSD + balanceARS / fxRate
-      const availableNetWorthUSD = Math.max(0, netWorthUSD - lockedReserveUSD)
+      const liquidUSDEquivalent = liquidUSD + liquidARS / fxRate
+      const availableUSD = Math.max(0, liquidUSDEquivalent - lockedReserveUSD)
 
-      if (availableNetWorthUSD < goalCostUSD) {
-        break // Not enough free capital for this goal yet
-      }
+      if (availableUSD < goalCostUSD) break
 
-      // Goal achieved!
       goalAchievementMonths.set(activeGoal.id, m)
+      goalAchievementFx.set(activeGoal.id, fxRate)
       achievedNames.push(activeGoal.name)
 
-      if (!goalAchievementNamesPerMonth.has(m)) {
-        goalAchievementNamesPerMonth.set(m, [])
-      }
-      goalAchievementNamesPerMonth.get(m)?.push(activeGoal.name)
-
-      // Handle goal completion type:
-      if (activeGoal.type === "purchase") {
-        // Deduct purchase cost from liquid balances (ARS then USD, or USD then ARS)
+      if (activeGoal.kind === "purchase") {
+        // Se paga primero con la moneda de la meta y el resto con la otra.
         if (activeGoal.currency === "ARS") {
-          const costARS = activeGoal.amount
-          if (balanceARS >= costARS) {
-            balanceARS -= costARS
+          const costARS = inflatedAmount
+          if (liquidARS >= costARS) {
+            liquidARS -= costARS
           } else {
-            const deficitARS = costARS - balanceARS
-            balanceARS = 0
-            const deficitUSD = deficitARS / fxRate
-            balanceUSD = Math.max(0, balanceUSD - deficitUSD)
+            const deficitARS = costARS - liquidARS
+            liquidARS = 0
+            liquidUSD = Math.max(0, liquidUSD - deficitARS / fxRate)
           }
         } else {
-          const costUSD = activeGoal.amount
-          if (balanceUSD >= costUSD) {
-            balanceUSD -= costUSD
+          const costUSD = inflatedAmount
+          if (liquidUSD >= costUSD) {
+            liquidUSD -= costUSD
           } else {
-            const deficitUSD = costUSD - balanceUSD
-            balanceUSD = 0
-            const deficitARS = deficitUSD * fxRate
-            balanceARS = Math.max(0, balanceARS - deficitARS)
+            const deficitUSD = costUSD - liquidUSD
+            liquidUSD = 0
+            liquidARS = Math.max(0, liquidARS - deficitUSD * fxRate)
           }
         }
-      } else if (activeGoal.type === "reserve") {
-        // Lock reserve capital so future goals accumulate on top of it
+      } else {
         lockedReserveUSD += goalCostUSD
       }
 
-      // Advance to next sequential goal
       currentGoalIdx++
     }
 
-    // Nominal Net Worth
-    const nominalWithGoal =
-      displayCurrency === "ARS"
-        ? balanceARS + balanceUSD * fxRate
-        : balanceUSD + balanceARS / fxRate
+    const nominalWithGoal = toDisplay(liquidARS + illiquidARS, liquidUSD + illiquidUSD, fxRate)
+    const nominalNoGoal = toDisplay(
+      liquidARSNoGoal + illiquidARS,
+      liquidUSDNoGoal + illiquidUSD,
+      fxRate
+    )
 
-    const nominalNoGoal =
-      displayCurrency === "ARS"
-        ? balanceARSNoGoal + balanceUSDNoGoal * fxRate
-        : balanceUSDNoGoal + balanceARSNoGoal / fxRate
-
-    // Inflation Discount Factor (real purchasing power)
-    const discountFactor = Math.pow(1 + iMonthly, -m)
-
-    const realWithGoal = nominalWithGoal * discountFactor
-    const realNoGoal = nominalNoGoal * discountFactor
+    // El poder adquisitivo se pierde al ritmo de la moneda que se muestra.
+    const inflationForDisplay = displayCurrency === "ARS" ? iArsMonthly : iUsdMonthly
+    const discountFactor = Math.pow(1 + inflationForDisplay, -m)
 
     let label = `M${m}`
     if (m % 12 === 0) {
@@ -347,279 +302,160 @@ function calculateScenarioTimeline(
       exchangeRate: fxRate,
       netWorthWithGoal: Math.max(0, nominalWithGoal),
       netWorthWithoutGoal: Math.max(0, nominalNoGoal),
-      netWorthWithGoalReal: Math.max(0, realWithGoal),
-      netWorthWithoutGoalReal: Math.max(0, realNoGoal),
-      goalCostInDisplay,
+      netWorthWithGoalReal: Math.max(0, nominalWithGoal * discountFactor),
+      netWorthWithoutGoalReal: Math.max(0, nominalNoGoal * discountFactor),
       achievedGoalNames: achievedNames,
     })
   }
 
-  return { points, totalSavedInDisplayCurrency, goalAchievementMonths }
+  return { points, totalContributed, totalReturns, goalAchievementMonths, goalAchievementFx }
 }
 
-/**
- * Main Engine Function: runs simulation across 3 scenarios
- */
+/** Corre la simulación en los tres escenarios. */
 export function runSimulation(params: SimulationParams): SimulationResult {
   const {
     annualInflationRate,
+    annualUsdInflationRate = DEFAULT_USD_INFLATION,
     annualDevaluationRate,
-    annualInvestmentReturnRate,
-    bigPurchaseGoal,
+    annualReturnARS,
+    annualReturnUSD,
     sequentialGoals = [],
     isRealTerms = false,
     displayCurrency,
+    horizonMonths,
   } = params
 
-  // 1. Configure 3 Scenarios
+  // Más inflación y menos rendimiento empujan siempre para el mismo lado, en
+  // las dos monedas. La devaluación queda fija: es un supuesto del usuario, no
+  // un eje del escenario (ver la nota de arriba).
+  const devaluation = Math.max(0, annualDevaluationRate)
+  const scaleReturn = (rate: number, factor: number) =>
+    rate >= 0 ? rate * factor : rate / factor
+
   const pessimisticConfig: ScenarioConfig = {
-    inflationRate: Math.max(0, annualInflationRate * 1.2),
-    devaluationRate: Math.max(0, annualDevaluationRate * 1.2),
-    returnRate:
-      annualInvestmentReturnRate >= 0
-        ? annualInvestmentReturnRate * 0.7
-        : annualInvestmentReturnRate * 1.3,
+    inflationARS: Math.max(0, annualInflationRate * 1.2),
+    inflationUSD: Math.max(0, annualUsdInflationRate * 1.2),
+    devaluation,
+    returnARS: scaleReturn(annualReturnARS, 0.7),
+    returnUSD: scaleReturn(annualReturnUSD, 0.7),
   }
 
   const neutralConfig: ScenarioConfig = {
-    inflationRate: Math.max(0, annualInflationRate),
-    devaluationRate: Math.max(0, annualDevaluationRate),
-    returnRate: annualInvestmentReturnRate,
+    inflationARS: Math.max(0, annualInflationRate),
+    inflationUSD: Math.max(0, annualUsdInflationRate),
+    devaluation,
+    returnARS: annualReturnARS,
+    returnUSD: annualReturnUSD,
   }
 
   const optimisticConfig: ScenarioConfig = {
-    inflationRate: Math.max(0, annualInflationRate * 0.85),
-    devaluationRate: Math.max(0, annualDevaluationRate * 0.85),
-    returnRate:
-      annualInvestmentReturnRate >= 0
-        ? annualInvestmentReturnRate * 1.25
-        : annualInvestmentReturnRate * 0.75,
+    inflationARS: Math.max(0, annualInflationRate * 0.85),
+    inflationUSD: Math.max(0, annualUsdInflationRate * 0.85),
+    devaluation,
+    returnARS: scaleReturn(annualReturnARS, 1.25),
+    returnUSD: scaleReturn(annualReturnUSD, 1.25),
   }
 
   const pSim = calculateScenarioTimeline(params, pessimisticConfig)
   const nSim = calculateScenarioTimeline(params, neutralConfig)
   const oSim = calculateScenarioTimeline(params, optimisticConfig)
 
-  // 2. Build Timeline Array
-  const timeline: ScenarioPoint[] = []
-  const len = pSim.points.length
-
-  for (let i = 0; i < len; i++) {
+  const timeline: ScenarioPoint[] = nSim.points.map((nPoint, i) => {
     const pPoint = pSim.points[i]
-    const nPoint = nSim.points[i]
     const oPoint = oSim.points[i]
 
-    let goalCostInDisplayCurrency = 0
-    if (bigPurchaseGoal && pPoint.month === bigPurchaseGoal.targetMonth) {
-      if (bigPurchaseGoal.currency === displayCurrency) {
-        goalCostInDisplayCurrency = bigPurchaseGoal.amount
-      } else if (displayCurrency === "ARS") {
-        goalCostInDisplayCurrency = bigPurchaseGoal.amount * nPoint.exchangeRate
-      } else {
-        goalCostInDisplayCurrency = bigPurchaseGoal.amount / nPoint.exchangeRate
-      }
-    }
-
-    timeline.push({
-      month: pPoint.month,
-      label: pPoint.label,
+    return {
+      month: nPoint.month,
+      label: nPoint.label,
       exchangeRate: nPoint.exchangeRate,
 
-      pessimistic: isRealTerms
-        ? pPoint.netWorthWithGoalReal
-        : pPoint.netWorthWithGoal,
-      neutral: isRealTerms
-        ? nPoint.netWorthWithGoalReal
-        : nPoint.netWorthWithGoal,
-      optimistic: isRealTerms
-        ? oPoint.netWorthWithGoalReal
-        : oPoint.netWorthWithGoal,
+      pessimistic: isRealTerms ? pPoint.netWorthWithGoalReal : pPoint.netWorthWithGoal,
+      neutral: isRealTerms ? nPoint.netWorthWithGoalReal : nPoint.netWorthWithGoal,
+      optimistic: isRealTerms ? oPoint.netWorthWithGoalReal : oPoint.netWorthWithGoal,
 
       pessimisticPreGoal: isRealTerms
         ? pPoint.netWorthWithoutGoalReal
         : pPoint.netWorthWithoutGoal,
-      neutralPreGoal: isRealTerms
-        ? nPoint.netWorthWithoutGoalReal
-        : nPoint.netWorthWithoutGoal,
+      neutralPreGoal: isRealTerms ? nPoint.netWorthWithoutGoalReal : nPoint.netWorthWithoutGoal,
       optimisticPreGoal: isRealTerms
         ? oPoint.netWorthWithoutGoalReal
         : oPoint.netWorthWithoutGoal,
 
-      goalCostInDisplayCurrency,
       achievedGoalNames: nPoint.achievedGoalNames,
-    })
-  }
+    }
+  })
 
-  // 3. Summaries
-  const pFinal = pSim.points[pSim.points.length - 1]
-  const nFinal = nSim.points[nSim.points.length - 1]
-  const oFinal = oSim.points[oSim.points.length - 1]
+  const summarize = (sim: ReturnType<typeof calculateScenarioTimeline>): ScenarioResultSummary => {
+    const final = sim.points[sim.points.length - 1]
+    return {
+      finalNominal: final.netWorthWithGoal,
+      finalReal: final.netWorthWithGoalReal,
+      totalSaved: sim.totalContributed,
+      totalReturns: sim.totalReturns,
+    }
+  }
 
   const finalNetWorth = {
-    pessimistic: {
-      finalNominal: pFinal.netWorthWithGoal,
-      finalReal: pFinal.netWorthWithGoalReal,
-      totalSaved: pSim.totalSavedInDisplayCurrency,
-      totalReturns: Math.max(
-        0,
-        pFinal.netWorthWithGoal -
-          pSim.points[0].netWorthWithGoal -
-          pSim.totalSavedInDisplayCurrency
-      ),
-    },
-    neutral: {
-      finalNominal: nFinal.netWorthWithGoal,
-      finalReal: nFinal.netWorthWithGoalReal,
-      totalSaved: nSim.totalSavedInDisplayCurrency,
-      totalReturns: Math.max(
-        0,
-        nFinal.netWorthWithGoal -
-          nSim.points[0].netWorthWithGoal -
-          nSim.totalSavedInDisplayCurrency
-      ),
-    },
-    optimistic: {
-      finalNominal: oFinal.netWorthWithGoal,
-      finalReal: oFinal.netWorthWithGoalReal,
-      totalSaved: oSim.totalSavedInDisplayCurrency,
-      totalReturns: Math.max(
-        0,
-        oFinal.netWorthWithGoal -
-          oSim.points[0].netWorthWithGoal -
-          oSim.totalSavedInDisplayCurrency
-      ),
-    },
+    pessimistic: summarize(pSim),
+    neutral: summarize(nSim),
+    optimistic: summarize(oSim),
   }
 
-  // 4. Sequential Goals Results Processing
+  // Cobertura: qué parte del costo acumulado de la secuencia hasta cada meta
+  // cubre el capital líquido de hoy. Medirla contra el costo de una sola meta
+  // daba 100% en la tercera de la fila con la plata que ya está comprometida en
+  // las dos anteriores.
+  const fx0 = Math.max(1, params.initialExchangeRate)
+  const liquidTodayUSD = params.initialNetWorth.USD + params.initialNetWorth.ARS / fx0
+  let cumulativeCostUSD = 0
+
   const sortedGoals = [...sequentialGoals].sort((a, b) => a.priority - b.priority)
   const sequentialGoalResults: SequentialGoalResult[] = sortedGoals.map((g) => {
     const monthNeutral = nSim.goalAchievementMonths.get(g.id)
-    const monthPessimistic = pSim.goalAchievementMonths.get(g.id)
-    const monthOptimistic = oSim.goalAchievementMonths.get(g.id)
-
     const isAchievedInHorizon = monthNeutral !== undefined
 
-    // Calculate cost in display currency at current FX
-    const initFx = params.initialExchangeRate || 1250
-    const costInDisplay =
+    const costTodayUSD = g.currency === "USD" ? g.amount : g.amount / fx0
+    cumulativeCostUSD += costTodayUSD
+
+    // Costo al tipo de cambio e inflación del mes en que efectivamente se logra.
+    const fxAtAchievement = nSim.goalAchievementFx.get(g.id) ?? fx0
+    const monthsToAchievement = monthNeutral ?? 0
+    const inflationMonthly =
+      Math.pow(1 + (g.currency === "ARS" ? annualInflationRate : annualUsdInflationRate) / 100, 1 / 12) - 1
+    const inflatedAmount = g.amount * Math.pow(1 + inflationMonthly, monthsToAchievement)
+    const costInDisplayCurrency =
       g.currency === displayCurrency
-        ? g.amount
+        ? inflatedAmount
         : displayCurrency === "ARS"
-        ? g.amount * initFx
-        : g.amount / initFx
-
-    // Coverage percent at end of horizon or at target
-    const currentNWDisplay = nSim.points[0].netWorthWithoutGoal
-    const coveragePercent = Math.min(100, Math.round((currentNWDisplay / (costInDisplay || 1)) * 100))
-
-    let estimatedDateLabel = "Más de 5 años"
-    if (monthNeutral !== undefined) {
-      estimatedDateLabel = getFutureMonthLabel(monthNeutral)
-    }
+        ? inflatedAmount * fxAtAchievement
+        : inflatedAmount / fxAtAchievement
 
     return {
       goal: g,
       estimatedMonthNeutral: monthNeutral,
-      estimatedMonthPessimistic: monthPessimistic,
-      estimatedMonthOptimistic: monthOptimistic,
-      estimatedDateLabel,
+      estimatedMonthPessimistic: pSim.goalAchievementMonths.get(g.id),
+      estimatedMonthOptimistic: oSim.goalAchievementMonths.get(g.id),
+      estimatedDateLabel: isAchievedInHorizon
+        ? getFutureMonthLabel(monthNeutral!)
+        : `No se alcanza en ${horizonMonths} meses`,
       isAchievedInHorizon,
-      coveragePercent,
-      costInDisplayCurrency: costInDisplay,
+      coveragePercent: Math.max(
+        0,
+        Math.min(100, Math.round((liquidTodayUSD / (cumulativeCostUSD || 1)) * 100))
+      ),
+      costInDisplayCurrency,
     }
   })
 
-  const nextGoal = sequentialGoalResults.find((r) => !r.isAchievedInHorizon) || sequentialGoalResults[sequentialGoalResults.length - 1] || null
-
-  // 5. Calculate Goal Viability if a single legacy big purchase goal exists
-  let goalViability: GoalViability | null = null
-
-  if (bigPurchaseGoal) {
-    const tMonth = Math.min(bigPurchaseGoal.targetMonth, timeline.length - 1)
-
-    const pPreAtTarget = pSim.points[tMonth]?.netWorthWithoutGoal ?? 0
-    const nPreAtTarget = nSim.points[tMonth]?.netWorthWithoutGoal ?? 0
-    const oPreAtTarget = oSim.points[tMonth]?.netWorthWithoutGoal ?? 0
-
-    const targetFx = nSim.points[tMonth]?.exchangeRate ?? params.initialExchangeRate
-    const goalCostInDisplay =
-      bigPurchaseGoal.currency === displayCurrency
-        ? bigPurchaseGoal.amount
-        : displayCurrency === "ARS"
-        ? bigPurchaseGoal.amount * targetFx
-        : bigPurchaseGoal.amount / targetFx
-
-    const covPessimistic =
-      goalCostInDisplay > 0 ? (pPreAtTarget / goalCostInDisplay) * 100 : 100
-    const covNeutral =
-      goalCostInDisplay > 0 ? (nPreAtTarget / goalCostInDisplay) * 100 : 100
-    const covOptimistic =
-      goalCostInDisplay > 0 ? (oPreAtTarget / goalCostInDisplay) * 100 : 100
-
-    const isViablePessimistic = covPessimistic >= 100
-    const isViableNeutral = covNeutral >= 100
-    const isViableOptimistic = covOptimistic >= 100
-
-    const findAchieveMonth = (simPoints: typeof nSim.points) => {
-      const idx = simPoints.findIndex((pt) => {
-        if (pt.month === 0) return false
-        const costAtPt =
-          bigPurchaseGoal.currency === displayCurrency
-            ? bigPurchaseGoal.amount
-            : displayCurrency === "ARS"
-            ? bigPurchaseGoal.amount * pt.exchangeRate
-            : bigPurchaseGoal.amount / pt.exchangeRate
-        return pt.netWorthWithoutGoal >= costAtPt
-      })
-      return idx > -1 ? idx : undefined
-    }
-
-    const estimatedMonthPessimistic = findAchieveMonth(pSim.points)
-    const estimatedMonthNeutral = findAchieveMonth(nSim.points)
-    const estimatedMonthOptimistic = findAchieveMonth(oSim.points)
-
-    let statusLabel = ""
-    let variant: "success" | "warning" | "destructive" | "secondary" = "secondary"
-
-    if (isViablePessimistic) {
-      statusLabel = "Viable en todos los escenarios"
-      variant = "success"
-    } else if (isViableNeutral) {
-      statusLabel = "Viable en escenario Neutro"
-      variant = "success"
-    } else if (isViableOptimistic) {
-      statusLabel = "Viable solo en escenario Optimista"
-      variant = "warning"
-    } else {
-      statusLabel = `Riesgo de déficit (${Math.round(covNeutral)}% cubierto)`
-      variant = "destructive"
-    }
-
-    goalViability = {
-      isViablePessimistic,
-      isViableNeutral,
-      isViableOptimistic,
-      coveragePercentPessimistic: Math.round(covPessimistic),
-      coveragePercentNeutral: Math.round(covNeutral),
-      coveragePercentOptimistic: Math.round(covOptimistic),
-      estimatedMonthPessimistic,
-      estimatedMonthNeutral,
-      estimatedMonthOptimistic,
-      statusBadge: {
-        label: statusLabel,
-        variant,
-      },
-    }
-  }
+  // La próxima meta es la primera que todavía no se logra. Si están todas
+  // cubiertas no hay ninguna próxima, y antes se mostraba la última ya lograda.
+  const nextGoal = sequentialGoalResults.find((r) => !r.isAchievedInHorizon) ?? null
 
   return {
     timeline,
-    goalViability,
     sequentialGoalResults,
     nextGoal,
     finalNetWorth,
     displayCurrency,
   }
 }
-
