@@ -1,88 +1,137 @@
 "use client"
 
 import React from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import {
-  TrendingUp,
-  Target,
-  PiggyBank,
-  CheckCircle2,
-  AlertTriangle,
-  XCircle,
-  HelpCircle,
-  Sparkles,
-  ArrowUpRight
-} from "lucide-react"
-import {
-  type SimulationResult,
-  type Currency,
-  type BigPurchaseGoal,
-} from "@/lib/simulation-engine"
+import { Progress } from "@/components/ui/progress"
+import { Target, PiggyBank, TrendingUp, Wallet, CheckCircle2 } from "lucide-react"
+import { type SimulationResult, type Currency } from "@/lib/simulation-engine"
 import { formatShort } from "@/lib/finance-data"
 
 export interface ProjectionKPIsProps {
   simulation: SimulationResult
   displayCurrency: Currency
   horizonMonths: number
-  bigPurchaseGoal?: BigPurchaseGoal | null
   isRealTerms?: boolean
+}
+
+function StatTile({
+  icon,
+  label,
+  value,
+  hint,
+}: {
+  icon: React.ReactNode
+  label: string
+  value: string
+  hint?: React.ReactNode
+}) {
+  return (
+    <Card className="border-border/50 bg-card/40 backdrop-blur-xl shadow-sm">
+      <CardContent className="p-4 space-y-1">
+        <div className="flex items-center gap-1.5 text-muted-foreground">
+          {icon}
+          <span className="text-[11px] font-medium">{label}</span>
+        </div>
+        <p className="text-xl font-semibold text-foreground">{value}</p>
+        {hint && <div className="text-[11px] text-muted-foreground">{hint}</div>}
+      </CardContent>
+    </Card>
+  )
 }
 
 export function ProjectionKPIs({
   simulation,
   displayCurrency,
   horizonMonths,
-  bigPurchaseGoal,
   isRealTerms = false,
 }: ProjectionKPIsProps) {
-  const { finalNetWorth, goalViability } = simulation
-  const horizonYears = horizonMonths / 12
+  const { finalNetWorth, nextGoal, sequentialGoalResults } = simulation
+  const years = horizonMonths / 12
 
-  const getBadgeVariant = (variant: string) => {
-    switch (variant) {
-      case "success":
-        return "bg-emerald-500/15 text-emerald-400 border-emerald-500/30"
-      case "warning":
-        return "bg-amber-500/15 text-amber-400 border-amber-500/30"
-      case "destructive":
-        return "bg-rose-500/15 text-rose-400 border-rose-500/30"
-      default:
-        return "bg-muted text-muted-foreground"
-    }
-  }
+  const pick = (s: { finalNominal: number; finalReal: number }) =>
+    isRealTerms ? s.finalReal : s.finalNominal
 
-  if (!simulation.nextGoal) return null
+  const neutral = pick(finalNetWorth.neutral)
+  const pessimistic = pick(finalNetWorth.pessimistic)
+  const optimistic = pick(finalNetWorth.optimistic)
+
+  const hasGoals = sequentialGoalResults.length > 0
 
   return (
-    <Card className="border-purple-500/40 bg-gradient-to-r from-purple-950/30 via-card/50 to-purple-950/20 backdrop-blur-xl shadow-lg">
-      <CardContent className="p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <Target className="size-4.5 text-purple-400" />
-            <span className="font-semibold text-sm text-foreground">
-              Próximo Objetivo: {simulation.nextGoal.goal.name}
+    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+      <StatTile
+        icon={<Wallet className="size-3.5" />}
+        label={`Patrimonio a ${years} ${years === 1 ? "año" : "años"}`}
+        value={formatShort(neutral, displayCurrency)}
+        hint={
+          <span className="flex items-center gap-2 flex-wrap">
+            <span className="flex items-center gap-1">
+              <span className="size-1.5 rounded-full bg-rose-500" aria-hidden />
+              Pesimista {formatShort(pessimistic, displayCurrency)}
             </span>
-            <Badge variant="outline" className="text-xs font-bold border-purple-500/40 text-purple-300">
-              {formatShort(simulation.nextGoal.goal.amount, simulation.nextGoal.goal.currency)}
-            </Badge>
-          </div>
-          <p className="text-xs text-muted-foreground">
-            Fecha estimada de logro en escenario neutro:{" "}
-            <strong className="text-purple-300 font-semibold">{simulation.nextGoal.estimatedDateLabel}</strong>
-          </p>
-        </div>
+            <span className="flex items-center gap-1">
+              <span className="size-1.5 rounded-full bg-emerald-500" aria-hidden />
+              Optimista {formatShort(optimistic, displayCurrency)}
+            </span>
+          </span>
+        }
+      />
 
-        <div className="flex items-center gap-4 text-xs font-medium self-stretch md:self-auto justify-between border-t md:border-t-0 border-border/40 pt-2 md:pt-0">
-          <div className="text-right">
-            <span className="text-[10px] text-muted-foreground block">Cobertura Actual</span>
-            <span className="font-mono font-bold text-cyan-400 text-sm tabular-nums">
-              {simulation.nextGoal.coveragePercent}%
-            </span>
+      <StatTile
+        icon={<PiggyBank className="size-3.5" />}
+        label="Aportes acumulados"
+        value={formatShort(finalNetWorth.neutral.totalSaved, displayCurrency)}
+        hint="Lo que ponés vos, a tipo de cambio de hoy"
+      />
+
+      <StatTile
+        icon={<TrendingUp className="size-3.5" />}
+        label="Rendimientos acumulados"
+        value={formatShort(finalNetWorth.neutral.totalReturns, displayCurrency)}
+        hint="Lo que genera el capital, escenario neutro"
+      />
+
+      <Card className="border-purple-500/40 bg-purple-500/5 backdrop-blur-xl shadow-sm">
+        <CardContent className="p-4 space-y-1.5">
+          <div className="flex items-center gap-1.5 text-muted-foreground">
+            <Target className="size-3.5" />
+            <span className="text-[11px] font-medium">Próximo objetivo</span>
           </div>
-        </div>
-      </CardContent>
-    </Card>
+
+          {!hasGoals ? (
+            <p className="text-xs text-muted-foreground pt-1">
+              Todavía no cargaste metas. Agregá una para ver la fecha estimada de llegada.
+            </p>
+          ) : !nextGoal ? (
+            <div className="flex items-center gap-1.5 pt-1">
+              <CheckCircle2 className="size-4 text-emerald-500" />
+              <p className="text-xs font-medium text-foreground">
+                Toda la secuencia entra en el horizonte.
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className="flex items-center gap-2 flex-wrap">
+                <p className="text-sm font-semibold text-foreground truncate">
+                  {nextGoal.goal.name}
+                </p>
+                <Badge variant="outline" className="text-[10px] font-mono border-purple-500/40">
+                  {formatShort(nextGoal.goal.amount, nextGoal.goal.currency)}
+                </Badge>
+              </div>
+              <p className="text-[11px] text-muted-foreground">{nextGoal.estimatedDateLabel}</p>
+              <div className="pt-1 space-y-1">
+                <Progress value={nextGoal.coveragePercent} className="h-1.5" />
+                <p className="text-[10px] text-muted-foreground tabular-nums">
+                  {nextGoal.coveragePercent}% de la secuencia hasta acá, cubierto con tu capital
+                  líquido de hoy
+                </p>
+              </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   )
 }
-

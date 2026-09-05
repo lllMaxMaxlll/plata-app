@@ -1,27 +1,21 @@
 "use client"
 
-import React, { useState, useId } from "react"
+import React, { useState, useId, useRef, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { TrendingUp, Target, Eye, EyeOff, Sparkles, AlertTriangle, CheckCircle2 } from "lucide-react"
-import {
-  type ScenarioPoint,
-  type Currency,
-  type BigPurchaseGoal,
-} from "@/lib/simulation-engine"
-import { formatShort } from "@/lib/finance-data"
+import { TrendingUp, Sparkles } from "lucide-react"
+import { type ScenarioPoint, type Currency } from "@/lib/simulation-engine"
+import { formatShort, formatCompact } from "@/lib/finance-data"
 
 export interface ProjectionChartProps {
   timeline: ScenarioPoint[]
   displayCurrency: Currency
-  bigPurchaseGoal?: BigPurchaseGoal | null
   isRealTerms?: boolean
 }
 
 export function ProjectionChart({
   timeline,
   displayCurrency,
-  bigPurchaseGoal,
   isRealTerms = false,
 }: ProjectionChartProps) {
   const [activeScenarios, setActiveScenarios] = useState({
@@ -32,6 +26,27 @@ export function ProjectionChart({
 
   const [hoverIndex, setHoverIndex] = useState<number | null>(null)
   const chartId = useId()
+  const svgRef = useRef<SVGSVGElement | null>(null)
+
+  // El gráfico se leía sólo con el mouse: las bandas de interacción tenían
+  // onMouseEnter y nada más, así que en el teléfono —donde se usa esta PWA— el
+  // tooltip no se podía abrir. Con eventos de puntero anda el hover del mouse y
+  // el arrastre del dedo, y touch-action: pan-y deja que la página siga
+  // scrolleando en vertical por encima del gráfico.
+  const pointFromEvent = useCallback(
+    (clientX: number, pointCount: number, left: number, graphW: number) => {
+      const svg = svgRef.current
+      if (!svg || pointCount === 0) return null
+      const rect = svg.getBoundingClientRect()
+      if (rect.width === 0) return null
+      // De píxeles de pantalla a unidades del viewBox.
+      const viewBoxX = ((clientX - rect.left) / rect.width) * 800
+      const ratio = (viewBoxX - left) / graphW
+      const index = Math.round(ratio * (pointCount - 1))
+      return Math.min(pointCount - 1, Math.max(0, index))
+    },
+    []
+  )
 
   if (!timeline || timeline.length === 0) {
     return null
@@ -48,27 +63,14 @@ export function ProjectionChart({
   const graphWidth = width - paddingLeft - paddingRight
   const graphHeight = height - paddingTop - paddingBottom
 
-  // Find Min / Max values across active scenarios
+  // El eje arranca siempre en cero, así que sólo hace falta el máximo.
   let maxVal = 0
-  let minVal = Infinity
-
   timeline.forEach((pt) => {
-    if (activeScenarios.optimistic) {
-      maxVal = Math.max(maxVal, pt.optimistic, pt.optimisticPreGoal)
-      minVal = Math.min(minVal, pt.optimistic)
-    }
-    if (activeScenarios.neutral) {
-      maxVal = Math.max(maxVal, pt.neutral, pt.neutralPreGoal)
-      minVal = Math.min(minVal, pt.neutral)
-    }
-    if (activeScenarios.pessimistic) {
-      maxVal = Math.max(maxVal, pt.pessimistic, pt.pessimisticPreGoal)
-      minVal = Math.min(minVal, pt.pessimistic)
-    }
+    if (activeScenarios.optimistic) maxVal = Math.max(maxVal, pt.optimistic, pt.optimisticPreGoal)
+    if (activeScenarios.neutral) maxVal = Math.max(maxVal, pt.neutral, pt.neutralPreGoal)
+    if (activeScenarios.pessimistic) maxVal = Math.max(maxVal, pt.pessimistic, pt.pessimisticPreGoal)
   })
-
   if (maxVal === 0) maxVal = 1000
-  if (minVal === Infinity || minVal < 0) minVal = 0
 
   // Add 10% headroom at the top
   const yMax = maxVal * 1.1
@@ -111,14 +113,9 @@ export function ProjectionChart({
 
   // X-axis Ticks (Labels for months)
   const xStep = Math.max(1, Math.floor(timeline.length / 6))
-  const xTicks = timeline.filter((_, idx) => idx % xStep === 0 || idx === timeline.length - 1)
-
-  // Goal marker coordinates
-  const goalPointIndex = bigPurchaseGoal
-    ? timeline.findIndex((pt) => pt.month === bigPurchaseGoal.targetMonth)
-    : -1
-
-  const goalX = goalPointIndex >= 0 ? getX(goalPointIndex) : null
+  const xTicks = timeline
+    .map((pt, index) => ({ pt, index }))
+    .filter(({ index }) => index % xStep === 0 || index === timeline.length - 1)
 
   // Active hover point
   const hoverPoint = hoverIndex !== null ? timeline[hoverIndex] : timeline[timeline.length - 1]
@@ -149,6 +146,7 @@ export function ProjectionChart({
           <div className="flex items-center gap-2 flex-wrap">
             <button
               onClick={() => toggleScenario("optimistic")}
+              aria-pressed={activeScenarios.optimistic}
               className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer border ${
                 activeScenarios.optimistic
                   ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/40"
@@ -161,6 +159,7 @@ export function ProjectionChart({
 
             <button
               onClick={() => toggleScenario("neutral")}
+              aria-pressed={activeScenarios.neutral}
               className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer border ${
                 activeScenarios.neutral
                   ? "bg-cyan-500/10 text-cyan-400 border-cyan-500/40"
@@ -173,6 +172,7 @@ export function ProjectionChart({
 
             <button
               onClick={() => toggleScenario("pessimistic")}
+              aria-pressed={activeScenarios.pessimistic}
               className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer border ${
                 activeScenarios.pessimistic
                   ? "bg-rose-500/10 text-rose-400 border-rose-500/40"
@@ -190,8 +190,13 @@ export function ProjectionChart({
         {/* SVG Container */}
         <div className="relative w-full aspect-[21/9] min-h-[260px] sm:min-h-[300px]">
           <svg
+            ref={svgRef}
             viewBox={`0 0 ${width} ${height}`}
             className="w-full h-full overflow-visible"
+            role="img"
+            aria-label={`Evolución proyectada del patrimonio en ${displayCurrency}, ${
+              isRealTerms ? "en términos reales" : "en valores nominales"
+            }, en tres escenarios a ${timeline.length - 1} meses.`}
             onMouseLeave={() => setHoverIndex(null)}
           >
             <defs>
@@ -232,14 +237,14 @@ export function ProjectionChart({
                   textAnchor="end"
                   className="fill-muted-foreground text-[10px] font-medium tabular-nums"
                 >
-                  {formatShort(tick.val, displayCurrency)}
+                  {formatCompact(tick.val, displayCurrency)}
                 </text>
               </g>
             ))}
 
             {/* X-axis Ticks */}
-            {xTicks.map((pt) => {
-              const x = getX(pt.month)
+            {xTicks.map(({ pt, index }) => {
+              const x = getX(index)
               return (
                 <text
                   key={pt.month}
@@ -311,30 +316,6 @@ export function ProjectionChart({
               />
             )}
 
-            {/* Big Purchase Goal Vertical Line Marker */}
-            {goalX !== null && bigPurchaseGoal && (
-              <g>
-                <line
-                  x1={goalX}
-                  y1={paddingTop}
-                  x2={goalX}
-                  y2={height - paddingBottom}
-                  stroke="#a855f7"
-                  strokeWidth="2"
-                  strokeDasharray="5 5"
-                />
-                <circle cx={goalX} cy={paddingTop + 5} r="6" fill="#a855f7" />
-                <text
-                  x={goalX}
-                  y={paddingTop - 8}
-                  textAnchor="middle"
-                  className="fill-purple-400 text-[10px] font-bold"
-                >
-                  🎯 {bigPurchaseGoal.name}
-                </text>
-              </g>
-            )}
-
             {/* Hover Line & Marker Circles */}
             {hoverX !== null && hoverPoint && (
               <g>
@@ -378,25 +359,70 @@ export function ProjectionChart({
               </g>
             )}
 
-            {/* Invisible Touch / Mouse Overlay Strips */}
-            {timeline.map((pt, idx) => {
-              const x = getX(idx)
-              const bandWidth = graphWidth / timeline.length
-              return (
-                <rect
-                  key={idx}
-                  x={x - bandWidth / 2}
-                  y={paddingTop}
-                  width={bandWidth}
-                  height={graphHeight}
-                  fill="transparent"
-                  className="cursor-pointer"
-                  onMouseEnter={() => setHoverIndex(idx)}
-                />
-              )
-            })}
+            {/* Capa única de interacción: mouse y dedo */}
+            <rect
+              x={paddingLeft}
+              y={paddingTop}
+              width={graphWidth}
+              height={graphHeight}
+              fill="transparent"
+              className="cursor-pointer"
+              style={{ touchAction: "pan-y" }}
+              onPointerDown={(e) =>
+                setHoverIndex(pointFromEvent(e.clientX, timeline.length, paddingLeft, graphWidth))
+              }
+              onPointerMove={(e) => {
+                // Con el dedo sólo seguimos si está apoyado; con el mouse, siempre.
+                if (e.pointerType !== "mouse" && e.buttons === 0) return
+                setHoverIndex(pointFromEvent(e.clientX, timeline.length, paddingLeft, graphWidth))
+              }}
+              onPointerLeave={() => setHoverIndex(null)}
+              onPointerCancel={() => setHoverIndex(null)}
+            />
           </svg>
         </div>
+
+        {/* Alternativa en texto: el gráfico es un SVG con series distinguidas
+            por color, que no sirve con lector de pantalla ni impreso. */}
+        <details className="mt-3 group">
+          <summary className="text-[11px] text-muted-foreground cursor-pointer select-none hover:text-foreground list-none flex items-center gap-1">
+            <span className="transition-transform group-open:rotate-90" aria-hidden>
+              ›
+            </span>
+            Ver los datos como tabla
+          </summary>
+          <div className="mt-2 max-h-64 overflow-auto rounded-xl border border-border/50">
+            <table className="w-full text-[11px] tabular-nums">
+              <caption className="sr-only">
+                Patrimonio proyectado por mes en los tres escenarios, en {displayCurrency}
+              </caption>
+              <thead className="sticky top-0 bg-card">
+                <tr className="text-muted-foreground text-left">
+                  <th scope="col" className="px-2 py-1.5 font-medium">Mes</th>
+                  <th scope="col" className="px-2 py-1.5 font-medium text-right">Pesimista</th>
+                  <th scope="col" className="px-2 py-1.5 font-medium text-right">Neutro</th>
+                  <th scope="col" className="px-2 py-1.5 font-medium text-right">Optimista</th>
+                  <th scope="col" className="px-2 py-1.5 font-medium text-right">TC</th>
+                </tr>
+              </thead>
+              <tbody>
+                {timeline.map((pt) => (
+                  <tr key={pt.month} className="border-t border-border/40">
+                    <th scope="row" className="px-2 py-1 font-normal text-muted-foreground text-left">
+                      {pt.month === 0 ? "Actual" : `M${pt.month}`}
+                    </th>
+                    <td className="px-2 py-1 text-right">{formatCompact(pt.pessimistic, displayCurrency)}</td>
+                    <td className="px-2 py-1 text-right">{formatCompact(pt.neutral, displayCurrency)}</td>
+                    <td className="px-2 py-1 text-right">{formatCompact(pt.optimistic, displayCurrency)}</td>
+                    <td className="px-2 py-1 text-right text-muted-foreground">
+                      {Math.round(pt.exchangeRate)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </details>
 
         {/* Hover Tooltip Info Bar */}
         {hoverPoint && (

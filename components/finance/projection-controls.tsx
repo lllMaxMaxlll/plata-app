@@ -16,14 +16,10 @@ import {
   Calendar,
   DollarSign,
   Flame,
-  PlusCircle,
-  Pencil,
-  RefreshCw,
   Sparkles,
   ArrowRightLeft
 } from "lucide-react"
-import { type Currency, type BigPurchaseGoal } from "@/lib/simulation-engine"
-import { formatCurrency, formatShort } from "@/lib/finance-data"
+import { type Currency } from "@/lib/simulation-engine"
 
 export interface ProjectionControlsProps {
   // Horizon & General
@@ -55,17 +51,22 @@ export interface ProjectionControlsProps {
   onAnnualInflationChange: (val: number) => void
   annualDevaluation: number
   onAnnualDevaluationChange: (val: number) => void
-  annualReturn: number
-  onAnnualReturnChange: (val: number) => void
+  annualReturnARS: number
+  onAnnualReturnARSChange: (val: number) => void
+  annualReturnUSD: number
+  onAnnualReturnUSDChange: (val: number) => void
+  /** Cartera de acciones: suma al patrimonio pero no financia metas. */
+  portfolioUSD?: number
+  /** Deuda ya vencida, ya descontada del patrimonio inicial. */
+  overdueARS?: number
+  overdueUSD?: number
+  /** Ahorro mensual deducido de los movimientos reales del usuario. */
+  savingsEstimate?: { ARS: number; USD: number; monthsUsed: number }
+  onUseEstimatedSavings?: () => void
   exchangeRate: number
   onExchangeRateChange: (val: number) => void
 
-  // Big Purchase Goal
-  bigPurchaseGoal?: BigPurchaseGoal | null
-  onOpenGoalModal: () => void
-  onRemoveGoal: () => void
-
-  // AI & Live Sync
+  // Cotización en vivo
   onSyncMacro?: () => void
   isSyncingMacro?: boolean
   lastMacroSyncDate?: string
@@ -93,13 +94,17 @@ export function ProjectionControls({
   onAnnualInflationChange,
   annualDevaluation,
   onAnnualDevaluationChange,
-  annualReturn,
-  onAnnualReturnChange,
+  annualReturnARS,
+  onAnnualReturnARSChange,
+  annualReturnUSD,
+  onAnnualReturnUSDChange,
+  portfolioUSD = 0,
+  overdueARS = 0,
+  overdueUSD = 0,
+  savingsEstimate,
+  onUseEstimatedSavings,
   exchangeRate,
   onExchangeRateChange,
-  bigPurchaseGoal,
-  onOpenGoalModal,
-  onRemoveGoal,
   onSyncMacro,
   isSyncingMacro,
   lastMacroSyncDate,
@@ -233,13 +238,42 @@ export function ProjectionControls({
                 />
               </div>
             </div>
+            {(overdueARS > 0 || overdueUSD > 0) && (
+              <p className="text-[10px] text-amber-500/90 mt-1.5">
+                − {overdueARS > 0 && `$${overdueARS.toLocaleString("es-AR", { maximumFractionDigits: 0 })}`}
+                {overdueARS > 0 && overdueUSD > 0 && " y "}
+                {overdueUSD > 0 && `US$${overdueUSD.toLocaleString("es-AR", { maximumFractionDigits: 0 })}`}{" "}
+                de vencimientos impagos, ya descontados.
+              </p>
+            )}
+            {portfolioUSD > 0 && (
+              <p className="text-[10px] text-muted-foreground mt-1.5">
+                + US${portfolioUSD.toLocaleString("es-AR", { maximumFractionDigits: 0 })} en cartera
+                de acciones. Suma al patrimonio proyectado, pero no financia metas: habría que
+                venderla primero.
+              </p>
+            )}
           </div>
 
           {/* Monthly Savings Inputs */}
           <div>
-            <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">
-              Ahorro Mensual Estimado
-            </Label>
+            <div className="flex items-center justify-between gap-2 mb-1.5 flex-wrap">
+              <Label className="text-xs font-medium text-muted-foreground">
+                Ahorro Mensual Estimado
+              </Label>
+              {savingsEstimate && savingsEstimate.monthsUsed > 0 && onUseEstimatedSavings && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={onUseEstimatedSavings}
+                  className="h-6 px-2 text-[10px] font-semibold text-primary hover:bg-primary/10 cursor-pointer"
+                  title={`Mediana de ingresos menos gastos de tus últimos ${savingsEstimate.monthsUsed} meses cerrados`}
+                >
+                  Usar mi promedio real
+                </Button>
+              )}
+            </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <span className="text-[10px] text-muted-foreground mb-1 block">+ ARS / mes</span>
@@ -262,9 +296,17 @@ export function ProjectionControls({
                 />
               </div>
             </div>
+            {savingsEstimate && savingsEstimate.monthsUsed > 0 && (
+              <p className="text-[10px] text-muted-foreground mt-1.5">
+                Tus movimientos de los últimos {savingsEstimate.monthsUsed}{" "}
+                {savingsEstimate.monthsUsed === 1 ? "mes cerrado" : "meses cerrados"} dan una
+                mediana de ${savingsEstimate.ARS.toLocaleString("es-AR")} y US$
+                {savingsEstimate.USD.toLocaleString("es-AR")} por mes.
+              </p>
+            )}
           </div>
 
-          {/* Initial Exchange Rate & AI Sync */}
+          {/* Tipo de cambio y sincronización */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <Label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
@@ -280,7 +322,7 @@ export function ProjectionControls({
                   className="h-7 text-[11px] gap-1.5 border-primary/30 text-primary hover:bg-primary/10 cursor-pointer shadow-xs"
                 >
                   <Sparkles className={`size-3 text-amber-400 ${isSyncingMacro ? "animate-spin" : ""}`} />
-                  {isSyncingMacro ? "Sincronizando..." : "Sincronizar Cotización e Indicadores con IA"}
+                  {isSyncingMacro ? "Actualizando..." : "Actualizar cotización"}
                 </Button>
               )}
             </div>
@@ -320,25 +362,36 @@ export function ProjectionControls({
 
       {/* 3. Advanced Economic Indicators (Collapsible) */}
       <Card className="border-border/50 bg-card/40 backdrop-blur-xl shadow-lg overflow-hidden">
-        <CardHeader className="pb-3 cursor-pointer select-none" onClick={() => setShowAdvanced(!showAdvanced)}>
-          <div className="flex items-center justify-between">
+        {/* Es un botón de verdad: como div con onClick no había forma de abrirlo
+            con el teclado ni de saber si estaba abierto con un lector. */}
+        <CardHeader className="pb-3">
+          <button
+            type="button"
+            onClick={() => setShowAdvanced(!showAdvanced)}
+            aria-expanded={showAdvanced}
+            aria-controls="ajustes-macro"
+            className="w-full flex items-center justify-between gap-2 text-left select-none cursor-pointer rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          >
             <CardTitle className="text-sm font-semibold flex items-center gap-2">
               <Percent className="size-4 text-cyan-400" />
               Ajustes Macroeconómicos Avanzados
             </CardTitle>
-            <Button variant="ghost" size="sm" className="h-7 text-xs font-mono text-muted-foreground">
+            <span className="h-7 px-2 inline-flex items-center text-xs font-mono text-muted-foreground">
               {showAdvanced ? "Ocultar" : "Personalizar"}
-            </Button>
-          </div>
+            </span>
+          </button>
           <CardDescription className="text-[11px]">
             {showAdvanced
               ? "Ajusta inflación, devaluación y retorno de inversión para afinar escenarios."
-              : "Valores predeterminados estándar de Argentina (Inflación 50%, Devaluación 45%, Retorno 12%)."}
+              : "Inflación, devaluación y rendimiento esperados. Los escenarios se abren a partir de estos valores."}
           </CardDescription>
         </CardHeader>
 
         {showAdvanced && (
-          <CardContent className="space-y-5 border-t border-border/40 pt-4 animate-in fade-in slide-in-from-top-2 duration-200">
+          <CardContent
+            id="ajustes-macro"
+            className="space-y-5 border-t border-border/40 pt-4 animate-in fade-in slide-in-from-top-2 duration-200"
+          >
             {/* Annual Inflation Slider */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
@@ -389,105 +442,65 @@ export function ProjectionControls({
               />
             </div>
 
-            {/* Investment Return Slider */}
+            {/* Rendimiento en pesos */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label className="text-xs font-medium flex items-center gap-1.5">
-                  <TrendingUp className="size-3.5 text-emerald-400" /> Rendimiento de Inversiones Anual
+                  <TrendingUp className="size-3.5 text-emerald-400" /> Rendimiento Anual en Pesos
                 </Label>
                 <div className="flex items-center gap-1">
                   <Input
                     type="number"
-                    value={annualReturn}
-                    onChange={(e) => onAnnualReturnChange(Number(e.target.value))}
+                    value={annualReturnARS}
+                    onChange={(e) => onAnnualReturnARSChange(Number(e.target.value))}
                     className="h-7 w-16 text-right text-xs font-bold tabular-nums px-2"
                   />
                   <span className="text-xs font-bold text-muted-foreground">%</span>
                 </div>
               </div>
               <Slider
-                value={annualReturn}
-                onValueChange={onAnnualReturnChange}
+                value={annualReturnARS}
+                onValueChange={onAnnualReturnARSChange}
                 min={-20}
-                max={100}
+                max={200}
                 step={1}
               />
+              <p className="text-[10px] text-muted-foreground">
+                Plazo fijo, cuenta remunerada o fondo money market.
+              </p>
+            </div>
+
+            {/* Rendimiento en dólares */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs font-medium flex items-center gap-1.5">
+                  <TrendingUp className="size-3.5 text-cyan-400" /> Rendimiento Anual en Dólares
+                </Label>
+                <div className="flex items-center gap-1">
+                  <Input
+                    type="number"
+                    value={annualReturnUSD}
+                    onChange={(e) => onAnnualReturnUSDChange(Number(e.target.value))}
+                    className="h-7 w-16 text-right text-xs font-bold tabular-nums px-2"
+                  />
+                  <span className="text-xs font-bold text-muted-foreground">%</span>
+                </div>
+              </div>
+              <Slider
+                value={annualReturnUSD}
+                onValueChange={onAnnualReturnUSDChange}
+                min={-20}
+                max={60}
+                step={1}
+              />
+              <p className="text-[10px] text-muted-foreground">
+                Acciones, ETFs o bonos en dólares.
+              </p>
             </div>
           </CardContent>
         )}
       </Card>
 
-      {/* 4. Big Purchase Target Goal Card */}
-      <Card className="border-border/50 bg-card/40 backdrop-blur-xl shadow-lg">
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-sm font-semibold flex items-center gap-2">
-              <Sparkles className="size-4 text-purple-400" />
-              Meta de Compra Grande
-            </CardTitle>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onOpenGoalModal}
-              className="h-7 text-xs gap-1 border-primary/40 hover:bg-primary/10 cursor-pointer"
-            >
-              {bigPurchaseGoal ? (
-                <>
-                  <Pencil className="size-3" /> Editar Meta
-                </>
-              ) : (
-                <>
-                  <PlusCircle className="size-3" /> Añadir Meta
-                </>
-              )}
-            </Button>
-          </div>
-        </CardHeader>
-
-        <CardContent>
-          {bigPurchaseGoal ? (
-            <div className="rounded-xl border border-primary/30 bg-primary/5 p-3.5 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="font-semibold text-xs text-foreground">
-                  {bigPurchaseGoal.name}
-                </span>
-                <Badge variant="secondary" className="text-[10px] uppercase font-bold">
-                  Mes {bigPurchaseGoal.targetMonth}
-                </Badge>
-              </div>
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span>Costo estimado:</span>
-                <span className="font-bold text-foreground tabular-nums">
-                  {formatShort(bigPurchaseGoal.amount, bigPurchaseGoal.currency)}
-                </span>
-              </div>
-
-              <div className="pt-2 flex justify-end">
-                <button
-                  onClick={onRemoveGoal}
-                  className="text-[11px] font-medium text-destructive hover:underline cursor-pointer"
-                >
-                  Quitar meta
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="text-center py-4 rounded-xl border border-dashed border-border/60 bg-muted/10">
-              <p className="text-xs text-muted-foreground mb-2">
-                Simula el impacto de comprar un auto, un viaje o un inmueble en una fecha proyectada.
-              </p>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onOpenGoalModal}
-                className="h-8 text-xs font-semibold text-primary hover:bg-primary/10 cursor-pointer"
-              >
-                + Configurar objetivo de compra
-              </Button>
-            </div>
-          )}
-        </CardContent>
-      </Card>
     </div>
   )
 }
