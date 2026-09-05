@@ -278,7 +278,81 @@ En el provider (`finance-provider.tsx`): estado `goals` + `addGoal` / `updateGoa
 
 ---
 
-## 7. Lo que queda
+## 7. Corrección posterior: "no se alcanza" en metas cercanas
+
+Reportado después de la primera entrega: una meta alcanzable en menos de 6 meses
+aparecía como inalcanzable en 24 o más. **El motor calculaba bien; lo que le
+llegaba estaba mal**, y además faltaban dos piezas del modelo.
+
+### Qué le llegaba al motor
+
+| Entrada | Guardado | Real |
+|---|---|---|
+| Patrimonio inicial ARS | **0** | $1.795.320 |
+| Ahorro mensual ARS | 14.000 | ~265.238 (mediana de 3 meses cerrados) |
+
+Con eso, "Fondo de reserva" de US$3.000 daba **no se alcanza en 36 meses**. Con
+los valores reales da **4 meses**.
+
+**Causa del 0:** al apagar el switch "sincronizar cuentas", el patrimonio manual
+se sembraba desde los saldos reales con `?? `. Pero el skeleton sólo esperaba a
+`settingsLoaded`, no a que cargaran las cuentas, así que el seeding podía correr
+con `accounts` vacío y escribir 0. Y como `0 ?? x` es `0`, quedaba clavado. El
+input lo remataba mostrando `""` en lugar de `0` (`value={initialARS || ""}`),
+así que el campo se veía vacío y el error era invisible.
+
+**Causa del ahorro:** los defaults quedaron en 0 y sólo se cambiaban a mano. Con
+ahorro 0 el patrimonio no crece y **ninguna meta se alcanza jamás**.
+
+### Arreglos
+
+- `dataLoaded` en el provider: el skeleton espera a que carguen cuentas y
+  movimientos, no sólo las preferencias.
+- Al pasar a manual, el patrimonio se copia de los saldos reales **sin `?? `**.
+- Los inputs muestran el 0 en vez de un campo vacío.
+- Aviso en pantalla, con acción de un clic, cuando se simula con menos capital
+  del que hay en las cuentas o con ahorro cero.
+- Nueva columna `monthly_savings_source` (`auto` | `manual`, migración
+  `20260905190000`): mientras el usuario no lo fije, el ahorro sale de sus
+  movimientos y se recalcula solo. Al editar el campo pasa a `manual`.
+
+### Dos errores de modelo que salieron en el camino
+
+1. **El aporte mensual no acompañaba a la inflación.** El precio de la meta se
+   inflacionaba y el sueldo que la paga quedaba clavado en pesos nominales: a 45%
+   anual el aporte valía un tercio a los tres años y **toda meta en pesos a más
+   de un año era inalcanzable por construcción**. Ahora el aporte se indexa por
+   la inflación de su moneda.
+2. **El saldo de una moneda podía irse a negativo sin límite.** Con un gasto neto
+   en dólares de −US$40 al mes, el saldo llegaba a −US$1.549 y seguía componiendo
+   al 12% anual como una deuda que no existía, restando de la plata disponible
+   para las metas. Ahora el faltante de una moneda se cubre con la otra al tipo
+   de cambio del mes, que es lo que hace una persona. Lo que quede en rojo tras
+   vaciar ambas sí es déficit real y se deja a la vista.
+
+### Y una mejora de lectura
+
+Una meta que caía en el mes 39 con horizonte de 36 decía sólo "No se alcanza en
+36 meses", que se lee como que la cuenta está mal. Ahora la proyección se estira
+internamente hasta 120 meses para poder decir **"Fuera del horizonte: llegaría en
+Diciembre 2029 (en 39 meses)"**.
+
+### Verificado contra los datos reales
+
+```
+Fondo de reserva   -> Enero 2027 (en 4 meses)
+Bajaj Dominar 400  -> Fuera del horizonte: llegaría en Diciembre 2029 (en 39 meses)
+```
+
+Los 39 meses de la moto son correctos: el fondo de US$3.000 va **adelante** en la
+cascada y consume unos $4,6 M antes de que la moto empiece a juntar. Sola, la
+moto entra en 16 meses. Si el orden no es el deseado, se reordena con las flechas.
+
+38 tests, incluidos los de regresión de este caso.
+
+---
+
+## 8. Lo que queda
 
 **Guardar escenarios con nombre y compararlos** ("Conservador", "Con aumento de sueldo"). Es la única cosa del plan original que no se hizo: es una feature nueva, no un arreglo, y necesita su propia tabla y su propia UI. La base para hacerla ya está: los parámetros de la simulación viven en un solo objeto (`ProjectionSettings`) y el motor es una función pura.
 

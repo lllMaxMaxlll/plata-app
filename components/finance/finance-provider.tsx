@@ -79,6 +79,11 @@ export interface ProjectionSettings {
   useRealAccounts: boolean
   monthlySavingsARS: number
   monthlySavingsUSD: number
+  /**
+   * 'auto': el ahorro sale del historial de movimientos y se recalcula solo.
+   * 'manual': lo fijó el usuario y la app no lo toca.
+   */
+  monthlySavingsSource: "auto" | "manual"
   /** null = todavía no lo tocó; la UI cae al saldo real de las cuentas. */
   manualInitialARS: number | null
   manualInitialUSD: number | null
@@ -154,6 +159,11 @@ interface FinanceContextValue {
   macroSettings: MacroSettings
   /** true una vez que se leyó user_settings; antes, macroSettings son defaults. */
   settingsLoaded: boolean
+  /**
+   * true cuando ya se leyeron cuentas y movimientos. Sin esto, una pantalla que
+   * derive algo de los saldos lo calcula sobre un array vacío y guarda ceros.
+   */
+  dataLoaded: boolean
   updateMacroSettings: (settings: Partial<MacroSettings>) => Promise<void>
   syncMacroFromApi: () => Promise<MacroSettings>
 
@@ -178,6 +188,7 @@ const DEFAULT_PROJECTION_SETTINGS: ProjectionSettings = {
   useRealAccounts: true,
   monthlySavingsARS: 0,
   monthlySavingsUSD: 0,
+  monthlySavingsSource: "auto",
   manualInitialARS: null,
   manualInitialUSD: null,
   annualReturnARS: 45,
@@ -257,6 +268,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const [dueItems, setDueItems] = useState<DueItem[]>([])
   const [macroSettings, setMacroSettings] = useState<MacroSettings>(DEFAULT_MACRO_SETTINGS)
   const [settingsLoaded, setSettingsLoaded] = useState(false)
+  const [dataLoaded, setDataLoaded] = useState(false)
   const [projectionSettings, setProjectionSettings] = useState<ProjectionSettings>(
     DEFAULT_PROJECTION_SETTINGS
   )
@@ -466,6 +478,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       applyProjectionSettings(DEFAULT_PROJECTION_SETTINGS)
       setGoals([])
       setSettingsLoaded(false)
+      setDataLoaded(false)
       return
     }
 
@@ -484,6 +497,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       loadGoals(),
     ]).then((results) => {
       if (!alive) return
+      setDataLoaded(true)
       const cats = results[2] as unknown as any[] | undefined
       if (Array.isArray(cats) && cats.length === 0) seedCategories()
     })
@@ -1324,6 +1338,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       markDueItemAsPending,
       macroSettings,
       settingsLoaded,
+      dataLoaded,
       updateMacroSettings,
       syncMacroFromApi,
       projectionSettings,
@@ -1383,6 +1398,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       markDueItemAsPending,
       macroSettings,
       settingsLoaded,
+      dataLoaded,
       updateMacroSettings,
       syncMacroFromApi,
       projectionSettings,

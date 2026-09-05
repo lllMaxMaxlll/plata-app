@@ -6,6 +6,10 @@
 //   - Los aportes son de fin de mes (renta ordinaria): el rendimiento del mes
 //     se aplica al saldo de apertura y recién después entra el ahorro. Sumarlo
 //     antes le regalaba un mes entero de interés a plata que todavía no estaba.
+//   - El ahorro mensual acompaña a la inflación de su moneda. Con el aporte
+//     clavado en pesos nominales, a 45% anual valía un tercio a los tres años y
+//     cualquier meta en pesos quedaba fuera de alcance para siempre: el precio
+//     de la meta se inflaciona y el sueldo que la paga, no.
 //   - Los escenarios NO mueven la devaluación. Más devaluación sube el
 //     patrimonio nominal en pesos de quien tiene dólares, así que usarla como
 //     eje pesimista/optimista hacía que la línea "pesimista" quedara por encima
@@ -38,6 +42,12 @@ export interface SequentialGoalResult {
   /** "Marzo 2027 (en 7 meses)", o el aviso de que no entra en el horizonte. */
   estimatedDateLabel: string
   isAchievedInHorizon: boolean
+  /**
+   * Mes en que se alcanzaría estirando el horizonte, cuando no entra en el
+   * elegido. Un "no se alcanza en 36 meses" a secas para algo que llega en 39
+   * se lee como que la cuenta está mal.
+   */
+  estimatedMonthBeyondHorizon?: number
   /** Qué parte de la secuencia hasta esta meta cubre el capital líquido de hoy. */
   coveragePercent: number
   /** Costo ya inflacionado al mes en que se alcanza (o de hoy, si no se alcanza). */
@@ -115,6 +125,9 @@ interface ScenarioConfig {
 
 export const DEFAULT_USD_INFLATION = 2.5
 
+/** Hasta dónde se estira la proyección para datar una meta que no entra. */
+const PROBE_HORIZON_MONTHS = 120
+
 /** Pasa una tasa anual en % a su equivalente mensual compuesto. */
 function getMonthlyRate(annualPercent: number): number {
   const annualDecimal = annualPercent / 100
@@ -131,6 +144,30 @@ function getFutureMonthLabel(monthIndex: number): string {
   const year = futureDate.getFullYear()
   const capitalizedMonth = monthName.charAt(0).toUpperCase() + monthName.slice(1)
   return `${capitalizedMonth} ${year} (en ${monthIndex} ${monthIndex === 1 ? "mes" : "meses"})`
+}
+
+/**
+ * Cubre el saldo negativo de una moneda pasando plata de la otra al tipo de
+ * cambio del mes. Nadie sostiene un descubierto en dólares durante tres años:
+ * si gastás más dólares de los que entran, comprás con pesos.
+ *
+ * Sin esto el saldo en dólares se hundía y seguía componiendo al 12% anual como
+ * una deuda que nadie tenía, y restaba de la plata disponible para las metas.
+ * Lo que quede en rojo después de vaciar la otra moneda sí es un déficit real y
+ * se deja a la vista.
+ */
+function coverShortfall(ars: number, usd: number, fx: number): [number, number] {
+  if (usd < 0 && ars > 0) {
+    const taken = Math.min(ars, -usd * fx)
+    ars -= taken
+    usd += taken / fx
+  }
+  if (ars < 0 && usd > 0) {
+    const taken = Math.min(usd, -ars / fx)
+    usd -= taken
+    ars += taken * fx
+  }
+  return [ars, usd]
 }
 
 interface ScenarioPointRaw {
@@ -216,15 +253,21 @@ function calculateScenarioTimeline(params: SimulationParams, config: ScenarioCon
     illiquidUSD *= 1 + rUsdMonthly
     totalReturns += displayCurrency === "ARS" ? returnARS + returnUSD * fx0 : returnUSD + returnARS / fx0
 
-    // 2. Aporte de fin de mes.
-    liquidARS += monthlySavings.ARS
-    liquidUSD += monthlySavings.USD
-    liquidARSNoGoal += monthlySavings.ARS
-    liquidUSDNoGoal += monthlySavings.USD
+    // 2. Aporte de fin de mes, indexado por inflación: lo que hoy te sobra son
+    // 265.000 pesos, no 265.000 pesos de dentro de tres años.
+    const savingsARSThisMonth = monthlySavings.ARS * Math.pow(1 + iArsMonthly, m)
+    const savingsUSDThisMonth = monthlySavings.USD * Math.pow(1 + iUsdMonthly, m)
+
+    liquidARS += savingsARSThisMonth
+    liquidUSD += savingsUSDThisMonth
+    liquidARSNoGoal += savingsARSThisMonth
+    liquidUSDNoGoal += savingsUSDThisMonth
+    ;[liquidARS, liquidUSD] = coverShortfall(liquidARS, liquidUSD, fxRate)
+    ;[liquidARSNoGoal, liquidUSDNoGoal] = coverShortfall(liquidARSNoGoal, liquidUSDNoGoal, fxRate)
     totalContributed +=
       displayCurrency === "ARS"
-        ? monthlySavings.ARS + monthlySavings.USD * fx0
-        : monthlySavings.USD + monthlySavings.ARS / fx0
+        ? savingsARSThisMonth + savingsUSDThisMonth * fx0
+        : savingsUSDThisMonth + savingsARSThisMonth / fx0
 
     // 3. La reserva ya bloqueada mantiene su poder adquisitivo.
     lockedReserveUSD *= 1 + iUsdMonthly
@@ -276,6 +319,7 @@ function calculateScenarioTimeline(params: SimulationParams, config: ScenarioCon
         lockedReserveUSD += goalCostUSD
       }
 
+      ;[liquidARS, liquidUSD] = coverShortfall(liquidARS, liquidUSD, fxRate)
       currentGoalIdx++
     }
 
@@ -450,6 +494,22 @@ export function runSimulation(params: SimulationParams): SimulationResult {
   // La próxima meta es la primera que todavía no se logra. Si están todas
   // cubiertas no hay ninguna próxima, y antes se mostraba la última ya lograda.
   const nextGoal = sequentialGoalResults.find((r) => !r.isAchievedInHorizon) ?? null
+
+  // Para las metas que no entran en el horizonte, una corrida larga del
+  // escenario neutro nos deja decir cuánto falta en vez de sólo que no llega.
+  if (horizonMonths < PROBE_HORIZON_MONTHS && sequentialGoalResults.some((r) => !r.isAchievedInHorizon)) {
+    const probe = calculateScenarioTimeline(
+      { ...params, horizonMonths: PROBE_HORIZON_MONTHS },
+      neutralConfig
+    )
+    for (const result of sequentialGoalResults) {
+      if (result.isAchievedInHorizon) continue
+      const month = probe.goalAchievementMonths.get(result.goal.id)
+      if (month === undefined) continue
+      result.estimatedMonthBeyondHorizon = month
+      result.estimatedDateLabel = `Fuera del horizonte: llegaría en ${getFutureMonthLabel(month)}`
+    }
+  }
 
   return {
     timeline,

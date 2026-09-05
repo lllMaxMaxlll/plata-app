@@ -370,6 +370,7 @@ export type Database = {
           manual_initial_usd: number | null
           monthly_savings_ars: number
           monthly_savings_usd: number
+          monthly_savings_source: string
           projection_display_currency: Database["public"]["Enums"]["currency"]
           projection_horizon_months: number
           projection_real_terms: boolean
@@ -389,6 +390,7 @@ export type Database = {
           manual_initial_usd?: number | null
           monthly_savings_ars?: number
           monthly_savings_usd?: number
+          monthly_savings_source?: string
           projection_display_currency?: Database["public"]["Enums"]["currency"]
           projection_horizon_months?: number
           projection_real_terms?: boolean
@@ -408,6 +410,7 @@ export type Database = {
           manual_initial_usd?: number | null
           monthly_savings_ars?: number
           monthly_savings_usd?: number
+          monthly_savings_source?: string
           projection_display_currency?: Database["public"]["Enums"]["currency"]
           projection_horizon_months?: number
           projection_real_terms?: boolean
