@@ -31,6 +31,7 @@ export function ProjectionsView() {
     totalsByCurrency,
     portfolioTotalValue,
     loading,
+    dataLoaded,
     accounts,
     transactions,
     dueItems,
@@ -68,13 +69,23 @@ export function ProjectionsView() {
     [transactions, accounts]
   )
 
+  // Mientras el usuario no fije el ahorro a mano, sale de sus movimientos. Antes
+  // arrancaba en cero y con cero ahorro ninguna meta se alcanza nunca: la página
+  // informaba "no se alcanza en 36 meses" para metas que llegaban en 4.
+  const usesEstimatedSavings =
+    projectionSettings.monthlySavingsSource === "auto" && savingsEstimate.monthsUsed > 0
+  const monthlySavingsARS = usesEstimatedSavings
+    ? savingsEstimate.ARS
+    : projectionSettings.monthlySavingsARS
+  const monthlySavingsUSD = usesEstimatedSavings
+    ? savingsEstimate.USD
+    : projectionSettings.monthlySavingsUSD
+
   const {
     horizonMonths,
     displayCurrency,
     isRealTerms,
     useRealAccounts,
-    monthlySavingsARS,
-    monthlySavingsUSD,
     manualInitialARS,
     manualInitialUSD,
     annualReturnARS,
@@ -205,7 +216,7 @@ export function ProjectionsView() {
   // Sin esto, el primer render simulaba con las cuentas todavía vacías: se veía
   // un patrimonio de $0 y un gráfico plano que un instante después pegaba un
   // salto.
-  if (loading || !settingsLoaded) {
+  if (loading || !settingsLoaded || !dataLoaded) {
     return (
       <div
         className="w-full max-w-7xl mx-auto px-4 sm:px-6 pt-4 pb-12 space-y-6"
@@ -446,14 +457,12 @@ export function ProjectionsView() {
             onUseRealAccountsChange={(useReal) =>
               updateProjectionSettings({
                 useRealAccounts: useReal,
-                // Al pasar a manual arrancamos del saldo real, para no tirar al
-                // usuario a un número inventado que no es su patrimonio.
+                // Al pasar a manual se copian los saldos reales del momento, sin
+                // "?? ": un 0 guardado no es lo mismo que "sin definir", y con el
+                // ?? quedaba clavado en cero para siempre.
                 ...(useReal
                   ? {}
-                  : {
-                      manualInitialARS: manualInitialARS ?? netARSBalance,
-                      manualInitialUSD: manualInitialUSD ?? netLiquidUSD,
-                    }),
+                  : { manualInitialARS: netARSBalance, manualInitialUSD: netLiquidUSD }),
               })
             }
             initialARS={effectiveInitialARS}
@@ -461,9 +470,13 @@ export function ProjectionsView() {
             initialUSD={effectiveInitialUSD}
             onInitialUSDChange={(val) => updateProjectionSettings({ manualInitialUSD: val })}
             savingsARS={monthlySavingsARS}
-            onSavingsARSChange={(val) => updateProjectionSettings({ monthlySavingsARS: val })}
+            onSavingsARSChange={(val) =>
+              updateProjectionSettings({ monthlySavingsARS: val, monthlySavingsSource: "manual" })
+            }
             savingsUSD={monthlySavingsUSD}
-            onSavingsUSDChange={(val) => updateProjectionSettings({ monthlySavingsUSD: val })}
+            onSavingsUSDChange={(val) =>
+              updateProjectionSettings({ monthlySavingsUSD: val, monthlySavingsSource: "manual" })
+            }
             annualInflation={annualInflation}
             onAnnualInflationChange={(val) => {
               setAnnualInflation(val)
@@ -482,10 +495,14 @@ export function ProjectionsView() {
             overdueARS={useRealAccounts ? overdue.ARS : 0}
             overdueUSD={useRealAccounts ? overdue.USD : 0}
             savingsEstimate={savingsEstimate}
-            onUseEstimatedSavings={() =>
+            usesEstimatedSavings={usesEstimatedSavings}
+            onUseEstimatedSavings={() => updateProjectionSettings({ monthlySavingsSource: "auto" })}
+            realARSBalance={netARSBalance}
+            realLiquidUSD={netLiquidUSD}
+            onUseRealBalances={() =>
               updateProjectionSettings({
-                monthlySavingsARS: savingsEstimate.ARS,
-                monthlySavingsUSD: savingsEstimate.USD,
+                manualInitialARS: netARSBalance,
+                manualInitialUSD: netLiquidUSD,
               })
             }
             exchangeRate={exchangeRate}

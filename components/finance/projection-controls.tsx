@@ -62,7 +62,13 @@ export interface ProjectionControlsProps {
   overdueUSD?: number
   /** Ahorro mensual deducido de los movimientos reales del usuario. */
   savingsEstimate?: { ARS: number; USD: number; monthsUsed: number }
+  /** true si el ahorro que se está usando sale del historial y no de una edición. */
+  usesEstimatedSavings?: boolean
   onUseEstimatedSavings?: () => void
+  /** Saldos reales, para avisar cuando el patrimonio manual no los refleja. */
+  realARSBalance?: number
+  realLiquidUSD?: number
+  onUseRealBalances?: () => void
   exchangeRate: number
   onExchangeRateChange: (val: number) => void
 
@@ -102,7 +108,11 @@ export function ProjectionControls({
   overdueARS = 0,
   overdueUSD = 0,
   savingsEstimate,
+  usesEstimatedSavings = false,
   onUseEstimatedSavings,
+  realARSBalance = 0,
+  realLiquidUSD = 0,
+  onUseRealBalances,
   exchangeRate,
   onExchangeRateChange,
   onSyncMacro,
@@ -220,7 +230,7 @@ export function ProjectionControls({
                 <Input
                   type="number"
                   disabled={useRealAccounts}
-                  value={initialARS || ""}
+                  value={Number.isFinite(initialARS) ? initialARS : ""}
                   onChange={(e) => onInitialARSChange(Number(e.target.value))}
                   placeholder="0"
                   className="h-9 text-xs font-semibold tabular-nums"
@@ -231,13 +241,36 @@ export function ProjectionControls({
                 <Input
                   type="number"
                   disabled={useRealAccounts}
-                  value={initialUSD || ""}
+                  value={Number.isFinite(initialUSD) ? initialUSD : ""}
                   onChange={(e) => onInitialUSDChange(Number(e.target.value))}
                   placeholder="0"
                   className="h-9 text-xs font-semibold tabular-nums"
                 />
               </div>
             </div>
+            {!useRealAccounts &&
+              (initialARS < realARSBalance * 0.5 || initialUSD < realLiquidUSD * 0.5) &&
+              (realARSBalance > 0 || realLiquidUSD > 0) && (
+                <div className="mt-2 rounded-lg border border-amber-500/40 bg-amber-500/10 p-2.5 space-y-1.5">
+                  <p className="text-[11px] text-amber-500">
+                    Estás simulando con un patrimonio menor al que tienen tus cuentas hoy ($
+                    {realARSBalance.toLocaleString("es-AR", { maximumFractionDigits: 0 })} y US$
+                    {realLiquidUSD.toLocaleString("es-AR", { maximumFractionDigits: 0 })}). Con menos
+                    capital inicial, las metas se ven mucho más lejos de lo que están.
+                  </p>
+                  {onUseRealBalances && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={onUseRealBalances}
+                      className="h-6 px-2 text-[10px] font-semibold border-amber-500/40 text-amber-500 hover:bg-amber-500/10 cursor-pointer"
+                    >
+                      Usar mis saldos reales
+                    </Button>
+                  )}
+                </div>
+              )}
             {(overdueARS > 0 || overdueUSD > 0) && (
               <p className="text-[10px] text-amber-500/90 mt-1.5">
                 − {overdueARS > 0 && `$${overdueARS.toLocaleString("es-AR", { maximumFractionDigits: 0 })}`}
@@ -262,16 +295,25 @@ export function ProjectionControls({
                 Ahorro Mensual Estimado
               </Label>
               {savingsEstimate && savingsEstimate.monthsUsed > 0 && onUseEstimatedSavings && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={onUseEstimatedSavings}
-                  className="h-6 px-2 text-[10px] font-semibold text-primary hover:bg-primary/10 cursor-pointer"
-                  title={`Mediana de ingresos menos gastos de tus últimos ${savingsEstimate.monthsUsed} meses cerrados`}
-                >
-                  Usar mi promedio real
-                </Button>
+                usesEstimatedSavings ? (
+                  <Badge
+                    variant="secondary"
+                    className="text-[10px] font-medium bg-primary/10 text-primary border-primary/20"
+                  >
+                    Calculado de tus movimientos
+                  </Badge>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={onUseEstimatedSavings}
+                    className="h-6 px-2 text-[10px] font-semibold text-primary hover:bg-primary/10 cursor-pointer"
+                    title={`Mediana de ingresos menos gastos de tus últimos ${savingsEstimate.monthsUsed} meses cerrados`}
+                  >
+                    Volver a mi promedio real
+                  </Button>
+                )
               )}
             </div>
             <div className="grid grid-cols-2 gap-3">
@@ -279,7 +321,7 @@ export function ProjectionControls({
                 <span className="text-[10px] text-muted-foreground mb-1 block">+ ARS / mes</span>
                 <Input
                   type="number"
-                  value={savingsARS || ""}
+                  value={Number.isFinite(savingsARS) ? savingsARS : ""}
                   onChange={(e) => onSavingsARSChange(Number(e.target.value))}
                   placeholder="0"
                   className="h-9 text-xs font-semibold tabular-nums"
@@ -289,14 +331,20 @@ export function ProjectionControls({
                 <span className="text-[10px] text-muted-foreground mb-1 block">+ USD / mes</span>
                 <Input
                   type="number"
-                  value={savingsUSD || ""}
+                  value={Number.isFinite(savingsUSD) ? savingsUSD : ""}
                   onChange={(e) => onSavingsUSDChange(Number(e.target.value))}
                   placeholder="0"
                   className="h-9 text-xs font-semibold tabular-nums"
                 />
               </div>
             </div>
-            {savingsEstimate && savingsEstimate.monthsUsed > 0 && (
+            {savingsARS === 0 && savingsUSD === 0 && (
+              <p className="text-[11px] text-amber-500 mt-1.5">
+                Con un ahorro de cero, el patrimonio no crece y ninguna meta se alcanza nunca.
+                Cargá cuánto te queda por mes.
+              </p>
+            )}
+            {savingsEstimate && savingsEstimate.monthsUsed > 0 && !usesEstimatedSavings && (
               <p className="text-[10px] text-muted-foreground mt-1.5">
                 Tus movimientos de los últimos {savingsEstimate.monthsUsed}{" "}
                 {savingsEstimate.monthsUsed === 1 ? "mes cerrado" : "meses cerrados"} dan una

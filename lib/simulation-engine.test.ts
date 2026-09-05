@@ -240,6 +240,139 @@ describe("metas", () => {
   })
 })
 
+// Caso real reportado: la página decía "no se alcanza en 36 meses" para una meta
+// que con los saldos y el ahorro reales se cumple en 4. El motor estaba bien; lo
+// que le llegaba no: patrimonio inicial en 0 porque el seeding del modo manual
+// corrió antes de que cargaran las cuentas, y ahorro en 0 porque nunca se había
+// fijado y no se derivaba del historial.
+describe("regresión: metas cercanas no deben verse inalcanzables", () => {
+  const caso = (initialARS: number, savingsARS: number): SimulationParams => ({
+    initialNetWorth: { ARS: initialARS, USD: 1_285.32 },
+    illiquidNetWorth: { ARS: 0, USD: 161 },
+    monthlySavings: { ARS: savingsARS, USD: 0 },
+    annualInflationRate: 45,
+    annualDevaluationRate: 40,
+    annualReturnARS: 45,
+    annualReturnUSD: 12,
+    horizonMonths: 36,
+    displayCurrency: "USD",
+    isRealTerms: true,
+    initialExchangeRate: 1540,
+    sequentialGoals: [
+      { id: "g1", name: "Fondo de reserva", amount: 3_000, currency: "USD", kind: "purchase", priority: 1 },
+    ],
+  })
+
+  test("con los saldos y el ahorro reales, la meta entra en menos de 6 meses", () => {
+    const r = runSimulation(caso(1_795_320, 265_238))
+    const mes = r.sequentialGoalResults[0].estimatedMonthNeutral
+    assert.ok(mes !== undefined, "la meta debería alcanzarse dentro del horizonte")
+    assert.ok(mes! <= 6, `se esperaba <= 6 meses, dio ${mes}`)
+  })
+
+  test("con el patrimonio en cero la misma meta se vuelve inalcanzable", () => {
+    const r = runSimulation(caso(0, 265_238))
+    assert.ok(
+      (r.sequentialGoalResults[0].estimatedMonthNeutral ?? 99) > 6,
+      "perder el capital inicial tiene que alejar la meta: es el síntoma que hay que evitar"
+    )
+  })
+
+  // El precio de la meta se inflacionaba pero el aporte que la paga quedaba
+  // clavado en pesos nominales, así que a 45% anual toda meta en pesos a más de
+  // un año se volvía inalcanzable por construcción.
+  test("una meta en pesos a mediano plazo se alcanza con un ahorro realista", () => {
+    const r = runSimulation({
+      ...caso(1_795_320, 265_238),
+      sequentialGoals: [
+        { id: "moto", name: "Moto", amount: 7_000_000, currency: "ARS", kind: "purchase", priority: 1 },
+      ],
+    })
+    const mes = r.sequentialGoalResults[0].estimatedMonthNeutral
+    assert.ok(mes !== undefined, "7.000.000 ahorrando 265.000 por mes tiene que entrar en 36 meses")
+    assert.ok(mes! <= 24, `se esperaba <= 24 meses, dio ${mes}`)
+  })
+
+  test("el aporte mensual acompaña a la inflación de su moneda", () => {
+    const sinInflacion = runSimulation({
+      ...caso(0, 100_000),
+      annualInflationRate: 0,
+      annualReturnARS: 0,
+      annualReturnUSD: 0,
+      initialNetWorth: { ARS: 0, USD: 0 },
+      illiquidNetWorth: { ARS: 0, USD: 0 },
+      displayCurrency: "ARS",
+      isRealTerms: false,
+      annualDevaluationRate: 0,
+      horizonMonths: 12,
+      sequentialGoals: [],
+    })
+    const conInflacion = runSimulation({
+      ...caso(0, 100_000),
+      annualInflationRate: 100,
+      annualReturnARS: 0,
+      annualReturnUSD: 0,
+      initialNetWorth: { ARS: 0, USD: 0 },
+      illiquidNetWorth: { ARS: 0, USD: 0 },
+      displayCurrency: "ARS",
+      isRealTerms: false,
+      annualDevaluationRate: 0,
+      horizonMonths: 12,
+      sequentialGoals: [],
+    })
+    assert.equal(Math.round(sinInflacion.timeline.at(-1)!.neutral), 1_200_000)
+    // Con inflación, el mismo esfuerzo aporta más pesos nominales.
+    assert.ok(conInflacion.timeline.at(-1)!.neutral > 1_200_000 * 1.3)
+  })
+
+  // El ahorro neto en dólares del usuario era negativo (gasta más de lo que
+  // entra). El saldo en dólares se hundía sin límite y seguía componiendo al 12%
+  // anual, restando de la plata disponible para las metas.
+  test("un gasto neto en dólares se cubre con pesos, no genera un descubierto", () => {
+    const r = runSimulation({
+      ...caso(5_000_000, 0),
+      monthlySavings: { ARS: 0, USD: -100 },
+      annualInflationRate: 0,
+      annualUsdInflationRate: 0,
+      annualDevaluationRate: 0,
+      annualReturnARS: 0,
+      annualReturnUSD: 0,
+      initialNetWorth: { ARS: 5_000_000, USD: 100 },
+      illiquidNetWorth: { ARS: 0, USD: 0 },
+      displayCurrency: "USD",
+      isRealTerms: false,
+      horizonMonths: 12,
+      sequentialGoals: [],
+    })
+    // Arranca con 100 + 5.000.000/1540 = 3.346 y gasta 100 por mes: quedan 2.246.
+    const esperado = 100 + 5_000_000 / 1540 - 12 * 100
+    assert.ok(
+      Math.abs(r.timeline.at(-1)!.neutral - esperado) < 1,
+      `se esperaba ~${esperado.toFixed(0)}, dio ${r.timeline.at(-1)!.neutral.toFixed(0)}`
+    )
+  })
+
+  test("una meta que queda apenas afuera dice cuánto falta, no sólo que no llega", () => {
+    const r = runSimulation({
+      ...caso(1_795_320, 265_238),
+      horizonMonths: 36,
+      sequentialGoals: [
+        { id: "r", name: "Reserva", amount: 3_000, currency: "USD", kind: "reserve", priority: 1 },
+        { id: "m", name: "Moto", amount: 20_000_000, currency: "ARS", kind: "purchase", priority: 2 },
+      ],
+    })
+    const moto = r.sequentialGoalResults[1]
+    assert.equal(moto.isAchievedInHorizon, false)
+    assert.ok(moto.estimatedMonthBeyondHorizon! > 36)
+    assert.match(moto.estimatedDateLabel, /Fuera del horizonte/)
+  })
+
+  test("con ahorro cero no se alcanza nunca, por más capital que haya", () => {
+    const r = runSimulation({ ...caso(1_000_000, 0), annualReturnARS: 0, annualReturnUSD: 0 })
+    assert.equal(r.sequentialGoalResults[0].estimatedMonthNeutral, undefined)
+  })
+})
+
 describe("casos borde", () => {
   test("todo en cero no rompe", () => {
     const r = runSimulation({
