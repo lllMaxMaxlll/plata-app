@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react"
 import { useFinance } from "./finance-provider"
+import { Pagination, usePagination } from "./pagination"
 import { AddVehicleSheet } from "./add-vehicle-sheet"
 import { AddVehicleLogSheet } from "./add-vehicle-log-sheet"
 import { formatShort, type Vehicle, type VehicleLog, type VehicleLogType } from "@/lib/finance-data"
@@ -28,6 +29,8 @@ import { PageHeader } from "./page-header"
 import { IconTile, pageClass } from "./lucas-ui"
 
 /** Nombre, ícono y color de cada tipo de registro. Los acentos llevan ícono en tinta. */
+const LOGS_PAGE_SIZE = 15
+
 const LOG_METADATA: Record<VehicleLogType, { label: string; Icon: LucideIcon; tone: string }> = {
   fuel: { label: "Nafta", Icon: Fuel, tone: "bg-lime" },
   service: { label: "Service", Icon: Wrench, tone: "bg-sky" },
@@ -90,6 +93,12 @@ export function VehiclesView() {
       return matchesType && matchesText
     })
   }, [activeLogs, typeFilter, searchQuery])
+
+  const { page, pageCount, pageItems: pageLogs, setPage } = usePagination(
+    filteredLogs,
+    LOGS_PAGE_SIZE,
+    [activeVehicle?.id, typeFilter, searchQuery.trim()].join("|")
+  )
 
   const stats = useMemo(() => {
     if (!activeVehicle || activeLogs.length === 0) {
@@ -456,7 +465,7 @@ export function VehiclesView() {
                     </p>
                   ) : (
                     <ul className="rounded-2xl border-2 border-foreground bg-card px-3.5 divide-y-[1.5px] divide-dashed divide-foreground/15">
-                      {filteredLogs.map((l) => {
+                      {pageLogs.map((l) => {
                         const meta = LOG_METADATA[l.type]
                         const details =
                           l.type === "fuel"
@@ -490,6 +499,7 @@ export function VehiclesView() {
                       })}
                     </ul>
                   )}
+                  <Pagination page={page} pageCount={pageCount} onPageChange={setPage} className="mt-3" />
                 </section>
               </div>
             </div>

@@ -14,7 +14,10 @@ import { Button } from "@/components/ui/button"
 import { OptionSelect } from "./option-select"
 import { Segmented } from "./segmented"
 import { pageClass } from "./lucas-ui"
+import { Pagination, usePagination } from "./pagination"
 import { cn } from "@/lib/utils"
+
+const PAGE_SIZE = 30
 
 type TypeFilter = "all" | TransactionType
 type DateFilter = "all" | "today" | "week" | "this_month" | "last_month"
@@ -115,23 +118,40 @@ export function ActivityView({
     return sum
   }, [filtered, getAccount])
 
+  const { page, pageCount, pageItems, setPage } = usePagination(
+    filtered,
+    PAGE_SIZE,
+    [search.trim(), type, accountId, categoryName, dateRange].join("|")
+  )
+
+  // El neto de cada día sale de todo lo filtrado: un día partido entre dos
+  // páginas tiene que mostrar el mismo neto en las dos.
+  const netByDay = useMemo(() => {
+    const net = new Map<string, number>()
+    for (const t of filtered) {
+      const currency = transactionCurrency(t, getAccount(t.accountId)) ?? "ARS"
+      if (currency !== "ARS") continue
+      const key = format(new Date(t.date), "yyyy-MM-dd")
+      net.set(key, (net.get(key) ?? 0) + (t.type === "income" ? t.amount : t.type === "expense" ? -t.amount : 0))
+    }
+    return net
+  }, [filtered, getAccount])
+
   // Agrupado por día calendario local, en el orden en que ya vienen.
   const days = useMemo(() => {
     const groups: { key: string; date: Date; items: Transaction[]; net: number }[] = []
-    for (const t of filtered) {
+    for (const t of pageItems) {
       const date = new Date(t.date)
       const key = format(date, "yyyy-MM-dd")
       let group = groups[groups.length - 1]
       if (!group || group.key !== key) {
-        group = { key, date, items: [], net: 0 }
+        group = { key, date, items: [], net: netByDay.get(key) ?? 0 }
         groups.push(group)
       }
       group.items.push(t)
-      const currency = transactionCurrency(t, getAccount(t.accountId)) ?? "ARS"
-      if (currency === "ARS") group.net += t.type === "income" ? t.amount : t.type === "expense" ? -t.amount : 0
     }
     return groups
-  }, [filtered, getAccount])
+  }, [pageItems, netByDay])
 
   const hasActiveFilters =
     search.trim() !== "" ||
@@ -291,6 +311,14 @@ export function ActivityView({
               </section>
             ))
           )}
+          <Pagination
+            page={page}
+            pageCount={pageCount}
+            onPageChange={(next) => {
+              setPage(next)
+              window.scrollTo({ top: 0, behavior: "smooth" })
+            }}
+          />
         </div>
       </div>
     </div>
