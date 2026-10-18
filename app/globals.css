@@ -181,6 +181,16 @@
   }
 }
 
+/*
+ * Sonner inyecta en runtime un `font-family` de sistema para el toaster, sin
+ * layer, así que le gana a cualquier utilidad de Tailwind. Esta regla tampoco
+ * va en un layer y es más específica: los toasts usan la misma letra que el
+ * resto de la app.
+ */
+html [data-sonner-toaster] {
+  font-family: var(--font-sans);
+}
+
 /* Hide scrollbars for horizontal scroll areas */
 .no-scrollbar::-webkit-scrollbar {
   display: none;
