@@ -1,46 +1,35 @@
 "use client"
 
-import { LogOut, CreditCard, Bell, ShieldCheck, CircleHelp, ChevronRight, Tag, ArrowLeft } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { LogOut, CreditCard, Download, ShieldCheck, ChevronRight, Tag } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { formatShort } from "@/lib/finance-data"
 import { useFinance } from "./finance-provider"
+import { PageHeader } from "./page-header"
+import { useUI } from "./ui-context"
 
 export function ProfileView({
   onManageCategories,
   onManageSecurity,
-  onBack,
 }: {
   onManageCategories: () => void
   onManageSecurity: () => void
-  onBack?: () => void
 }) {
   const { user, logout, accounts, transactions, totalsByCurrency } = useFinance()
+  const { mask, handleOpenExport } = useUI()
+  const router = useRouter()
 
   const items = [
     { Icon: Tag, label: "Categorías", onClick: onManageCategories },
-    { Icon: CreditCard, label: "Cuentas y tarjetas", onClick: () => { } },
-    { Icon: Bell, label: "Notificaciones", onClick: () => { } },
+    { Icon: CreditCard, label: "Cuentas y tarjetas", onClick: () => router.push("/accounts") },
+    { Icon: Download, label: "Exportar datos", onClick: handleOpenExport },
     { Icon: ShieldCheck, label: "Seguridad", onClick: onManageSecurity },
-    { Icon: CircleHelp, label: "Ayuda", onClick: () => { } },
   ]
 
   return (
     <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 pt-4 pb-12 font-sans space-y-6">
-      <div className="flex items-center gap-3">
-        {onBack && (
-          <Button
-            variant="outline"
-            size="icon-sm"
-            onClick={onBack}
-            className="size-10 sm:size-8 rounded-xl shrink-0"
-            aria-label="Volver"
-          >
-            <ArrowLeft className="size-4" />
-          </Button>
-        )}
-        <h1 className="text-xl font-semibold tracking-tight">Perfil</h1>
-      </div>
+      <PageHeader route="profile" />
 
       <Card className="mt-5 flex items-center gap-3.5 rounded-xl p-4 shadow-sm">
         <span className="flex size-14 items-center justify-center rounded-full bg-primary text-lg font-semibold text-primary-foreground">
@@ -55,7 +44,7 @@ export function ProfileView({
       <div className="mt-3 grid grid-cols-3 gap-2.5">
         <Stat label="Cuentas" value={String(accounts.length)} />
         <Stat label="Movimientos" value={String(transactions.length)} />
-        <Stat label="Patrimonio USD" value={formatShort(totalsByCurrency.USD, "USD")} />
+        <Stat label="Efectivo USD" value={mask(formatShort(totalsByCurrency.USD, "USD"))} />
       </div>
 
       <ul className="mt-5 overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
@@ -78,13 +67,13 @@ export function ProfileView({
         variant="destructive"
         size="lg"
         onClick={logout}
-        className="mt-5 h-11 w-full rounded-xl text-sm font-semibold"
+        className="mt-5 h-11 w-full text-sm font-semibold"
       >
         <LogOut className="size-4" />
         Cerrar sesión
       </Button>
 
-      <p className="mt-4 text-center text-xs text-muted-foreground">PLATA · demo v1.0</p>
+      <p className="mt-4 text-center text-xs text-muted-foreground">PLATA</p>
     </div>
   )
 }

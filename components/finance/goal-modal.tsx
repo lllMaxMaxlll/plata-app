@@ -32,7 +32,8 @@ export interface GoalModalProps {
   onOpenChange: (open: boolean) => void
   currentGoal?: Goal | null
   onSaveGoal: (goal: GoalDraft) => Promise<void>
-  onRemoveGoal: () => Promise<void>
+  /** Devuelve false si el usuario canceló la confirmación. */
+  onRemoveGoal: () => Promise<boolean>
 }
 
 export function GoalModal({
@@ -84,7 +85,7 @@ export function GoalModal({
   const handleRemove = async () => {
     setSubmitting(true)
     try {
-      await onRemoveGoal()
+      if (!(await onRemoveGoal())) return
       toast.success("Meta eliminada.")
       onOpenChange(false)
     } catch (err) {
@@ -99,8 +100,8 @@ export function GoalModal({
       <ResponsiveDialogContent className="sm:max-w-[440px] border-border/50 bg-card/95 backdrop-blur-2xl">
         <ResponsiveDialogHeader>
           <ResponsiveDialogTitle className="flex items-center gap-2 text-base font-semibold">
-            <Sparkles className="size-4.5 text-purple-400" />
-            {currentGoal ? "Editar Meta Secuencial" : "Nueva Meta en la Secuencia"}
+            <Sparkles className="size-4.5 text-chart-5" />
+            {currentGoal ? "Editar meta" : "Nueva meta"}
           </ResponsiveDialogTitle>
           <ResponsiveDialogDescription className="text-xs">
             Define tu objetivo. La aplicación calculará en qué fecha proyectada llegarás en base a tu capacidad de ahorro libre.
@@ -172,10 +173,10 @@ export function GoalModal({
                   }`}
                 >
                   <div className="flex items-center gap-1.5 font-bold text-xs">
-                    <ShieldCheck className="size-3.5 text-emerald-500" />
+                    <ShieldCheck className="size-3.5 text-success" />
                     Reserva de Capital
                   </div>
-                  <p className="text-[10px] text-muted-foreground leading-tight">
+                  <p className="text-[11px] text-muted-foreground leading-tight">
                     Fondo de ahorro o colchón. Permanece en tu patrimonio.
                   </p>
                 </button>
@@ -190,10 +191,10 @@ export function GoalModal({
                   }`}
                 >
                   <div className="flex items-center gap-1.5 font-bold text-xs">
-                    <ShoppingBag className="size-3.5 text-purple-400" />
+                    <ShoppingBag className="size-3.5 text-chart-5" />
                     Compra / Gasto
                   </div>
-                  <p className="text-[10px] text-muted-foreground leading-tight">
+                  <p className="text-[11px] text-muted-foreground leading-tight">
                     Compra importante. Se descuenta del capital acumulado.
                   </p>
                 </button>
@@ -208,7 +209,7 @@ export function GoalModal({
                   size="sm"
                   disabled={submitting}
                   onClick={handleRemove}
-                  className="h-9 text-xs gap-1.5 cursor-pointer"
+                  className="h-9 text-xs gap-1.5"
                 >
                   {submitting ? <Loader2 className="size-3.5 animate-spin" /> : <Trash2 className="size-3.5" />} Quitar Meta
                 </Button>
@@ -231,7 +232,7 @@ export function GoalModal({
                   type="submit"
                   size="sm"
                   disabled={submitting}
-                  className="h-9 text-xs gap-1.5 font-semibold bg-primary hover:bg-primary/90 text-primary-foreground cursor-pointer"
+                  className="h-9 text-xs gap-1.5 font-semibold"
                 >
                   {submitting ? <Loader2 className="size-3.5 animate-spin" /> : <Check className="size-3.5" />} Guardar Meta
                 </Button>

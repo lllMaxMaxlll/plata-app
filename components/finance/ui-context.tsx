@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, useContext, useState, type ReactNode } from "react"
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react"
 import type { Account, Transaction } from "@/lib/finance-data"
 
 interface UIContextType {
@@ -26,9 +26,15 @@ interface UIContextType {
   handleCloseSecurity: () => void
   handleCloseTxSheet: () => void
   handleCloseAccountSheet: () => void
+  balancesHidden: boolean
+  toggleBalancesHidden: () => void
+  /** Reemplaza un importe por puntos cuando el usuario ocultó los saldos. */
+  mask: (value: string) => string
 }
 
 const UIContext = createContext<UIContextType | null>(null)
+
+const BALANCES_HIDDEN_KEY = "plata:balances-hidden"
 
 export function UIProvider({ children }: { children: ReactNode }) {
   const [txOpen, setTxOpen] = useState(false)
@@ -39,6 +45,26 @@ export function UIProvider({ children }: { children: ReactNode }) {
   const [securityOpen, setSecurityOpen] = useState(false)
   const [editingAccount, setEditingAccount] = useState<Account | null>(null)
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null)
+  const [balancesHidden, setBalancesHidden] = useState(false)
+
+  // Se lee después de montar para no desincronizar el HTML del servidor.
+  useEffect(() => {
+    try {
+      setBalancesHidden(localStorage.getItem(BALANCES_HIDDEN_KEY) === "1")
+    } catch {}
+  }, [])
+
+  function toggleBalancesHidden() {
+    setBalancesHidden((prev) => {
+      const next = !prev
+      try {
+        localStorage.setItem(BALANCES_HIDDEN_KEY, next ? "1" : "0")
+      } catch {}
+      return next
+    })
+  }
+
+  const mask = (value: string) => (balancesHidden ? "••••••" : value)
 
   function handleAddAccount() {
     setEditingAccount(null)
@@ -127,6 +153,9 @@ export function UIProvider({ children }: { children: ReactNode }) {
         handleCloseSecurity,
         handleCloseTxSheet,
         handleCloseAccountSheet,
+        balancesHidden,
+        toggleBalancesHidden,
+        mask,
       }}
     >
       {children}

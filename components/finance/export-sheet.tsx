@@ -6,10 +6,8 @@ import {
   FileText,
   FileCode,
   Download,
-  Calendar as CalendarIcon,
   TrendingUp,
   TrendingDown,
-  FileCheck,
 } from "lucide-react"
 import { useFinance } from "./finance-provider"
 import {
@@ -182,7 +180,7 @@ export function ExportSheet({ open, onClose }: { open: boolean; onClose: () => v
                   variant="outline"
                   size="sm"
                   onClick={handleSelectCurrentMonth}
-                  className="flex-1 sm:flex-none text-xs font-semibold rounded-xl h-10 border-border/60 bg-card/60 cursor-pointer"
+                  className="flex-1 sm:flex-none text-xs font-semibold h-10 border-border/60 bg-card/60"
                 >
                   Este mes
                 </Button>
@@ -191,7 +189,7 @@ export function ExportSheet({ open, onClose }: { open: boolean; onClose: () => v
                   variant="outline"
                   size="sm"
                   onClick={handleSelectPreviousMonth}
-                  className="flex-1 sm:flex-none text-xs font-semibold rounded-xl h-10 border-border/60 bg-card/60 cursor-pointer"
+                  className="flex-1 sm:flex-none text-xs font-semibold h-10 border-border/60 bg-card/60"
                 >
                   Mes pasado
                 </Button>
@@ -220,28 +218,28 @@ export function ExportSheet({ open, onClose }: { open: boolean; onClose: () => v
             ) : (
               <div className="grid grid-cols-2 gap-4 min-w-0">
                 <div className="min-w-0">
-                  <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider mb-1">
+                  <p className="text-[11px] uppercase font-bold text-muted-foreground tracking-wider mb-1">
                     Resumen ARS
                   </p>
-                  <p className="text-xs text-emerald-500 font-semibold flex items-center gap-1">
+                  <p className="text-xs text-success font-semibold flex items-center gap-1">
                     <TrendingUp className="size-3 shrink-0" />
                     +${summary.totalIncomeARS.toLocaleString("es-AR")}
                   </p>
-                  <p className="text-xs text-rose-500 font-semibold flex items-center gap-1 mt-0.5">
+                  <p className="text-xs text-destructive font-semibold flex items-center gap-1 mt-0.5">
                     <TrendingDown className="size-3 shrink-0" />
                     -${summary.totalExpenseARS.toLocaleString("es-AR")}
                   </p>
                 </div>
 
                 <div className="min-w-0">
-                  <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider mb-1">
+                  <p className="text-[11px] uppercase font-bold text-muted-foreground tracking-wider mb-1">
                     Resumen USD
                   </p>
-                  <p className="text-xs text-emerald-500 font-semibold flex items-center gap-1">
+                  <p className="text-xs text-success font-semibold flex items-center gap-1">
                     <TrendingUp className="size-3 shrink-0" />
                     +US${summary.totalIncomeUSD.toLocaleString("en-US")}
                   </p>
-                  <p className="text-xs text-rose-500 font-semibold flex items-center gap-1 mt-0.5">
+                  <p className="text-xs text-destructive font-semibold flex items-center gap-1 mt-0.5">
                     <TrendingDown className="size-3 shrink-0" />
                     -US${summary.totalExpenseUSD.toLocaleString("en-US")}
                   </p>
@@ -262,12 +260,12 @@ export function ExportSheet({ open, onClose }: { open: boolean; onClose: () => v
                 type="button"
                 disabled={exportingFormat !== null}
                 onClick={() => handleExport("excel")}
-                className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-3.5 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/15 transition-all cursor-pointer disabled:opacity-50 min-w-0"
+                className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-success/20 bg-success/10 p-3.5 text-success dark:text-success hover:bg-success/15 transition-all cursor-pointer disabled:opacity-50 min-w-0"
               >
                 <FileSpreadsheet className="size-6 shrink-0" />
                 <div className="text-center min-w-0">
                   <p className="text-xs font-bold">Excel (.xlsx)</p>
-                  <p className="text-[10px] opacity-80 mt-0.5">Planilla estructurada</p>
+                  <p className="text-[11px] opacity-80 mt-0.5">Planilla estructurada</p>
                 </div>
               </button>
 
@@ -276,12 +274,12 @@ export function ExportSheet({ open, onClose }: { open: boolean; onClose: () => v
                 type="button"
                 disabled={exportingFormat !== null}
                 onClick={() => handleExport("pdf")}
-                className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-rose-500/20 bg-rose-500/10 p-3.5 text-rose-600 dark:text-rose-400 hover:bg-rose-500/15 transition-all cursor-pointer disabled:opacity-50 min-w-0"
+                className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-destructive/20 bg-destructive/10 p-3.5 text-destructive dark:text-destructive hover:bg-destructive/15 transition-all cursor-pointer disabled:opacity-50 min-w-0"
               >
                 <FileText className="size-6 shrink-0" />
                 <div className="text-center min-w-0">
                   <p className="text-xs font-bold">PDF (.pdf)</p>
-                  <p className="text-[10px] opacity-80 mt-0.5">Documento imprimible</p>
+                  <p className="text-[11px] opacity-80 mt-0.5">Documento imprimible</p>
                 </div>
               </button>
 
@@ -290,12 +288,12 @@ export function ExportSheet({ open, onClose }: { open: boolean; onClose: () => v
                 type="button"
                 disabled={exportingFormat !== null}
                 onClick={() => handleExport("markdown")}
-                className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-blue-500/20 bg-blue-500/10 p-3.5 text-blue-600 dark:text-blue-400 hover:bg-blue-500/15 transition-all cursor-pointer disabled:opacity-50 min-w-0"
+                className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-chart-1/20 bg-chart-1/10 p-3.5 text-chart-1 dark:text-chart-1 hover:bg-chart-1/15 transition-all cursor-pointer disabled:opacity-50 min-w-0"
               >
                 <FileCode className="size-6 shrink-0" />
                 <div className="text-center min-w-0">
                   <p className="text-xs font-bold">Markdown (.md)</p>
-                  <p className="text-[10px] opacity-80 mt-0.5">Formato texto plano</p>
+                  <p className="text-[11px] opacity-80 mt-0.5">Formato texto plano</p>
                 </div>
               </button>
             </div>

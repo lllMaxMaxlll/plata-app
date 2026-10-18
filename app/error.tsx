@@ -19,7 +19,7 @@ export default function Error({
 
   return (
     <div className="flex min-h-[70vh] flex-col items-center justify-center p-6 text-center">
-      <div className="flex size-16 items-center justify-center rounded-xl bg-rose-500/10 text-rose-500 border border-rose-500/20 shadow-lg mb-4">
+      <div className="flex size-16 items-center justify-center rounded-xl bg-destructive/10 text-destructive border border-destructive/20 shadow-lg mb-4">
         <AlertTriangle className="size-8" />
       </div>
 
@@ -40,7 +40,7 @@ export default function Error({
         <Button
           onClick={reset}
           variant="default"
-          className="flex items-center gap-2 rounded-xl text-xs font-semibold"
+          className="flex items-center gap-2 text-xs font-semibold"
         >
           <RotateCcw className="size-4" />
           Reintentar
@@ -49,7 +49,7 @@ export default function Error({
           render={<Link href="/" />}
           nativeButton={false}
           variant="outline"
-          className="flex items-center gap-2 rounded-xl text-xs font-semibold"
+          className="flex items-center gap-2 text-xs font-semibold"
         >
           <Home className="size-4" />
           Ir al inicio

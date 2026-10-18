@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Plus, Pencil, Trash2, Tag, Loader2 } from "lucide-react"
+import { Plus, Pencil, Trash2, Tag } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -14,6 +14,7 @@ import {
   ResponsiveDialogDescription,
 } from "@/components/ui/responsive-dialog"
 import { useFinance } from "./finance-provider"
+import { useConfirm } from "./confirm-dialog"
 import { DEFAULT_COLORS, type Category } from "@/lib/finance-data"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
@@ -26,6 +27,7 @@ export function ManageCategoriesSheet({
   onClose: () => void
 }) {
   const { categories, addCategory, updateCategory, deleteCategory } = useFinance()
+  const confirm = useConfirm()
   const [tab, setTab] = useState<"expense" | "income">("expense")
 
   // Form states
@@ -74,9 +76,10 @@ export function ManageCategoriesSheet({
   }
 
   async function handleDelete(cat: Category) {
-    const confirmed = window.confirm(
-      `¿Estás seguro de que querés eliminar la categoría "${cat.name}"?\n(Los movimientos registrados seguirán mostrando este nombre de categoría)`
-    )
+    const confirmed = await confirm({
+      title: `¿Eliminar la categoría "${cat.name}"?`,
+      description: "Los movimientos registrados van a seguir mostrando este nombre de categoría.",
+    })
     if (!confirmed) return
 
     setSubmitting(true)
@@ -144,7 +147,7 @@ export function ManageCategoriesSheet({
 
           {/* Categories List */}
           <div className="flex min-w-0 flex-col gap-2 max-h-56 overflow-y-auto no-scrollbar">
-            <Label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-1">
+            <Label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider px-1">
               Categorías registradas ({list.length})
             </Label>
             {list.length === 0 ? (
@@ -199,7 +202,7 @@ export function ManageCategoriesSheet({
           {/* Creator / Editor Form */}
           <div className="border-t border-border/50 pt-3 flex min-w-0 flex-col gap-3">
             <div className="flex items-center justify-between min-w-0">
-              <Label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+              <Label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
                 {editingCategory ? "Editar categoría" : "Nueva categoría"}
               </Label>
               {editingCategory && (
@@ -254,7 +257,7 @@ export function ManageCategoriesSheet({
                 type="submit"
                 size="lg"
                 disabled={submitting || !name.trim()}
-                className="h-11 w-full text-sm font-semibold rounded-xl bg-primary text-primary-foreground shadow-lg shadow-primary/20 cursor-pointer mt-1"
+                className="h-11 w-full text-sm font-semibold mt-1"
               >
                 {submitting ? (
                   <span className="size-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />

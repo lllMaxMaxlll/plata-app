@@ -1,6 +1,6 @@
 "use client"
 
-import { ReactNode, useState } from "react"
+import { ReactNode } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useFinance } from "@/components/finance/finance-provider"
@@ -31,56 +31,30 @@ import {
   Bike,
   CalendarClock,
   Target,
-  Globe,
   ChevronRight,
-  Shield,
-  Activity,
   Search,
+  type LucideIcon,
 } from "lucide-react"
 import { formatShort } from "@/lib/finance-data"
+import { ROUTES, findRoute, type RouteKey } from "@/lib/routes"
 import { useIsDesktop } from "@/lib/use-is-desktop"
 
 const NAV_GROUPS = [
-  {
-    title: "CORE SERVICES",
-    items: [
-      { href: "/", label: "Inicio", Icon: Home },
-      { href: "/accounts", label: "Cuentas", Icon: Wallet },
-      { href: "/activity", label: "Actividad", Icon: ReceiptText },
-    ],
-  },
-  {
-    title: "ANALYTICS",
-    items: [
-      { href: "/search", label: "Búsqueda", Icon: Search },
-      { href: "/analytics", label: "Análisis", Icon: TrendingUp },
-      { href: "/dashboard/proyecciones", label: "Proyecciones", Icon: Target },
-    ],
-  },
-  {
-    title: "ASSETS & TRACKING",
-    items: [
-      { href: "/stocks", label: "Portafolio", Icon: LineChart },
-      { href: "/vehicles", label: "Vehículos", Icon: Bike },
-      { href: "/dashboard/vencimientos", label: "Vencimientos", Icon: CalendarClock },
-    ],
-  },
-  {
-    title: "ACCOUNT & SETTINGS",
-    items: [
-      { href: "/profile", label: "Perfil", Icon: User },
-    ],
-  },
+  { title: "Principal", items: [nav("home", Home), nav("accounts", Wallet), nav("activity", ReceiptText)] },
+  { title: "Análisis", items: [nav("search", Search), nav("analytics", TrendingUp), nav("projections", Target)] },
+  { title: "Activos y seguimiento", items: [nav("stocks", LineChart), nav("vehicles", Bike), nav("dueItems", CalendarClock)] },
+  { title: "Cuenta", items: [nav("profile", User)] },
 ]
+
+function nav(key: RouteKey, Icon: LucideIcon) {
+  return { ...ROUTES[key], Icon }
+}
 
 export function AppShell({ children }: { children: ReactNode }) {
   const { user, loading, logout, totalsByCurrency } = useFinance()
   const ui = useUI()
   const pathname = usePathname()
-  const [hidden, setHidden] = useState(false)
   const isDesktop = useIsDesktop()
-
-  const mask = (value: string) => (hidden ? "••••••" : value)
 
   // Only one shell is mounted: rendering both and hiding one with CSS duplicated
   // every page, its effects and its data fetching.
@@ -99,43 +73,12 @@ export function AppShell({ children }: { children: ReactNode }) {
     return <AuthView />
   }
 
-  const getPageTitle = (path: string) => {
-    switch (path) {
-      case "/":
-        return "Overview Dashboard"
-      case "/accounts":
-        return "Cuentas & Activos"
-      case "/dashboard/proyecciones":
-      case "/proyecciones":
-        return "Proyección Financiera & Escenarios"
-      case "/dashboard/vencimientos":
-      case "/vencimientos":
-        return "Calendario de Vencimientos"
-      case "/vehicles":
-        return "Vehículos & Mantenimiento"
-      case "/stocks":
-        return "Portafolio de Inversiones"
-      case "/activity":
-        return "Historial de Eventos"
-      case "/profile":
-        return "Configuración de Cuenta"
-      case "/search":
-        return "Búsqueda Inteligente"
-      case "/analytics":
-        return "Análisis & Métricas"
-      case "/more":
-        return "Explorar"
-      default:
-        return "Cloudflare Dashboard"
-    }
-  }
-
   return (
     <>
       {/* Mobile View Shell */}
       {!isDesktop && (
         <div className="mx-auto min-h-dvh w-full max-w-md bg-background">
-          <main className="pb-28">{children}</main>
+          <main className="pt-[env(safe-area-inset-top)] pb-28">{children}</main>
           <BottomNav onAdd={ui.handleAddTransaction} />
         </div>
       )}
@@ -162,7 +105,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               <div className="flex flex-col gap-2">
                 <Button
                   onClick={ui.handleAddTransaction}
-                  className="w-full justify-start gap-2 bg-primary hover:bg-primary/90 text-primary-foreground font-medium text-xs h-9 shadow-sm cursor-pointer"
+                  className="w-full justify-start gap-2 font-medium text-xs h-9"
                 >
                   <Plus data-icon="inline-start" className="size-3.5" />
                   Nuevo Movimiento
@@ -171,7 +114,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <Button
                   onClick={ui.handleOpenExchange}
                   variant="outline"
-                  className="w-full justify-start gap-2 border-border bg-card/60 hover:bg-accent text-foreground font-medium text-xs h-9 cursor-pointer"
+                  className="w-full justify-start gap-2 border-border bg-card/60 hover:bg-accent text-foreground font-medium text-xs h-9"
                 >
                   <ArrowLeftRight data-icon="inline-start" className="size-3.5 text-muted-foreground" />
                   Cambio de Moneda
@@ -182,7 +125,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               <nav className="flex flex-col gap-5 pt-1">
                 {NAV_GROUPS.map((group) => (
                   <div key={group.title} className="flex flex-col gap-1">
-                    <h3 className="px-2 text-[10px] font-mono font-semibold uppercase tracking-wider text-muted-foreground/80">
+                    <h3 className="px-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/80">
                       {group.title}
                     </h3>
                     <div className="flex flex-col gap-0.5 mt-0.5">
@@ -221,7 +164,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-xs font-medium text-foreground">{user?.name}</p>
-                  <p className="truncate text-[10px] font-mono text-muted-foreground">{user?.email}</p>
+                  <p className="truncate text-[11px] font-mono text-muted-foreground">{user?.email}</p>
                 </div>
               </div>
 
@@ -229,10 +172,10 @@ export function AppShell({ children }: { children: ReactNode }) {
                 onClick={logout}
                 variant="ghost"
                 size="sm"
-                className="w-full justify-start gap-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10 h-8 px-2 cursor-pointer"
+                className="w-full justify-start gap-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10 h-8 px-2"
               >
                 <LogOut data-icon="inline-start" className="size-3.5" />
-                Cerrar Sesión
+                Cerrar sesión
               </Button>
             </div>
           </aside>
@@ -241,48 +184,48 @@ export function AppShell({ children }: { children: ReactNode }) {
           <main className="flex-1 flex flex-col min-w-0 overflow-y-auto bg-background">
             {/* Cloudflare Top Header Bar */}
             <header className="border-b border-border bg-card/80 backdrop-blur-md px-6 py-3.5 flex items-center justify-between gap-4 shrink-0">
-              <div className="flex items-center gap-3">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h1 className="text-base font-bold tracking-tight text-foreground">
-                      {getPageTitle(pathname)}
-                    </h1>
-                  </div>
-                </div>
-              </div>
+              {/* Ruta y no título: el <h1> lo pone cada vista con el mismo nombre. */}
+              <nav aria-label="Ubicación" className="flex items-center gap-1.5 text-sm">
+                <span className="text-muted-foreground">PLATA</span>
+                <ChevronRight className="size-3.5 text-muted-foreground" aria-hidden />
+                <span className="font-semibold text-foreground" aria-current="page">
+                  {findRoute(pathname)?.label ?? "PLATA"}
+                </span>
+              </nav>
 
               <div className="flex items-center gap-4">
                 {/* Consolidated Cloudflare Metric Pill */}
                 <div className="flex items-center gap-3 border border-border bg-muted/30 rounded-md px-3.5 py-1.5 font-mono">
                   <div className="flex items-center gap-2 border-r border-border pr-3">
                     <div>
-                      <p className="text-[9px] text-muted-foreground uppercase font-semibold tracking-wider">
+                      <p className="text-[11px] text-muted-foreground uppercase font-semibold tracking-wider">
                         TOTAL ARS
                       </p>
                       <p className="text-xs font-bold text-foreground tabular-nums">
-                        {mask(formatShort(totalsByCurrency.ARS, "ARS"))}
+                        {ui.mask(formatShort(totalsByCurrency.ARS, "ARS"))}
                       </p>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-3">
                     <div>
-                      <p className="text-[9px] text-muted-foreground uppercase font-semibold tracking-wider">
+                      <p className="text-[11px] text-muted-foreground uppercase font-semibold tracking-wider">
                         TOTAL USD
                       </p>
                       <p className="text-xs font-bold text-primary tabular-nums">
-                        {mask(formatShort(totalsByCurrency.USD, "USD"))}
+                        {ui.mask(formatShort(totalsByCurrency.USD, "USD"))}
                       </p>
                     </div>
 
                     <Button
-                      onClick={() => setHidden((h) => !h)}
+                      onClick={ui.toggleBalancesHidden}
                       variant="ghost"
                       size="icon"
-                      className="size-7 rounded text-muted-foreground hover:text-foreground hover:bg-muted cursor-pointer"
-                      title={hidden ? "Mostrar saldos" : "Ocultar saldos"}
+                      className="size-7 text-muted-foreground hover:text-foreground hover:bg-muted"
+                      title={ui.balancesHidden ? "Mostrar saldos" : "Ocultar saldos"}
+                      aria-label={ui.balancesHidden ? "Mostrar saldos" : "Ocultar saldos"}
                     >
-                      {hidden ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
+                      {ui.balancesHidden ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
                     </Button>
                   </div>
                 </div>

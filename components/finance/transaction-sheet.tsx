@@ -501,7 +501,7 @@ export function TransactionSheet({
                 size="lg"
                 disabled={isSubmitDisabled}
                 variant={type === "expense" ? "destructive" : "default"}
-                className="h-11 w-full rounded-xl text-sm font-semibold"
+                className="h-11 w-full text-sm font-semibold"
               >
                 {submitting ? (
                   <span className="size-4 animate-spin rounded-full border-2 border-current border-t-transparent" />

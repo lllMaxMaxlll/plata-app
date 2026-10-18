@@ -12,10 +12,9 @@ const ebGaramondHeading = EB_Garamond({subsets:['latin'],variable:'--font-headin
 const notoSans = Noto_Sans({subsets:['latin'],variable:'--font-sans'});
 
 export const metadata: Metadata = {
-  title: 'PLATA — Finanzas Cloud Dashboard',
+  title: 'PLATA — Finanzas personales',
   description:
-    'App de finanzas personales para Argentina con UI Cloudflare: cuentas en pesos y dólares, ingresos, gastos y transferencias.',
-  generator: 'v0.app',
+    'App de finanzas personales para Argentina: cuentas en pesos y dólares, ingresos, gastos y transferencias.',
   appleWebApp: { capable: true, statusBarStyle: 'black-translucent', title: 'PLATA' },
   icons: {
     icon: [
@@ -35,7 +34,7 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   colorScheme: 'dark',
-  themeColor: '#0e1015',
+  themeColor: '#090b0c',
   width: 'device-width',
   initialScale: 1,
   // Sin `userScalable: false` ni `maximumScale`: la app muestra muchos importes

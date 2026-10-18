@@ -4,12 +4,13 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Home, Wallet, Plus, ReceiptText, LayoutGrid } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { findRoute, ROUTES } from "@/lib/routes"
 
 const ITEMS: { href: string; label: string; Icon: typeof Home }[] = [
-  { href: "/", label: "Inicio", Icon: Home },
-  { href: "/accounts", label: "Cuentas", Icon: Wallet },
-  { href: "/activity", label: "Actividad", Icon: ReceiptText },
-  { href: "/more", label: "Más", Icon: LayoutGrid },
+  { ...ROUTES.home, Icon: Home },
+  { ...ROUTES.accounts, Icon: Wallet },
+  { ...ROUTES.activity, Icon: ReceiptText },
+  { ...ROUTES.more, Icon: LayoutGrid },
 ]
 
 export function BottomNav({ onAdd }: { onAdd: () => void }) {
@@ -30,7 +31,8 @@ export function BottomNav({ onAdd }: { onAdd: () => void }) {
             ))}
           </div>
 
-          <div className="w-14" aria-hidden />
+          {/* Hueco del FAB: sin FAB, las cuatro pestañas se reparten el ancho. */}
+          {showFab && <div className="w-14" aria-hidden />}
 
           <div className="flex flex-1 justify-around">
             {right.map((item) => (
@@ -57,18 +59,8 @@ export function BottomNav({ onAdd }: { onAdd: () => void }) {
 
 function isTabActive(href: string, currentPath: string): boolean {
   if (href === currentPath) return true
-  if (href === "/more") {
-    return [
-      "/more",
-      "/search",
-      "/vehicles",
-      "/stocks",
-      "/profile",
-      "/analytics",
-      "/dashboard/vencimientos",
-      "/dashboard/proyecciones",
-    ].includes(currentPath)
-  }
+  // Las pantallas que cuelgan de "Más" mantienen esa pestaña activa.
+  if (href === ROUTES.more.href) return findRoute(currentPath)?.parent === ROUTES.more.href
   return false
 }
 
@@ -83,7 +75,8 @@ function NavButton({
   return (
     <Link
       href={item.href}
-      className={`flex flex-col items-center gap-0.5 px-2 py-1 text-[11px] font-medium transition-colors cursor-pointer ${
+      aria-current={isActive ? "page" : undefined}
+      className={`flex min-h-11 min-w-14 flex-col items-center justify-center gap-0.5 px-2 py-1 text-[11px] font-medium transition-colors cursor-pointer ${
         isActive ? "text-primary font-semibold" : "text-muted-foreground hover:text-foreground"
       }`}
     >

@@ -14,9 +14,10 @@ import {
 } from "@/components/ui/responsive-dialog"
 import type { Account, Currency } from "@/lib/finance-data"
 import { useFinance } from "./finance-provider"
+import { useConfirm } from "./confirm-dialog"
 import { AccountIcon } from "./account-icon"
 import { toast } from "sonner"
-import { Wallet, Trash2, Loader2 } from "lucide-react"
+import { Wallet, Trash2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const KINDS: { value: Account["kind"]; label: string }[] = [
@@ -48,6 +49,7 @@ export function AddAccountSheet({
   account?: Account | null
 }) {
   const { addAccount, updateAccount, deleteAccount } = useFinance()
+  const confirm = useConfirm()
   const [name, setName] = useState("")
   const [currency, setCurrency] = useState<Currency>("ARS")
   const [kind, setKind] = useState<Account["kind"]>("bank")
@@ -113,9 +115,10 @@ export function AddAccountSheet({
 
   async function handleDelete() {
     if (!account) return
-    const confirmed = window.confirm(
-      `¿Estás seguro de que querés eliminar la cuenta "${account.name}"?\n(Las transacciones registradas no se borrarán)`
-    )
+    const confirmed = await confirm({
+      title: `¿Eliminar la cuenta "${account.name}"?`,
+      description: "Los movimientos registrados no se borrarán.",
+    })
     if (!confirmed) return
 
     setSubmitting(true)
@@ -142,7 +145,7 @@ export function AddAccountSheet({
             </span>
             <div>
               <ResponsiveDialogTitle className="text-lg font-semibold tracking-tight text-foreground">
-                {account ? "Editar Cuenta" : "Nueva Cuenta"}
+                {account ? "Editar cuenta" : "Nueva cuenta"}
               </ResponsiveDialogTitle>
               <ResponsiveDialogDescription className="text-xs text-muted-foreground">
                 {account
@@ -276,7 +279,7 @@ export function AddAccountSheet({
                 size="icon"
                 disabled={submitting}
                 onClick={handleDelete}
-                className="rounded-xl shrink-0 h-11 w-11 cursor-pointer"
+                className="shrink-0 h-11 w-11"
                 title="Eliminar cuenta"
                 aria-label="Eliminar cuenta"
               >
@@ -288,7 +291,7 @@ export function AddAccountSheet({
               type="submit"
               size="lg"
               disabled={submitting}
-              className="flex-1 rounded-xl h-11 font-semibold bg-primary text-primary-foreground shadow-lg shadow-primary/20 cursor-pointer"
+              className="flex-1 h-11 font-semibold"
             >
               {submitting ? (
                 <span className="size-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />

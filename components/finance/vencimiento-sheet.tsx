@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/responsive-dialog"
 import { DatePicker } from "@/components/ui/date-picker"
 import { useFinance } from "./finance-provider"
+import { useConfirm } from "./confirm-dialog"
 import { DUE_CATEGORIES, type DueItem, type DueFrequency, type Currency } from "@/lib/finance-data"
 import { toast } from "sonner"
 import { Trash2, Loader2 } from "lucide-react"
@@ -45,6 +46,7 @@ const REMINDER_OPTIONS = [
 
 export function VencimientoSheet({ open, onClose, item }: VencimientoSheetProps) {
   const { addDueItem, updateDueItem, deleteDueItem, accounts } = useFinance()
+  const confirm = useConfirm()
 
   const [title, setTitle] = useState("")
   const [category, setCategory] = useState("Servicios")
@@ -149,6 +151,8 @@ export function VencimientoSheet({ open, onClose, item }: VencimientoSheetProps)
 
   async function handleDelete() {
     if (!item) return
+    const confirmed = await confirm({ title: `¿Eliminar el vencimiento "${item.title}"?` })
+    if (!confirmed) return
     setSubmitting(true)
     try {
       await deleteDueItem(item.id)
@@ -167,7 +171,7 @@ export function VencimientoSheet({ open, onClose, item }: VencimientoSheetProps)
       <ResponsiveDialogContent className="w-full sm:max-w-xl max-w-[calc(100%-2rem)] h-auto rounded-xl bg-card border border-border p-6 shadow-2xl overflow-y-auto max-h-[90vh] transition-all duration-200">
         <ResponsiveDialogHeader className="text-left pb-2">
           <ResponsiveDialogTitle className="text-lg font-semibold tracking-tight text-foreground">
-            {item ? "Editar Vencimiento" : "Nuevo Vencimiento o Servicio"}
+            {item ? "Editar vencimiento" : "Nuevo vencimiento o servicio"}
           </ResponsiveDialogTitle>
           <ResponsiveDialogDescription className="text-xs text-muted-foreground">
             Registra tus servicios periódicos (luz, agua, alquiler, etc.) para recibir alertas antes de que queden en mora.
@@ -350,7 +354,7 @@ export function VencimientoSheet({ open, onClose, item }: VencimientoSheetProps)
                 size="icon"
                 onClick={handleDelete}
                 disabled={submitting}
-                className="size-11 rounded-xl shrink-0 cursor-pointer"
+                className="size-11 shrink-0"
                 title="Eliminar vencimiento"
                 aria-label="Eliminar vencimiento"
               >
@@ -361,7 +365,7 @@ export function VencimientoSheet({ open, onClose, item }: VencimientoSheetProps)
             <Button
               type="submit"
               disabled={submitting}
-              className="flex-1 rounded-xl bg-primary text-primary-foreground font-semibold py-5 shadow-lg shadow-primary/20 cursor-pointer"
+              className="flex-1 font-semibold py-5"
             >
               {submitting ? (
                 <>

@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/responsive-dialog"
 import type { Vehicle, VehicleType } from "@/lib/finance-data"
 import { useFinance } from "./finance-provider"
+import { useConfirm } from "./confirm-dialog"
 import { toast } from "sonner"
 import { Bike, Car, Truck, Milestone, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -34,6 +35,7 @@ export function AddVehicleSheet({
   vehicle?: Vehicle | null
 }) {
   const { addVehicle, updateVehicle, deleteVehicle } = useFinance()
+  const confirm = useConfirm()
   const [name, setName] = useState("")
   const [type, setType] = useState<VehicleType>("car")
   const [brand, setBrand] = useState("")
@@ -111,9 +113,10 @@ export function AddVehicleSheet({
 
   async function handleDelete() {
     if (!vehicle) return
-    const confirmed = window.confirm(
-      `¿Estás seguro de que querés eliminar el vehículo "${vehicle.name}"?\n(Se eliminarán todos sus registros y gastos asociados de forma permanente)`
-    )
+    const confirmed = await confirm({
+      title: `¿Eliminar "${vehicle.name}"?`,
+      description: "Se eliminarán todos sus registros y gastos asociados de forma permanente.",
+    })
     if (!confirmed) return
 
     setSubmitting(true)
@@ -135,7 +138,7 @@ export function AddVehicleSheet({
       <ResponsiveDialogContent className="w-full sm:max-w-xl max-w-[calc(100%-2rem)] h-auto rounded-xl bg-card border border-border p-6 shadow-2xl overflow-y-auto max-h-[90vh] transition-all duration-200">
         <ResponsiveDialogHeader className="text-left pb-1">
           <ResponsiveDialogTitle className="text-lg font-semibold tracking-tight text-foreground">
-            {vehicle ? "Editar Vehículo" : "Nuevo Vehículo"}
+            {vehicle ? "Editar vehículo" : "Nuevo vehículo"}
           </ResponsiveDialogTitle>
           <ResponsiveDialogDescription className="text-xs text-muted-foreground">
             {vehicle ? "Modificá la ficha del vehículo" : "Registrá un nuevo vehículo en tu garaje"}
@@ -178,7 +181,7 @@ export function AddVehicleSheet({
                     className="flex h-14 flex-col items-center justify-center gap-1 p-1 rounded-xl cursor-pointer"
                   >
                     <SelectedIcon className="size-4" />
-                    <span className="text-[10px]">{t.label}</span>
+                    <span className="text-[11px]">{t.label}</span>
                   </Button>
                 )
               })}
@@ -288,7 +291,7 @@ export function AddVehicleSheet({
             <Button
               type="submit"
               size="lg"
-              className="w-full rounded-xl h-11 font-semibold bg-primary text-primary-foreground shadow-lg shadow-primary/20 cursor-pointer"
+              className="w-full h-11 font-semibold"
               disabled={submitting}
             >
               {submitting ? (
@@ -308,7 +311,7 @@ export function AddVehicleSheet({
                 type="button"
                 variant="destructive"
                 size="lg"
-                className="w-full rounded-xl h-11 cursor-pointer"
+                className="w-full h-11"
                 onClick={handleDelete}
                 disabled={submitting}
               >

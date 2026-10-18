@@ -152,7 +152,7 @@ export function PayVencimientoModal({ open, onClose, item }: PayVencimientoModal
           </div>
 
           {!hasEligibleAccount && (
-            <p className="text-[11px] font-medium text-amber-500/90 bg-amber-500/10 p-2.5 rounded-xl border border-amber-500/20 text-center">
+            <p className="text-[11px] font-medium text-warning/90 bg-warning/10 p-2.5 rounded-xl border border-warning/20 text-center">
               No tenés ninguna cuenta en {item.currency}. Podés marcarlo como pagado, pero el movimiento no se va a
               registrar.
             </p>
@@ -214,7 +214,7 @@ export function PayVencimientoModal({ open, onClose, item }: PayVencimientoModal
           )}
 
           {item.autoRenew && item.frequency !== "one_time" && (
-            <p className="text-[11px] text-emerald-500/90 font-medium bg-emerald-500/10 p-2.5 rounded-xl border border-emerald-500/20 text-center">
+            <p className="text-[11px] text-success/90 font-medium bg-success/10 p-2.5 rounded-xl border border-success/20 text-center">
               💡 Al confirmar, este servicio auto-renovará su vencimiento para el próximo ciclo.
             </p>
           )}
@@ -226,7 +226,7 @@ export function PayVencimientoModal({ open, onClose, item }: PayVencimientoModal
               variant="outline"
               onClick={onClose}
               disabled={submitting}
-              className="rounded-xl flex-1 border-border cursor-pointer"
+              className="flex-1 border-border"
             >
               Cancelar
             </Button>
@@ -234,7 +234,7 @@ export function PayVencimientoModal({ open, onClose, item }: PayVencimientoModal
               type="button"
               onClick={handleConfirm}
               disabled={submitting}
-              className="rounded-xl flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-lg shadow-emerald-600/20 py-5 cursor-pointer"
+              className="flex-1 bg-success hover:bg-success text-white font-semibold shadow-success/20 py-5"
             >
               {submitting ? (
                 <>

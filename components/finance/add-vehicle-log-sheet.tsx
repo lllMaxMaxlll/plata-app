@@ -15,17 +15,19 @@ import {
 } from "@/components/ui/responsive-dialog"
 import type { Vehicle, VehicleLog, VehicleLogType } from "@/lib/finance-data"
 import { useFinance } from "./finance-provider"
+import { useConfirm } from "./confirm-dialog"
 import { toast } from "sonner"
 import { Fuel, Wrench, Settings, ShieldAlert, Sparkles, ShoppingBag, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { OptionSelect } from "./option-select"
 
 const LOG_TYPES: { value: VehicleLogType; label: string; Icon: any; color: string }[] = [
-  { value: "fuel", label: "Combustible", Icon: Fuel, color: "bg-orange-500/10 text-orange-500 border-orange-500/20" },
-  { value: "service", label: "Service", Icon: Wrench, color: "bg-blue-500/10 text-blue-500 border-blue-500/20" },
-  { value: "part", label: "Repuesto", Icon: Settings, color: "bg-purple-500/10 text-purple-500 border-purple-500/20" },
-  { value: "gear", label: "Indumentaria", Icon: ShoppingBag, color: "bg-pink-500/10 text-pink-500 border-pink-500/20" },
-  { value: "insurance", label: "Seguro/Patente", Icon: ShieldAlert, color: "bg-red-500/10 text-red-500 border-red-500/20" },
-  { value: "other", label: "Otro", Icon: Sparkles, color: "bg-slate-500/10 text-slate-500 border-slate-500/20" },
+  { value: "fuel", label: "Combustible", Icon: Fuel, color: "bg-chart-2/10 text-chart-2 border-chart-2/20" },
+  { value: "service", label: "Service", Icon: Wrench, color: "bg-chart-1/10 text-chart-1 border-chart-1/20" },
+  { value: "part", label: "Repuesto", Icon: Settings, color: "bg-chart-5/10 text-chart-5 border-chart-5/20" },
+  { value: "gear", label: "Indumentaria", Icon: ShoppingBag, color: "bg-chart-5/10 text-chart-5 border-chart-5/20" },
+  { value: "insurance", label: "Seguro/Patente", Icon: ShieldAlert, color: "bg-destructive/10 text-destructive border-destructive/20" },
+  { value: "other", label: "Otro", Icon: Sparkles, color: "bg-muted text-muted-foreground border-border" },
 ]
 
 const GAS_STATIONS = ["YPF", "Shell", "Axion", "Puma", "Otro"]
@@ -42,6 +44,7 @@ export function AddVehicleLogSheet({
   log?: VehicleLog | null
 }) {
   const { addVehicleLog, updateVehicleLog, deleteVehicleLog, accounts } = useFinance()
+  const confirm = useConfirm()
 
   const [type, setType] = useState<VehicleLogType>("fuel")
   const [date, setDate] = useState("")
@@ -181,9 +184,10 @@ export function AddVehicleLogSheet({
 
   async function handleDelete() {
     if (!log) return
-    const confirmed = window.confirm(
-      "¿Estás seguro de que querés eliminar este registro?\n(Si estaba vinculado a una cuenta, se devolverá el dinero a su saldo)"
-    )
+    const confirmed = await confirm({
+      title: "¿Eliminar este registro?",
+      description: "Si estaba vinculado a una cuenta, el importe vuelve a su saldo.",
+    })
     if (!confirmed) return
 
     setSubmitting(true)
@@ -205,7 +209,7 @@ export function AddVehicleLogSheet({
       <ResponsiveDialogContent className="w-full max-w-[calc(100vw-2rem)] sm:max-w-lg rounded-xl bg-card border border-border p-6 shadow-2xl overflow-y-auto max-h-[90vh]">
         <ResponsiveDialogHeader className="text-left pb-1">
           <ResponsiveDialogTitle className="text-lg font-semibold tracking-tight text-foreground">
-            {log ? "Editar Registro" : "Nuevo Registro"}
+            {log ? "Editar registro" : "Nuevo registro"}
           </ResponsiveDialogTitle>
           <ResponsiveDialogDescription className="text-xs text-muted-foreground">
             {log ? "Modificá los detalles del registro" : `Registrar evento para ${vehicle.name}`}
@@ -231,7 +235,7 @@ export function AddVehicleLogSheet({
                     className="flex h-12 flex-col items-center justify-center gap-1 p-1 rounded-xl cursor-pointer"
                   >
                     <t.Icon className="size-4" />
-                    <span className="text-[10px]">{t.label}</span>
+                    <span className="text-[11px]">{t.label}</span>
                   </Button>
                 )
               })}
@@ -294,17 +298,12 @@ export function AddVehicleLogSheet({
                   <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
                     Estación de Servicio
                   </Label>
-                  <select
+                  <OptionSelect
+                    ariaLabel="Estación de servicio"
                     value={gasStation}
-                    onChange={(e) => setGasStation(e.target.value)}
-                    className="w-full h-10 rounded-xl border border-border bg-card/60 px-3 text-sm"
-                  >
-                    {GAS_STATIONS.map((st) => (
-                      <option key={st} value={st}>
-                        {st}
-                      </option>
-                    ))}
-                  </select>
+                    onValueChange={setGasStation}
+                    options={GAS_STATIONS.map((st) => ({ value: st, label: st }))}
+                  />
                 </div>
               </div>
 
@@ -440,18 +439,15 @@ export function AddVehicleLogSheet({
               <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
                 Pagar desde cuenta
               </Label>
-              <select
-                value={accountId}
-                onChange={(e) => setAccountId(e.target.value)}
-                className="w-full h-10 rounded-xl border border-border bg-card/60 px-3 text-sm"
-              >
-                <option value="">No descontar (Solo registrar)</option>
-                {accounts.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.name} ({a.currency})
-                  </option>
-                ))}
-              </select>
+              <OptionSelect
+                ariaLabel="Cuenta a descontar"
+                value={accountId || "none"}
+                onValueChange={(v) => setAccountId(v === "none" ? "" : v)}
+                options={[
+                  { value: "none", label: "No descontar (solo registrar)" },
+                  ...accounts.map((a) => ({ value: a.id, label: `${a.name} (${a.currency})` })),
+                ]}
+              />
             </div>
           </div>
 
@@ -460,7 +456,7 @@ export function AddVehicleLogSheet({
             <Button
               type="submit"
               size="lg"
-              className="w-full rounded-xl h-11 font-semibold bg-primary text-primary-foreground shadow-lg shadow-primary/20 cursor-pointer"
+              className="w-full h-11 font-semibold"
               disabled={submitting}
             >
               {submitting ? (
@@ -480,7 +476,7 @@ export function AddVehicleLogSheet({
                 type="button"
                 variant="destructive"
                 size="lg"
-                className="w-full rounded-xl h-11 cursor-pointer"
+                className="w-full h-11"
                 onClick={handleDelete}
                 disabled={submitting}
               >

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Wallet, Mail, Lock, ArrowRight } from "lucide-react"
+import { Mail, Lock, ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useFinance } from "./finance-provider"
 
@@ -173,12 +173,12 @@ export function AuthView() {
           )}
 
           {success && (
-            <div className="rounded-xl bg-green-500/10 p-3 text-center text-xs font-medium text-green-500 border border-green-500/20">
+            <div className="rounded-xl bg-success/10 p-3 text-center text-xs font-medium text-success border border-success/20">
               {success}
             </div>
           )}
 
-          <Button type="submit" size="lg" disabled={submitting || (mode === "forgot" && !!success)} className="mt-1 h-11 w-full rounded-xl text-sm">
+          <Button type="submit" size="lg" disabled={submitting || (mode === "forgot" && !!success)} className="mt-1 h-11 w-full text-sm">
             {submitting ? (
               <span className="size-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
             ) : (

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { ShieldAlert, KeyRound, Mail, RefreshCw, Lock, Eye, EyeOff, CheckCircle2, Loader2 } from "lucide-react"
+import { ShieldAlert, Mail, RefreshCw, Eye, EyeOff, CheckCircle2, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -154,13 +154,13 @@ export function SecuritySheet({ open, onClose }: { open: boolean; onClose: () =>
                 <Mail className="size-5" />
               </div>
               <div className="min-w-0 flex-1">
-                <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                <Label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
                   Correo Electrónico
                 </Label>
                 <p className="truncate text-sm font-semibold text-foreground">{user.email}</p>
               </div>
               {isGoogleUser && (
-                <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-primary/10 border border-primary/20 px-2.5 py-0.5 text-[10px] font-semibold text-primary">
+                <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-primary/10 border border-primary/20 px-2.5 py-0.5 text-[11px] font-semibold text-primary">
                   Google
                 </span>
               )}
@@ -187,12 +187,12 @@ export function SecuritySheet({ open, onClose }: { open: boolean; onClose: () =>
             </div>
 
             {user.emailVerified ? (
-              <div className="flex items-center gap-2.5 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-3 text-xs text-emerald-600 dark:text-emerald-400 font-semibold min-w-0">
+              <div className="flex items-center gap-2.5 rounded-2xl border border-success/20 bg-success/10 p-3 text-xs text-success dark:text-success font-semibold min-w-0">
                 <CheckCircle2 className="size-4 shrink-0" />
                 <span>Tu correo electrónico está verificado correctamente.</span>
               </div>
             ) : (
-              <div className="flex min-w-0 flex-col gap-2 rounded-2xl border border-amber-500/20 bg-amber-500/10 p-3.5 text-amber-700 dark:text-amber-300">
+              <div className="flex min-w-0 flex-col gap-2 rounded-2xl border border-warning/20 bg-warning/10 p-3.5 text-warning dark:text-warning">
                 <div className="flex items-start gap-2.5 min-w-0">
                   <ShieldAlert className="size-4 shrink-0 mt-0.5" />
                   <div className="text-xs min-w-0">
@@ -209,7 +209,7 @@ export function SecuritySheet({ open, onClose }: { open: boolean; onClose: () =>
                   size="sm"
                   disabled={sendingVerification || verificationCooldown > 0}
                   onClick={handleSendVerification}
-                  className="w-full text-xs font-semibold py-2 h-9 rounded-xl border-amber-500/30 hover:bg-amber-500/10 text-amber-700 dark:text-amber-300 cursor-pointer mt-1"
+                  className="w-full text-xs font-semibold py-2 h-9 rounded-xl border-warning/30 hover:bg-warning/10 text-warning dark:text-warning cursor-pointer mt-1"
                 >
                   {sendingVerification ? (
                     <span className="size-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
@@ -313,7 +313,7 @@ export function SecuritySheet({ open, onClose }: { open: boolean; onClose: () =>
                   type="submit"
                   size="lg"
                   disabled={submitting || !currentPassword || !newPassword || !confirmPassword}
-                  className="h-11 w-full text-sm font-semibold rounded-xl bg-primary text-primary-foreground shadow-lg shadow-primary/20 cursor-pointer mt-1"
+                  className="h-11 w-full text-sm font-semibold mt-1"
                 >
                   {submitting ? (
                     <>

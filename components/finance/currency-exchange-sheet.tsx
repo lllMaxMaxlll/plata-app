@@ -466,7 +466,7 @@ export function CurrencyExchangeSheet({ open, onClose }: CurrencyExchangeSheetPr
                 type="submit"
                 disabled={!canSubmit}
                 size="lg"
-                className="mt-2 w-full font-semibold h-11 rounded-xl bg-primary text-primary-foreground shadow-lg shadow-primary/20 cursor-pointer"
+                className="mt-2 w-full font-semibold h-11"
               >
                 {submitting ? (
                   <span className="flex items-center justify-center gap-2 font-semibold">

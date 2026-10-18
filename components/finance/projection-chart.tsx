@@ -149,11 +149,11 @@ export function ProjectionChart({
               aria-pressed={activeScenarios.optimistic}
               className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer border ${
                 activeScenarios.optimistic
-                  ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/40"
+                  ? "bg-success/10 text-success border-success/40"
                   : "bg-muted/40 text-muted-foreground border-transparent opacity-50"
               }`}
             >
-              <span className="size-2 rounded-full bg-emerald-500" />
+              <span className="size-2 rounded-full bg-success" />
               Optimista
             </button>
 
@@ -162,11 +162,11 @@ export function ProjectionChart({
               aria-pressed={activeScenarios.neutral}
               className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer border ${
                 activeScenarios.neutral
-                  ? "bg-cyan-500/10 text-cyan-400 border-cyan-500/40"
+                  ? "bg-chart-1/10 text-chart-1 border-chart-1/40"
                   : "bg-muted/40 text-muted-foreground border-transparent opacity-50"
               }`}
             >
-              <span className="size-2 rounded-full bg-cyan-500" />
+              <span className="size-2 rounded-full bg-chart-1" />
               Neutro
             </button>
 
@@ -175,11 +175,11 @@ export function ProjectionChart({
               aria-pressed={activeScenarios.pessimistic}
               className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer border ${
                 activeScenarios.pessimistic
-                  ? "bg-rose-500/10 text-rose-400 border-rose-500/40"
+                  ? "bg-destructive/10 text-destructive border-destructive/40"
                   : "bg-muted/40 text-muted-foreground border-transparent opacity-50"
               }`}
             >
-              <span className="size-2 rounded-full bg-rose-500" />
+              <span className="size-2 rounded-full bg-destructive" />
               Pesimista
             </button>
           </div>
@@ -202,20 +202,20 @@ export function ProjectionChart({
             <defs>
               {/* Optimistic Gradient */}
               <linearGradient id={`grad-opt-${chartId}`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#10b981" stopOpacity="0.3" />
-                <stop offset="100%" stopColor="#10b981" stopOpacity="0.0" />
+                <stop offset="0%" stopColor="var(--success)" stopOpacity="0.3" />
+                <stop offset="100%" stopColor="var(--success)" stopOpacity="0.0" />
               </linearGradient>
 
               {/* Neutral Gradient */}
               <linearGradient id={`grad-neu-${chartId}`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#06b6d4" stopOpacity="0.3" />
-                <stop offset="100%" stopColor="#06b6d4" stopOpacity="0.0" />
+                <stop offset="0%" stopColor="var(--chart-1)" stopOpacity="0.3" />
+                <stop offset="100%" stopColor="var(--chart-1)" stopOpacity="0.0" />
               </linearGradient>
 
               {/* Pessimistic Gradient */}
               <linearGradient id={`grad-pes-${chartId}`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#f43f5e" stopOpacity="0.25" />
-                <stop offset="100%" stopColor="#f43f5e" stopOpacity="0.0" />
+                <stop offset="0%" stopColor="var(--destructive)" stopOpacity="0.25" />
+                <stop offset="100%" stopColor="var(--destructive)" stopOpacity="0.0" />
               </linearGradient>
             </defs>
 
@@ -235,7 +235,7 @@ export function ProjectionChart({
                   x={paddingLeft - 8}
                   y={tick.y + 4}
                   textAnchor="end"
-                  className="fill-muted-foreground text-[10px] font-medium tabular-nums"
+                  className="fill-muted-foreground text-[11px] font-medium tabular-nums"
                 >
                   {formatCompact(tick.val, displayCurrency)}
                 </text>
@@ -251,7 +251,7 @@ export function ProjectionChart({
                   x={x}
                   y={height - 12}
                   textAnchor="middle"
-                  className="fill-muted-foreground text-[10px] font-medium"
+                  className="fill-muted-foreground text-[11px] font-medium"
                 >
                   {pt.label}
                 </text>
@@ -286,7 +286,7 @@ export function ProjectionChart({
               <path
                 d={buildPath("optimistic")}
                 fill="none"
-                stroke="#10b981"
+                stroke="var(--success)"
                 strokeWidth="2.5"
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -297,7 +297,7 @@ export function ProjectionChart({
               <path
                 d={buildPath("neutral")}
                 fill="none"
-                stroke="#06b6d4"
+                stroke="var(--chart-1)"
                 strokeWidth="2.5"
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -308,7 +308,7 @@ export function ProjectionChart({
               <path
                 d={buildPath("pessimistic")}
                 fill="none"
-                stroke="#f43f5e"
+                stroke="var(--destructive)"
                 strokeWidth="2.5"
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -334,7 +334,7 @@ export function ProjectionChart({
                     cx={hoverX}
                     cy={getY(hoverPoint.optimistic)}
                     r="5"
-                    fill="#10b981"
+                    fill="var(--success)"
                     className="stroke-background stroke-2"
                   />
                 )}
@@ -343,7 +343,7 @@ export function ProjectionChart({
                     cx={hoverX}
                     cy={getY(hoverPoint.neutral)}
                     r="5"
-                    fill="#06b6d4"
+                    fill="var(--chart-1)"
                     className="stroke-background stroke-2"
                   />
                 )}
@@ -352,7 +352,7 @@ export function ProjectionChart({
                     cx={hoverX}
                     cy={getY(hoverPoint.pessimistic)}
                     r="5"
-                    fill="#f43f5e"
+                    fill="var(--destructive)"
                     className="stroke-background stroke-2"
                   />
                 )}
@@ -438,15 +438,15 @@ export function ProjectionChart({
 
             <div className="flex items-center gap-4 flex-wrap">
               {hoverPoint.achievedGoalNames && hoverPoint.achievedGoalNames.length > 0 && (
-                <Badge variant="outline" className="text-[10px] border-purple-500/50 text-purple-300 gap-1 bg-purple-500/10">
+                <Badge variant="outline" className="text-[11px] border-chart-5/50 text-chart-5 gap-1 bg-chart-5/10">
                   <Sparkles className="size-3" /> Meta alcanzada: {hoverPoint.achievedGoalNames.join(", ")}
                 </Badge>
               )}
               {activeScenarios.optimistic && (
                 <div className="flex items-center gap-1.5">
-                  <span className="size-2 rounded-full bg-emerald-500" />
+                  <span className="size-2 rounded-full bg-success" />
                   <span className="text-muted-foreground">Opt:</span>
-                  <span className="font-bold text-emerald-400 tabular-nums">
+                  <span className="font-bold text-success tabular-nums">
                     {formatShort(hoverPoint.optimistic, displayCurrency)}
                   </span>
                 </div>
@@ -454,9 +454,9 @@ export function ProjectionChart({
 
               {activeScenarios.neutral && (
                 <div className="flex items-center gap-1.5">
-                  <span className="size-2 rounded-full bg-cyan-500" />
+                  <span className="size-2 rounded-full bg-chart-1" />
                   <span className="text-muted-foreground font-medium">Neu:</span>
-                  <span className="font-bold text-cyan-400 tabular-nums">
+                  <span className="font-bold text-chart-1 tabular-nums">
                     {formatShort(hoverPoint.neutral, displayCurrency)}
                   </span>
                 </div>
@@ -464,9 +464,9 @@ export function ProjectionChart({
 
               {activeScenarios.pessimistic && (
                 <div className="flex items-center gap-1.5">
-                  <span className="size-2 rounded-full bg-rose-500" />
+                  <span className="size-2 rounded-full bg-destructive" />
                   <span className="text-muted-foreground">Pes:</span>
-                  <span className="font-bold text-rose-400 tabular-nums">
+                  <span className="font-bold text-destructive tabular-nums">
                     {formatShort(hoverPoint.pessimistic, displayCurrency)}
                   </span>
                 </div>

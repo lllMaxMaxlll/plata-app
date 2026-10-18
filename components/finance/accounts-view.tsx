@@ -1,12 +1,13 @@
 "use client"
 
 import { useState, useMemo } from "react"
-import { Plus, Wallet, Building2, CreditCard, Banknote, ShieldCheck, ArrowLeftRight, Pencil, Coins, Percent } from "lucide-react"
+import { Plus, Wallet, Building2, CreditCard, Banknote, ShieldCheck, ArrowLeftRight, Pencil, Coins } from "lucide-react"
 import { ACCENT_BY_KIND, formatShort, formatCurrency, type Account, type Currency } from "@/lib/finance-data"
 import { useFinance } from "./finance-provider"
+import { PageHeader } from "./page-header"
 import { AccountIcon } from "./account-icon"
 import { Button } from "@/components/ui/button"
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
+import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { useUI } from "./ui-context"
 
@@ -30,6 +31,7 @@ export function AccountsView({
 }) {
   const { accounts, totalsByCurrency } = useFinance()
   const ui = useUI()
+  const { mask } = ui
 
   const [selectedKind, setSelectedKind] = useState<FilterKind>("all")
 
@@ -56,22 +58,7 @@ export function AccountsView({
   if (accounts.length === 0) {
     return (
       <div className="px-4 sm:px-6 pt-4 pb-12 font-sans max-w-4xl mx-auto space-y-6">
-        <div className="flex items-center justify-between border-b border-border/40 pb-4">
-          <div>
-            <h1 className="text-xl font-bold tracking-tight text-foreground flex items-center gap-2">
-              <Wallet className="size-5 text-primary" /> Mis Cuentas
-            </h1>
-            <p className="text-xs text-muted-foreground mt-0.5">Administrá tus fuentes y métodos de pago</p>
-          </div>
-          <Button
-            size="sm"
-            onClick={onAddAccount}
-            className="h-9 text-xs font-semibold gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90 cursor-pointer shadow-xs"
-          >
-            <Plus className="size-3.5" />
-            Nueva Cuenta
-          </Button>
-        </div>
+        <PageHeader route="accounts" description="Administrá tus fuentes y métodos de pago." />
 
         <Card className="p-8 text-center border-dashed border-border/80 bg-card/40 flex flex-col items-center justify-center max-w-md mx-auto my-12">
           <div className="mb-4 flex size-14 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
@@ -83,9 +70,10 @@ export function AccountsView({
           </p>
           <Button
             onClick={onAddAccount}
-            className="mt-5 h-9 text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 cursor-pointer shadow-xs"
+            className="mt-5 h-9 text-xs font-semibold"
           >
-            + Crear Mi Primera Cuenta
+            <Plus className="size-4" />
+            Crear mi primera cuenta
           </Button>
         </Card>
       </div>
@@ -95,47 +83,25 @@ export function AccountsView({
   return (
     <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 pt-4 pb-12 font-sans space-y-6">
       {/* 1. Header Banner */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-border/40 pb-4">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <span className="flex size-9 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20">
-              <Wallet className="size-5" />
-            </span>
-            <div>
-              <h1 className="text-xl font-bold tracking-tight text-foreground flex items-center gap-2">
-                Mis Cuentas & Tarjetas
-              </h1>
-              <p className="text-xs text-muted-foreground">
-                {accounts.length} {accounts.length === 1 ? "cuenta activa" : "cuentas activas en total"}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2.5 w-full sm:w-auto">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={ui.handleOpenExchange}
-            className="h-9 text-xs gap-1.5 font-semibold border-border bg-card hover:bg-accent hover:border-primary/40 cursor-pointer shadow-xs flex-1 sm:flex-initial transition-all"
-          >
-            <ArrowLeftRight className="size-3.5 text-primary" />
-            Transferir / Cambio
-          </Button>
-
-          <Button
-            size="sm"
-            onClick={onAddAccount}
-            className="h-9 text-xs gap-1.5 font-bold bg-primary text-primary-foreground hover:bg-primary/90 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer shadow-sm flex-1 sm:flex-initial"
-          >
-            <Plus className="size-3.5" />
-            Nueva Cuenta
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        route="accounts"
+        description={`${accounts.length} ${accounts.length === 1 ? "cuenta activa" : "cuentas activas"}`}
+        actions={
+          <>
+            <Button variant="outline" onClick={ui.handleOpenExchange}>
+              <ArrowLeftRight className="size-4" />
+              Cambio / Transferir
+            </Button>
+            <Button onClick={onAddAccount}>
+              <Plus className="size-4" />
+              Nueva cuenta
+            </Button>
+          </>
+        }
+      />
 
       {/* 2. Type Filter Pills */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none font-mono">
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar font-mono">
         {(Object.keys(KIND_LABELS) as FilterKind[]).map((kindKey) => {
           const { label, icon: Icon } = KIND_LABELS[kindKey]
           const count = kindKey === "all" ? accounts.length : countsByKind[kindKey] || 0
@@ -155,7 +121,7 @@ export function AccountsView({
             >
               <Icon className="size-3.5" />
               <span>{label}</span>
-              <span className={`ml-0.5 text-[10px] px-1.5 py-0.2 rounded-full ${isSelected ? "bg-primary-foreground/20 text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
+              <span className={`ml-0.5 text-[11px] px-1.5 py-0.2 rounded-full ${isSelected ? "bg-primary-foreground/20 text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
                 {count}
               </span>
             </button>
@@ -186,11 +152,11 @@ export function AccountsView({
                   <p className="text-[11px] font-mono text-muted-foreground">{g.subtitle}</p>
                 </div>
                 <div className="text-right font-mono">
-                  <span className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold block">
+                  <span className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold block">
                     TOTAL CONSOLIDADO
                   </span>
                   <span className={`text-base font-bold tabular-nums ${g.currency === "USD" ? "text-primary" : "text-foreground"}`}>
-                    {formatCurrency(totalBalance, g.currency)}
+                    {mask(formatCurrency(totalBalance, g.currency))}
                   </span>
                 </div>
               </div>
@@ -235,12 +201,12 @@ export function AccountsView({
                                   </p>
                                   <Badge
                                     variant="outline"
-                                    className="px-1.5 py-0 text-[9px] font-mono uppercase tracking-wider border-border text-muted-foreground"
+                                    className="px-1.5 py-0 text-[11px] uppercase tracking-wider border-border text-muted-foreground"
                                   >
                                     {acc.kind}
                                   </Badge>
                                 </div>
-                                <p className="text-[10px] text-muted-foreground font-mono mt-0.5">
+                                <p className="text-[11px] text-muted-foreground font-mono mt-0.5">
                                   {pctShare > 0 ? `${pctShare.toFixed(1)}% del saldo ${acc.currency}` : "Sin saldo"}
                                 </p>
                               </div>
@@ -248,9 +214,9 @@ export function AccountsView({
 
                             <div className="text-right font-mono">
                               <p className="text-sm font-bold text-foreground tabular-nums">
-                                {formatShort(acc.balance, acc.currency)}
+                                {mask(formatShort(acc.balance, acc.currency))}
                               </p>
-                              <span className="mt-1 flex items-center justify-end gap-1 text-[10px] text-muted-foreground group-hover:text-primary transition-colors">
+                              <span className="mt-1 flex items-center justify-end gap-1 text-[11px] text-muted-foreground group-hover:text-primary transition-colors">
                                 <Pencil aria-hidden className="size-3" />
                                 Editar
                               </span>
@@ -280,7 +246,7 @@ export function AccountsView({
               <Button
                 variant="outline"
                 onClick={onAddAccount}
-                className="w-full flex items-center justify-center gap-2 py-2 rounded-lg border-dashed border-border/80 text-xs font-medium text-muted-foreground hover:border-primary hover:text-primary cursor-pointer"
+                className="w-full flex items-center justify-center gap-2 py-2 border-dashed border-border/80 text-xs font-medium text-muted-foreground hover:border-primary hover:text-primary"
               >
                 <Plus className="size-3.5" />
                 Agregar Cuenta en {g.currency}

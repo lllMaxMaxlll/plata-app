@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react"
 import {
-  ArrowLeft,
   Calendar,
   TrendingUp,
   TrendingDown,
@@ -11,11 +10,10 @@ import {
   DollarSign,
   Bike,
   Car,
-  Truck
+  Truck,
 } from "lucide-react"
 import { useFinance } from "./finance-provider"
 import { formatShort, formatCurrency, transactionCurrency, type Transaction, type Currency } from "@/lib/finance-data"
-import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
@@ -30,7 +28,6 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  ResponsiveContainer,
 } from "recharts"
 import {
   ChartContainer,
@@ -43,14 +40,15 @@ import {
 import { BarChart3, LineChart as LineChartIcon } from "lucide-react"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { cn, clickableRowProps, focusRing } from "@/lib/utils"
+import { PageHeader } from "./page-header"
+import { OptionSelect } from "./option-select"
+import { Segmented } from "./segmented"
 
 interface AnalyticsViewProps {
-  isDesktop?: boolean
-  onBack: () => void
   onEditTransaction: (tx: Transaction) => void
 }
 
-export function AnalyticsView({ isDesktop = false, onBack, onEditTransaction }: AnalyticsViewProps) {
+export function AnalyticsView({ onEditTransaction }: AnalyticsViewProps) {
   const { transactions, getAccount, categories, vehicles, vehicleLogs } = useFinance()
   const [selectedCurrency, setSelectedCurrency] = useState<Currency>("ARS")
   
@@ -330,75 +328,51 @@ export function AnalyticsView({ isDesktop = false, onBack, onEditTransaction }: 
   return (
     <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 pt-4 pb-12 font-sans space-y-6 text-foreground">
       {/* Header */}
-      {!isDesktop && (
-        <div className="flex items-center gap-3 mb-6">
-          <Button
-            variant="outline"
-            size="icon-sm"
-            onClick={onBack}
-            className="size-10 sm:size-8 rounded-full shrink-0"
-            aria-label="Volver"
-          >
-            <ArrowLeft className="size-4" />
-          </Button>
-          <div>
-            <h1 className="text-lg font-bold tracking-tight">Análisis de Gastos</h1>
-            <p className="text-xs text-muted-foreground">Distribución y comparación de tus consumos</p>
-          </div>
-        </div>
-      )}
+      <PageHeader route="analytics" description="Distribución y comparación de tus consumos." />
 
       {/* Selectors and Currency Controls */}
       <Card className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-6 p-4 shadow-sm">
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex flex-col gap-1">
-            <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider pl-1">Mes a Analizar</span>
+            <span className="text-[11px] text-muted-foreground font-bold uppercase tracking-wider pl-1">Mes a analizar</span>
             <div className="relative">
-              <select
+              <OptionSelect
+                ariaLabel="Mes a analizar"
                 value={selectedMonth}
-                onChange={(e) => {
-                  setSelectedMonth(e.target.value)
-                  if (e.target.value === comparisonMonth) {
-                    const idx = availableMonths.indexOf(e.target.value)
+                onValueChange={(month) => {
+                  setSelectedMonth(month)
+                  if (month === comparisonMonth) {
+                    const idx = availableMonths.indexOf(month)
                     setComparisonMonth(availableMonths[idx + 1] || "none")
                   }
                 }}
-                className="w-48 appearance-none bg-transparent border border-input text-sm font-semibold rounded-xl pl-3.5 pr-8 py-2 transition-colors cursor-pointer text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                {availableMonths.map((m) => (
-                  <option key={m} value={m}>
-                    {formatMonthName(m)}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none size-4 text-muted-foreground" />
+                className="w-48"
+                options={availableMonths.map((m) => ({ value: m, label: formatMonthName(m) }))}
+              />
             </div>
           </div>
 
           <div className="flex flex-col gap-1">
-            <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider pl-1">Comparar Con</span>
+            <span className="text-[11px] text-muted-foreground font-bold uppercase tracking-wider pl-1">Comparar con</span>
             <div className="relative">
-              <select
+              <OptionSelect
+                ariaLabel="Comparar con"
                 value={comparisonMonth}
-                onChange={(e) => setComparisonMonth(e.target.value)}
-                className="w-48 appearance-none bg-transparent border border-input text-sm font-semibold rounded-xl pl-3.5 pr-8 py-2 transition-colors cursor-pointer text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                <option value="none">Ninguno (Solo ver mes)</option>
-                {availableMonths
-                  .filter((m) => m !== selectedMonth)
-                  .map((m) => (
-                    <option key={m} value={m}>
-                      {formatMonthName(m)}
-                    </option>
-                  ))}
-              </select>
-              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none size-4 text-muted-foreground" />
+                onValueChange={setComparisonMonth}
+                className="w-48"
+                options={[
+                  { value: "none", label: "Ninguno (solo ver el mes)" },
+                  ...availableMonths
+                    .filter((m) => m !== selectedMonth)
+                    .map((m) => ({ value: m, label: formatMonthName(m) })),
+                ]}
+              />
             </div>
           </div>
         </div>
 
         <div className="flex flex-col gap-1 self-end md:self-auto">
-          <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider pl-1 self-end md:self-auto">Moneda</span>
+          <span className="text-[11px] text-muted-foreground font-bold uppercase tracking-wider pl-1 self-end md:self-auto">Moneda</span>
           <ToggleGroup
             value={[selectedCurrency]}
             onValueChange={(values) => {
@@ -412,13 +386,13 @@ export function AnalyticsView({ isDesktop = false, onBack, onEditTransaction }: 
           >
             <ToggleGroupItem value="ARS" className="gap-2 px-3 text-xs font-bold">
               ARS ($)
-              <Badge variant="secondary" className="px-1.5 text-[9px] tabular-nums">
+              <Badge variant="secondary" className="px-1.5 text-[11px] tabular-nums">
                 {currencyActivity.ARS}
               </Badge>
             </ToggleGroupItem>
             <ToggleGroupItem value="USD" className="gap-2 px-3 text-xs font-bold">
               USD (US$)
-              <Badge variant="secondary" className="px-1.5 text-[9px] tabular-nums">
+              <Badge variant="secondary" className="px-1.5 text-[11px] tabular-nums">
                 {currencyActivity.USD}
               </Badge>
             </ToggleGroupItem>
@@ -434,7 +408,7 @@ export function AnalyticsView({ isDesktop = false, onBack, onEditTransaction }: 
               <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">
                 Total Gastado
               </span>
-              <Badge variant="secondary" className="px-2 py-0.5 text-[9px] font-bold uppercase">
+              <Badge variant="secondary" className="px-2 py-0.5 text-[11px] font-bold uppercase">
                 {selectedCurrency}
               </Badge>
             </div>
@@ -458,7 +432,7 @@ export function AnalyticsView({ isDesktop = false, onBack, onEditTransaction }: 
                   <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">
                     Total Referencia
                   </span>
-                  <Badge variant="secondary" className="px-2 py-0.5 text-[9px] font-bold uppercase">
+                  <Badge variant="secondary" className="px-2 py-0.5 text-[11px] font-bold uppercase">
                     {selectedCurrency}
                   </Badge>
                 </div>
@@ -482,7 +456,7 @@ export function AnalyticsView({ isDesktop = false, onBack, onEditTransaction }: 
                   </span>
                   <Badge
                     variant={analyticsData.totalDiff > 0 ? "destructive" : "default"}
-                    className="flex items-center gap-0.5 text-[10px] font-extrabold"
+                    className="flex items-center gap-0.5 text-[11px] font-extrabold"
                   >
                     {analyticsData.totalDiff > 0 ? (
                       <TrendingUp className="size-3" />
@@ -496,7 +470,7 @@ export function AnalyticsView({ isDesktop = false, onBack, onEditTransaction }: 
                   </Badge>
                 </div>
                 <p className={`text-2xl font-extrabold tracking-tight tabular-nums ${
-                  analyticsData.totalDiff > 0 ? "text-destructive" : "text-emerald-500"
+                  analyticsData.totalDiff > 0 ? "text-destructive" : "text-success"
                 }`}>
                   {analyticsData.totalDiff > 0 ? "+" : ""}{formatShort(analyticsData.totalDiff, selectedCurrency)}
                 </p>
@@ -526,53 +500,34 @@ export function AnalyticsView({ isDesktop = false, onBack, onEditTransaction }: 
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            {/* Range Selector */}
-            <div className="inline-flex rounded-md bg-muted/60 p-0.5 text-xs font-mono">
-              {( [3, 6, 12] as const).map((m) => (
-                <button
-                  key={m}
-                  type="button"
-                  onClick={() => setTrendMonths(m)}
-                  className={`px-2.5 py-1 rounded text-xs font-medium transition-all cursor-pointer ${
-                    trendMonths === m
-                      ? "bg-background text-foreground shadow-xs font-bold"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  {m}M
-                </button>
-              ))}
-            </div>
+            <Segmented
+              ariaLabel="Meses a mostrar"
+              size="sm"
+              value={String(trendMonths) as "3" | "6" | "12"}
+              onValueChange={(m) => setTrendMonths(Number(m) as 3 | 6 | 12)}
+              options={[
+                { value: "3", label: "3M" },
+                { value: "6", label: "6M" },
+                { value: "12", label: "12M" },
+              ]}
+            />
 
-            {/* Mode Switcher */}
-            <div className="inline-flex rounded-md bg-muted/60 p-0.5 text-xs font-mono">
-              <button
-                type="button"
-                onClick={() => setChartMode("stacked_bar")}
-                className={`flex items-center gap-1 px-2.5 py-1 rounded text-xs font-medium transition-all cursor-pointer ${
-                  chartMode === "stacked_bar"
-                    ? "bg-background text-foreground shadow-xs font-bold"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-                title="Barras Apiladas"
-              >
-                <BarChart3 className="size-3.5" />
-                <span className="hidden sm:inline">Barras</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setChartMode("area")}
-                className={`flex items-center gap-1 px-2.5 py-1 rounded text-xs font-medium transition-all cursor-pointer ${
-                  chartMode === "area"
-                    ? "bg-background text-foreground shadow-xs font-bold"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-                title="Área de Tendencia"
-              >
-                <LineChartIcon className="size-3.5" />
-                <span className="hidden sm:inline">Tendencia</span>
-              </button>
-            </div>
+            <Segmented
+              ariaLabel="Tipo de gráfico"
+              size="sm"
+              value={chartMode}
+              onValueChange={setChartMode}
+              options={[
+                {
+                  value: "stacked_bar",
+                  label: <><BarChart3 className="size-3.5" /><span className="hidden sm:inline">Barras</span></>,
+                },
+                {
+                  value: "area",
+                  label: <><LineChartIcon className="size-3.5" /><span className="hidden sm:inline">Tendencia</span></>,
+                },
+              ]}
+            />
           </div>
         </div>
 
@@ -715,7 +670,7 @@ export function AnalyticsView({ isDesktop = false, onBack, onEditTransaction }: 
                       </span>
                       <div className="min-w-0">
                         <h3 className="text-xs font-extrabold text-foreground truncate">{v.name}</h3>
-                        {v.plate && <p className="text-[10px] text-muted-foreground font-semibold tracking-wider uppercase mt-0.5">{v.plate}</p>}
+                        {v.plate && <p className="text-[11px] text-muted-foreground font-semibold tracking-wider uppercase mt-0.5">{v.plate}</p>}
                       </div>
                     </div>
                     <span className="text-sm font-extrabold tabular-nums text-foreground/90 shrink-0">
@@ -742,44 +697,17 @@ export function AnalyticsView({ isDesktop = false, onBack, onEditTransaction }: 
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            {/* Sort Selector */}
-            <div className="inline-flex rounded-md bg-muted/60 p-0.5 text-xs font-mono">
-              <button
-                type="button"
-                onClick={() => setCategorySortMode("amount_desc")}
-                className={`px-2 py-0.5 rounded text-[11px] font-medium transition-all cursor-pointer ${
-                  categorySortMode === "amount_desc"
-                    ? "bg-background text-foreground shadow-xs font-bold"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                Monto
-              </button>
-              {comparisonMonth !== "none" && (
-                <button
-                  type="button"
-                  onClick={() => setCategorySortMode("diff_desc")}
-                  className={`px-2 py-0.5 rounded text-[11px] font-medium transition-all cursor-pointer ${
-                    categorySortMode === "diff_desc"
-                      ? "bg-background text-foreground shadow-xs font-bold"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  Variación
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={() => setCategorySortMode("name_asc")}
-                className={`px-2 py-0.5 rounded text-[11px] font-medium transition-all cursor-pointer ${
-                  categorySortMode === "name_asc"
-                    ? "bg-background text-foreground shadow-xs font-bold"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                Nombre
-              </button>
-            </div>
+            <Segmented
+              ariaLabel="Ordenar categorías por"
+              size="sm"
+              value={categorySortMode}
+              onValueChange={setCategorySortMode}
+              options={[
+                { value: "amount_desc", label: "Monto" },
+                ...(comparisonMonth !== "none" ? [{ value: "diff_desc" as const, label: "Variación" }] : []),
+                { value: "name_asc", label: "Nombre" },
+              ]}
+            />
 
             <Badge variant="secondary" className="text-xs font-semibold uppercase tracking-wider">
               {selectedCurrency}
@@ -879,7 +807,7 @@ export function AnalyticsView({ isDesktop = false, onBack, onEditTransaction }: 
                           <span className="font-bold truncate group-hover:text-primary transition-colors">
                             {r.category}
                           </span>
-                          <Badge variant="secondary" className="text-[10px] font-mono font-semibold px-1.5 py-0.2 shrink-0">
+                          <Badge variant="secondary" className="text-[11px] font-mono font-semibold px-1.5 py-0.2 shrink-0">
                             {percentOfTotal.toFixed(1)}%
                           </Badge>
                         </div>
@@ -893,16 +821,16 @@ export function AnalyticsView({ isDesktop = false, onBack, onEditTransaction }: 
                             {comparisonMonth !== "none" && (
                               <div className="flex justify-end mt-0.5">
                                 {r.compAmount === 0 ? (
-                                  <Badge variant="outline" className="text-[9px] font-mono px-1 py-0 border-primary/30 text-primary">
+                                  <Badge variant="outline" className="text-[11px] font-mono px-1 py-0 border-primary/30 text-primary">
                                     Nueva
                                   </Badge>
                                 ) : (
                                   <span
-                                    className={`inline-flex items-center gap-0.5 text-[10px] font-mono font-bold px-1.5 py-0.2 rounded ${
+                                    className={`inline-flex items-center gap-0.5 text-[11px] font-mono font-bold px-1.5 py-0.2 rounded ${
                                       r.diff > 0
                                         ? "bg-destructive/10 text-destructive"
                                         : r.diff < 0
-                                        ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                                        ? "bg-success/10 text-success dark:text-success"
                                         : "bg-muted text-muted-foreground"
                                     }`}
                                   >
@@ -933,10 +861,10 @@ export function AnalyticsView({ isDesktop = false, onBack, onEditTransaction }: 
                     {isExpanded && (
                       <div className="mt-3 ml-3 pl-4 border-l-2 border-primary/40 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
                         <div className="flex items-center justify-between border-b border-border/60 pb-1.5 mb-2">
-                          <span className="text-[10px] text-muted-foreground font-mono font-semibold uppercase tracking-wider">
+                          <span className="text-[11px] text-muted-foreground font-semibold uppercase tracking-wider">
                             Movimientos del Mes
                           </span>
-                          <span className="text-[10px] text-muted-foreground font-mono">
+                          <span className="text-[11px] text-muted-foreground font-mono">
                             {categoryTxs.length} registros
                           </span>
                         </div>
@@ -967,7 +895,7 @@ export function AnalyticsView({ isDesktop = false, onBack, onEditTransaction }: 
                                     <p className="font-semibold truncate group-hover/item:text-primary transition-colors">
                                       {tx.note || "Sin descripción"}
                                     </p>
-                                    <p className="text-[10px] text-muted-foreground truncate font-mono">
+                                    <p className="text-[11px] text-muted-foreground truncate font-mono">
                                       {dateLabel} · Cuenta: <span className="font-medium text-foreground/80">{acc?.name ?? "Desconocida"}</span>
                                     </p>
                                   </div>

@@ -1,25 +1,36 @@
 "use client"
 
 import { useState } from "react"
-import { Eye, EyeOff, ArrowLeftRight, Plus, Sparkles, Wallet, Globe } from "lucide-react"
+import { useUI } from "./ui-context"
+import { Eye, EyeOff, RefreshCw, ArrowLeftRight, Wallet } from "lucide-react"
 import { formatCurrency, formatShort, type Currency } from "@/lib/finance-data"
 import { useFinance } from "./finance-provider"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Segmented } from "./segmented"
 
-export function DashboardHeader({
-  onOpenExchange,
-  onAddAccount,
-  onAddTransaction,
-}: {
-  onOpenExchange: () => void
-  onAddAccount?: () => void
-  onAddTransaction?: () => void
-}) {
-  const { user, totalsByCurrency, portfolioTotalValue, macroSettings } = useFinance()
-  const [hidden, setHidden] = useState(false)
+export function DashboardHeader({ onOpenExchange }: { onOpenExchange: () => void }) {
+  const { totalsByCurrency, portfolioTotalValue, macroSettings, settingsLoaded, syncMacroFromApi } = useFinance()
+  const { balancesHidden, toggleBalancesHidden, mask } = useUI()
   const [consolidationCurrency, setConsolidationCurrency] = useState<Currency>("USD")
+  const [syncingFx, setSyncingFx] = useState(false)
+
+  // Sin fila guardada, el tipo de cambio es el valor por defecto del código:
+  // se avisa en vez de consolidar el patrimonio con un número inventado.
+  const fxConfigured = Boolean(macroSettings.lastUpdated)
+  const fxKind = Object.entries(macroSettings.rates ?? {}).find(
+    ([, value]) => value === macroSettings.exchangeRate
+  )?.[0]
+
+  async function handleSyncFx() {
+    setSyncingFx(true)
+    try {
+      await syncMacroFromApi()
+    } finally {
+      setSyncingFx(false)
+    }
+  }
 
   const fxRate = macroSettings.exchangeRate || 1250
   const usdTotal = (totalsByCurrency.USD || 0) + (portfolioTotalValue || 0)
@@ -30,8 +41,6 @@ export function DashboardHeader({
 
   const totalNetWorth = consolidationCurrency === "USD" ? netWorthInUSD : netWorthInARS
 
-  const mask = (value: string) => (hidden ? "••••••••" : value)
-
   return (
     <header className="space-y-4">
       {/* Hero Net Worth Card */}
@@ -39,34 +48,33 @@ export function DashboardHeader({
         {/* Top Meta Bar */}
         <div className="flex items-center justify-between border-b border-border/50 pb-3">
           <div className="flex items-center gap-2">
-            <span className="text-xs font-mono font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-              <Wallet className="size-3.5 text-primary" /> Patrimonio Neto Consolidado
+            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+              <Wallet className="size-3.5 text-primary" /> Patrimonio neto
             </span>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              onClick={toggleBalancesHidden}
+              aria-label={balancesHidden ? "Mostrar saldos" : "Ocultar saldos"}
+              title={balancesHidden ? "Mostrar saldos" : "Ocultar saldos"}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              {balancesHidden ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+            </Button>
           </div>
 
           {/* Consolidation Currency Switch */}
-          <div className="inline-flex rounded-lg bg-muted/60 p-0.5 text-xs font-mono">
-            <button
-              type="button"
-              onClick={() => setConsolidationCurrency("USD")}
-              className={`px-2.5 py-0.5 rounded-md text-[11px] font-semibold transition-all cursor-pointer ${consolidationCurrency === "USD"
-                ? "bg-background text-primary shadow-xs"
-                : "text-muted-foreground hover:text-foreground"
-                }`}
-            >
-              USD
-            </button>
-            <button
-              type="button"
-              onClick={() => setConsolidationCurrency("ARS")}
-              className={`px-2.5 py-0.5 rounded-md text-[11px] font-semibold transition-all cursor-pointer ${consolidationCurrency === "ARS"
-                ? "bg-background text-foreground shadow-xs"
-                : "text-muted-foreground hover:text-foreground"
-                }`}
-            >
-              ARS
-            </button>
-          </div>
+          <Segmented
+            ariaLabel="Moneda del patrimonio"
+            size="sm"
+            value={consolidationCurrency}
+            onValueChange={setConsolidationCurrency}
+            options={[
+              { value: "USD", label: "USD" },
+              { value: "ARS", label: "ARS" },
+            ]}
+          />
         </div>
 
         {/* Hero Amount Display */}
@@ -75,64 +83,47 @@ export function DashboardHeader({
             <h2 className="text-3xl font-bold font-mono tracking-tight tabular-nums text-foreground">
               {mask(formatCurrency(totalNetWorth, consolidationCurrency))}
             </h2>
-            <Badge variant="secondary" className="text-[10px] font-mono text-muted-foreground bg-muted/40 border border-border/40">
-              TC: ${fxRate} ARS/USD
-            </Badge>
+            {settingsLoaded && !fxConfigured ? (
+              <Button variant="outline" size="xs" onClick={handleSyncFx} disabled={syncingFx}>
+                <RefreshCw className={syncingFx ? "size-3 animate-spin" : "size-3"} />
+                Tipo de cambio sin cargar · actualizar
+              </Button>
+            ) : (
+              <Badge
+                variant="secondary"
+                className="text-[11px] font-mono text-muted-foreground bg-muted/40 border border-border/40"
+                title={
+                  fxConfigured
+                    ? `Actualizado el ${new Date(macroSettings.lastUpdated).toLocaleDateString("es-AR")}`
+                    : undefined
+                }
+              >
+                TC{fxKind ? ` ${fxKind}` : ""}: {formatCurrency(fxRate, "ARS")}
+              </Badge>
+            )}
           </div>
         </div>
 
         {/* Currency Sub-breakdown */}
         <div className="mt-4 grid grid-cols-2 gap-3 pt-3 border-t border-border/40 font-mono text-xs">
           <div className="rounded-lg border border-border/40 bg-muted/30 p-2.5">
-            <span className="text-[10px] uppercase text-muted-foreground font-semibold">Pesos (ARS)</span>
+            <span className="text-[11px] uppercase text-muted-foreground font-semibold">Pesos (ARS)</span>
             <p className="mt-0.5 font-bold text-foreground tabular-nums">
               {mask(formatShort(arsTotal, "ARS"))}
             </p>
           </div>
           <div className="rounded-lg border border-border/40 bg-muted/30 p-2.5">
-            <span className="text-[10px] uppercase text-muted-foreground font-semibold">Dólares (USD)</span>
+            <span className="text-[11px] uppercase text-muted-foreground font-semibold">Dólares (USD)</span>
             <p className="mt-0.5 font-bold text-primary tabular-nums">
               {mask(formatShort(usdTotal, "USD"))}
             </p>
           </div>
         </div>
 
-        {/* Quick Action Buttons Bar */}
-        <div className="mt-4 flex items-center gap-2 pt-1">
-          {onAddTransaction && (
-            <Button
-              size="sm"
-              onClick={onAddTransaction}
-              className="flex-1 h-9 text-xs font-semibold gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90 cursor-pointer shadow-xs"
-            >
-              <Plus className="size-3.5" />
-              Movimiento
-            </Button>
-          )}
-
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onOpenExchange}
-            className="flex-1 h-9 text-xs font-medium gap-1.5 border-border bg-card hover:bg-accent cursor-pointer"
-          >
-            <ArrowLeftRight className="size-3.5 text-primary" />
-            Cambio / Transferir
-          </Button>
-
-          {onAddAccount && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onAddAccount}
-              className="h-9 text-xs font-medium gap-1.5 border-border bg-card hover:bg-accent cursor-pointer px-3"
-              title="Agregar nueva cuenta"
-            >
-              <Plus className="size-3.5" />
-              Cuenta
-            </Button>
-          )}
-        </div>
+        <Button variant="outline" onClick={onOpenExchange} className="mt-4 w-full">
+          <ArrowLeftRight className="size-4" />
+          Cambio / Transferir
+        </Button>
       </Card>
     </header>
   )

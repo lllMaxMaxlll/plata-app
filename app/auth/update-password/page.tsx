@@ -177,7 +177,7 @@ export default function UpdatePasswordPage() {
               </p>
             )}
 
-            <Button type="submit" size="lg" disabled={submitting} className="mt-1 h-11 w-full rounded-xl text-sm">
+            <Button type="submit" size="lg" disabled={submitting} className="mt-1 h-11 w-full text-sm">
               {submitting ? (
                 <>
                   <Loader2 className="size-4 animate-spin" />

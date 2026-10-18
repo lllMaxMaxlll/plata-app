@@ -1,11 +1,12 @@
 "use client"
 
 import { useState, useMemo } from "react"
-import { ArrowUpRight, TrendingUp, TrendingDown, Calendar, DollarSign } from "lucide-react"
+import { ArrowUpRight, TrendingUp, TrendingDown } from "lucide-react"
 import { formatCurrency, formatShort, transactionCurrency } from "@/lib/finance-data"
 import { useFinance } from "./finance-provider"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Segmented } from "./segmented"
 
 type PeriodOption = "this_month" | "last_month" | "last_30" | "all"
 type CurrencyOption = "ARS" | "USD"
@@ -140,67 +141,47 @@ export function ExpenseChart({
         {/* Card Header */}
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/60 pb-3">
           <div className="flex items-center gap-2">
-            <h2 className="text-xs font-mono font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-              <span>Gastos por Categoría</span>
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+              <span>Gastos por categoría</span>
             </h2>
           </div>
 
           <div className="flex items-center gap-2">
             {/* Currency Selector */}
-            <div className="inline-flex rounded-md bg-muted/60 p-0.5 text-xs font-mono">
-              <button
-                type="button"
-                onClick={() => setSelectedCurrency("ARS")}
-                className={`px-2 py-0.5 rounded text-[11px] font-medium transition-all ${
-                  selectedCurrency === "ARS"
-                    ? "bg-background text-foreground shadow-xs font-bold"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                ARS
-              </button>
-              <button
-                type="button"
-                onClick={() => setSelectedCurrency("USD")}
-                className={`px-2 py-0.5 rounded text-[11px] font-medium transition-all ${
-                  selectedCurrency === "USD"
-                    ? "bg-background text-foreground shadow-xs font-bold"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                USD
-              </button>
-            </div>
+            <Segmented
+              ariaLabel="Moneda del gráfico"
+              value={selectedCurrency}
+              onValueChange={setSelectedCurrency}
+              options={[
+                { value: "ARS", label: "ARS" },
+                { value: "USD", label: "USD" },
+              ]}
+            />
 
             {onSeeAnalytics && (
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={onSeeAnalytics}
-                className="text-xs font-medium text-primary hover:bg-primary/10 h-7 px-2 cursor-pointer"
+                className="text-xs font-medium text-primary hover:bg-primary/10 h-7 px-2"
               >
-                Ver Análisis <ArrowUpRight className="size-3.5 ml-0.5" />
+                Ver análisis <ArrowUpRight className="size-3.5 ml-0.5" />
               </Button>
             )}
           </div>
         </div>
 
         {/* Period Selector Tabs */}
-        <div className="mt-3 flex items-center gap-1 overflow-x-auto pb-1 scrollbar-none">
-          {(Object.keys(PERIOD_LABELS) as PeriodOption[]).map((pKey) => (
-            <button
-              key={pKey}
-              type="button"
-              onClick={() => setPeriod(pKey)}
-              className={`px-2.5 py-1 rounded-md text-xs font-mono transition-all whitespace-nowrap cursor-pointer ${
-                period === pKey
-                  ? "bg-primary/15 text-primary font-semibold border border-primary/20"
-                  : "bg-muted/40 text-muted-foreground hover:bg-muted hover:text-foreground border border-transparent"
-              }`}
-            >
-              {PERIOD_LABELS[pKey]}
-            </button>
-          ))}
+        <div className="mt-3 overflow-x-auto pb-1 no-scrollbar">
+          <Segmented
+            ariaLabel="Período"
+            value={period}
+            onValueChange={setPeriod}
+            options={(Object.keys(PERIOD_LABELS) as PeriodOption[]).map((pKey) => ({
+              value: pKey,
+              label: PERIOD_LABELS[pKey],
+            }))}
+          />
         </div>
 
         {/* Total Display */}
@@ -249,11 +230,11 @@ export function ExpenseChart({
                       {/* Comparative Trend Badge */}
                       {r.trendPercent !== null && (
                         <span
-                          className={`inline-flex items-center gap-0.5 text-[10px] font-mono px-1.5 py-0.2 rounded font-medium ${
+                          className={`inline-flex items-center gap-0.5 text-[11px] font-mono px-1.5 py-0.2 rounded font-medium ${
                             r.trendPercent > 0
                               ? "bg-destructive/10 text-destructive"
                               : r.trendPercent < 0
-                              ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                              ? "bg-success/10 text-success dark:text-success"
                               : "bg-muted text-muted-foreground"
                           }`}
                           title={`vs período anterior (${mask(formatShort(r.prevAmount, selectedCurrency))})`}

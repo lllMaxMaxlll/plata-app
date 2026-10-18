@@ -2,12 +2,11 @@
 
 import { useState, useMemo } from "react"
 import { useFinance } from "./finance-provider"
+import { PageHeader } from "./page-header"
 import {
   formatCurrency,
   formatShort,
-  DUE_CATEGORIES,
   type DueItem,
-  type DueItemStatus,
   type Currency,
 } from "@/lib/finance-data"
 import { Button } from "@/components/ui/button"
@@ -31,9 +30,7 @@ import {
   Search,
   Receipt,
   RotateCcw,
-  Sparkles,
   Zap,
-  MoreVertical,
   Check,
 } from "lucide-react"
 
@@ -285,31 +282,16 @@ export function VencimientosView({ isDesktop = false }: { isDesktop?: boolean })
   return (
     <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 pt-4 pb-20 space-y-6">
       {/* Header Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="flex size-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
-              <CalendarIcon className="size-5" />
-            </span>
-            <h1 className="text-xl font-bold tracking-tight text-foreground">
-              Vencimientos y Servicios
-            </h1>
-          </div>
-          <p className="text-xs text-muted-foreground mt-1">
-            Gestioná tus facturas periódicas y evitá moras con alertas automáticas PWA.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Button
-            onClick={handleOpenCreate}
-            className="rounded-xl bg-primary text-primary-foreground font-semibold shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
-          >
-            <Plus className="size-4 mr-1.5" />
-            Nuevo Vencimiento
+      <PageHeader
+        route="dueItems"
+        description="Gestioná tus facturas periódicas y evitá moras con alertas."
+        actions={
+          <Button onClick={handleOpenCreate}>
+            <Plus className="size-4" />
+            Nuevo vencimiento
           </Button>
-        </div>
-      </div>
+        }
+      />
 
       {/* KPI Cards Overview */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -319,7 +301,7 @@ export function VencimientosView({ isDesktop = false }: { isDesktop?: boolean })
             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
               Total Este Mes
             </span>
-            <span className="flex size-9 items-center justify-center rounded-xl bg-blue-500/10 text-blue-500 border border-blue-500/20">
+            <span className="flex size-9 items-center justify-center rounded-xl bg-chart-1/10 text-chart-1 border border-chart-1/20">
               <Receipt className="size-4.5" />
             </span>
           </div>
@@ -345,7 +327,7 @@ export function VencimientosView({ isDesktop = false }: { isDesktop?: boolean })
             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
               Próximos Vencimientos
             </span>
-            <span className="flex size-9 items-center justify-center rounded-xl bg-amber-500/10 text-amber-500 border border-amber-500/20">
+            <span className="flex size-9 items-center justify-center rounded-xl bg-warning/10 text-warning border border-warning/20">
               <Clock className="size-4.5" />
             </span>
           </div>
@@ -358,7 +340,7 @@ export function VencimientosView({ isDesktop = false }: { isDesktop?: boolean })
                 <div key={item.id} className="flex items-center justify-between text-xs">
                   <div className="min-w-0 pr-2">
                     <p className="font-semibold text-foreground truncate">{item.title}</p>
-                    <p className="text-[10px] text-muted-foreground">
+                    <p className="text-[11px] text-muted-foreground">
                       {item.daysUntilDue === 0
                         ? "Vence HOY"
                         : item.daysUntilDue < 0
@@ -372,7 +354,7 @@ export function VencimientosView({ isDesktop = false }: { isDesktop?: boolean })
                     </span>
                     <button
                       onClick={() => handleOpenPayModal(item)}
-                      className="size-9 sm:size-7 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 flex items-center justify-center transition-colors cursor-pointer"
+                      className="size-9 sm:size-7 rounded-lg bg-success/10 hover:bg-success/20 text-success flex items-center justify-center transition-colors cursor-pointer"
                       title="Marcar como pagado"
                       aria-label={`Marcar ${item.title} como pagado`}
                     >
@@ -388,7 +370,7 @@ export function VencimientosView({ isDesktop = false }: { isDesktop?: boolean })
         {/* Card 3: Alerta de Mora / Vencidas */}
         <div
           className={`relative overflow-hidden rounded-xl border p-5 shadow-sm backdrop-blur-xl transition-colors ${overdueItems.length > 0
-              ? "border-rose-500/30 bg-rose-500/5 shadow-rose-500/5"
+              ? "border-destructive/30 bg-destructive/5 shadow-destructive/5"
               : "border-border/60 bg-card/40"
             }`}
         >
@@ -398,8 +380,8 @@ export function VencimientosView({ isDesktop = false }: { isDesktop?: boolean })
             </span>
             <span
               className={`flex size-9 items-center justify-center rounded-xl border ${overdueItems.length > 0
-                  ? "bg-rose-500/15 text-rose-500 border-rose-500/30 animate-pulse"
-                  : "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
+                  ? "bg-destructive/15 text-destructive border-destructive/30 animate-pulse"
+                  : "bg-success/10 text-success border-success/20"
                 }`}
             >
               {overdueItems.length > 0 ? (
@@ -413,17 +395,17 @@ export function VencimientosView({ isDesktop = false }: { isDesktop?: boolean })
           <div className="mt-3">
             {overdueItems.length > 0 ? (
               <>
-                <p className="text-2xl font-extrabold text-rose-500 tabular-nums tracking-tight">
+                <p className="text-2xl font-extrabold text-destructive tabular-nums tracking-tight">
                   {overdueItems.length} {overdueItems.length === 1 ? "factura" : "facturas"}
                 </p>
-                <p className="text-xs font-semibold text-rose-400 mt-0.5">
+                <p className="text-xs font-semibold text-destructive mt-0.5">
                   Mora total: {formatShort(totalOverdueAmount.ARS, "ARS")}
                   {totalOverdueAmount.USD > 0 && ` + ${formatShort(totalOverdueAmount.USD, "USD")}`}
                 </p>
               </>
             ) : (
               <>
-                <p className="text-2xl font-extrabold text-emerald-500 tracking-tight">Al Día</p>
+                <p className="text-2xl font-extrabold text-success tracking-tight">Al Día</p>
                 <p className="text-xs text-muted-foreground mt-0.5">No registrás servicios vencidos en mora.</p>
               </>
             )}
@@ -450,7 +432,7 @@ export function VencimientosView({ isDesktop = false }: { isDesktop?: boolean })
             onClick={handleTestNotificationCheck}
             variant="secondary"
             disabled={testingNotification}
-            className="rounded-xl text-xs font-semibold bg-primary/10 hover:bg-primary/20 text-primary"
+            className="text-xs font-semibold bg-primary/10 hover:bg-primary/20 text-primary"
           >
             <Zap className="size-3.5 mr-1.5" />
             {testingNotification ? "Comprobando..." : "Comprobar Ahora"}
@@ -537,7 +519,7 @@ export function VencimientosView({ isDesktop = false }: { isDesktop?: boolean })
             <Button
               onClick={handleOpenCreate}
               variant="outline"
-              className="mt-4 rounded-xl text-xs border-primary/30 text-primary"
+              className="mt-4 text-xs border-primary/30 text-primary"
             >
               <Plus className="size-3.5 mr-1.5" />
               Crear Vencimiento
@@ -556,36 +538,36 @@ export function VencimientosView({ isDesktop = false }: { isDesktop?: boolean })
                   className={`group relative rounded-xl border p-4.5 transition-all duration-200 backdrop-blur-xl flex flex-col justify-between ${isPaid
                       ? "border-border/40 bg-card/20 opacity-75"
                       : isOverdue
-                        ? "border-rose-500/40 bg-rose-500/5 shadow-lg shadow-rose-500/5"
+                        ? "border-destructive/40 bg-destructive/5 shadow-lg shadow-destructive/5"
                         : isDueSoon
-                          ? "border-amber-500/40 bg-amber-500/5 shadow-lg shadow-amber-500/5"
+                          ? "border-warning/40 bg-warning/5 shadow-lg shadow-warning/5"
                           : "border-border/60 bg-card/40 hover:border-border hover:bg-card/60"
                     }`}
                 >
                   <div>
                     {/* Top Row: Category & Status Badge */}
                     <div className="flex items-center justify-between gap-2">
-                      <Badge variant="outline" className="text-[10px] font-semibold rounded-lg bg-muted/30">
+                      <Badge variant="outline" className="text-[11px] font-semibold rounded-lg bg-muted/30">
                         {item.category}
                       </Badge>
 
                       {isPaid ? (
-                        <span className="flex items-center gap-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 text-[10px] font-bold text-emerald-500">
+                        <span className="flex items-center gap-1 rounded-full bg-success/10 border border-success/20 px-2 py-0.5 text-[11px] font-bold text-success">
                           <CheckCircle2 className="size-3" />
                           Pagado
                         </span>
                       ) : isOverdue ? (
-                        <span className="flex items-center gap-1 rounded-full bg-rose-500/10 border border-rose-500/30 px-2 py-0.5 text-[10px] font-bold text-rose-500 animate-pulse">
+                        <span className="flex items-center gap-1 rounded-full bg-destructive/10 border border-destructive/30 px-2 py-0.5 text-[11px] font-bold text-destructive animate-pulse">
                           <AlertTriangle className="size-3" />
                           Vencido ({Math.abs(item.daysUntilDue)}d)
                         </span>
                       ) : isDueSoon ? (
-                        <span className="flex items-center gap-1 rounded-full bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 text-[10px] font-bold text-amber-500">
+                        <span className="flex items-center gap-1 rounded-full bg-warning/10 border border-warning/30 px-2 py-0.5 text-[11px] font-bold text-warning">
                           <Clock className="size-3" />
                           {item.daysUntilDue === 0 ? "Vence hoy" : `En ${item.daysUntilDue} días`}
                         </span>
                       ) : (
-                        <span className="flex items-center gap-1 rounded-full bg-slate-500/10 border border-slate-500/20 px-2 py-0.5 text-[10px] font-bold text-muted-foreground">
+                        <span className="flex items-center gap-1 rounded-full bg-muted border border-border px-2 py-0.5 text-[11px] font-bold text-muted-foreground">
                           Al día
                         </span>
                       )}
@@ -624,7 +606,7 @@ export function VencimientosView({ isDesktop = false }: { isDesktop?: boolean })
                       <Button
                         size="sm"
                         onClick={() => handleOpenPayModal(item)}
-                        className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs h-8 shadow-md shadow-emerald-600/20 cursor-pointer"
+                        className="rounded-xl bg-success hover:bg-success text-white font-semibold text-xs h-8 shadow-md shadow-success/20 cursor-pointer"
                       >
                         <CheckCircle2 className="size-3.5 mr-1" />
                         Marcar Pagado
@@ -739,14 +721,14 @@ export function VencimientosView({ isDesktop = false }: { isDesktop?: boolean })
                     <div className="flex items-center justify-between">
                       <span
                         className={`text-xs font-bold ${isTodayCell
-                            ? "flex size-5 items-center justify-center rounded-full bg-primary text-primary-foreground text-[10px]"
+                            ? "flex size-5 items-center justify-center rounded-full bg-primary text-primary-foreground text-[11px]"
                             : "text-foreground"
                           }`}
                       >
                         {day.dayNumber}
                       </span>
                       {day.items.length > 0 && (
-                        <span className="text-[10px] font-extrabold px-1.5 py-0.2 rounded-full bg-muted/60 text-muted-foreground">
+                        <span className="text-[11px] font-extrabold px-1.5 py-0.2 rounded-full bg-muted/60 text-muted-foreground">
                           {day.items.length}
                         </span>
                       )}
@@ -757,12 +739,12 @@ export function VencimientosView({ isDesktop = false }: { isDesktop?: boolean })
                       {day.items.slice(0, 2).map((item) => (
                         <div
                           key={item.id}
-                          className={`truncate text-[10px] font-semibold px-1.5 py-0.5 rounded-lg border ${item.status === "paid"
-                              ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
+                          className={`truncate text-[11px] font-semibold px-1.5 py-0.5 rounded-lg border ${item.status === "paid"
+                              ? "bg-success/10 text-success border-success/20"
                               : item.computedStatusTag === "overdue"
-                                ? "bg-rose-500/15 text-rose-400 border-rose-500/30"
+                                ? "bg-destructive/15 text-destructive border-destructive/30"
                                 : item.computedStatusTag === "due_soon"
-                                  ? "bg-amber-500/15 text-amber-400 border-amber-500/30"
+                                  ? "bg-warning/15 text-warning border-warning/30"
                                   : "bg-primary/10 text-primary border-primary/20"
                             }`}
                         >
@@ -770,7 +752,7 @@ export function VencimientosView({ isDesktop = false }: { isDesktop?: boolean })
                         </div>
                       ))}
                       {day.items.length > 2 && (
-                        <p className="text-[9px] text-muted-foreground font-semibold pl-1">
+                        <p className="text-[11px] text-muted-foreground font-semibold pl-1">
                           +{day.items.length - 2} más
                         </p>
                       )}
@@ -820,7 +802,7 @@ export function VencimientosView({ isDesktop = false }: { isDesktop?: boolean })
                           <Button
                             size="sm"
                             onClick={() => handleOpenPayModal(item)}
-                            className="rounded-xl text-xs bg-emerald-600 text-white h-8"
+                            className="rounded-xl text-xs bg-success text-white h-8"
                           >
                             Pagar
                           </Button>

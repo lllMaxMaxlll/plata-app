@@ -67,11 +67,11 @@ export function ProjectionKPIs({
         hint={
           <span className="flex items-center gap-2 flex-wrap">
             <span className="flex items-center gap-1">
-              <span className="size-1.5 rounded-full bg-rose-500" aria-hidden />
+              <span className="size-1.5 rounded-full bg-destructive" aria-hidden />
               Pesimista {formatShort(pessimistic, displayCurrency)}
             </span>
             <span className="flex items-center gap-1">
-              <span className="size-1.5 rounded-full bg-emerald-500" aria-hidden />
+              <span className="size-1.5 rounded-full bg-success" aria-hidden />
               Optimista {formatShort(optimistic, displayCurrency)}
             </span>
           </span>
@@ -92,7 +92,7 @@ export function ProjectionKPIs({
         hint="Lo que genera el capital, escenario neutro"
       />
 
-      <Card className="border-purple-500/40 bg-purple-500/5 backdrop-blur-xl shadow-sm">
+      <Card className="border-chart-5/40 bg-chart-5/5 backdrop-blur-xl shadow-sm">
         <CardContent className="p-4 space-y-1.5">
           <div className="flex items-center gap-1.5 text-muted-foreground">
             <Target className="size-3.5" />
@@ -105,7 +105,7 @@ export function ProjectionKPIs({
             </p>
           ) : !nextGoal ? (
             <div className="flex items-center gap-1.5 pt-1">
-              <CheckCircle2 className="size-4 text-emerald-500" />
+              <CheckCircle2 className="size-4 text-success" />
               <p className="text-xs font-medium text-foreground">
                 Toda la secuencia entra en el horizonte.
               </p>
@@ -116,14 +116,14 @@ export function ProjectionKPIs({
                 <p className="text-sm font-semibold text-foreground truncate">
                   {nextGoal.goal.name}
                 </p>
-                <Badge variant="outline" className="text-[10px] font-mono border-purple-500/40">
+                <Badge variant="outline" className="text-[11px] font-mono border-chart-5/40">
                   {formatShort(nextGoal.goal.amount, nextGoal.goal.currency)}
                 </Badge>
               </div>
               <p className="text-[11px] text-muted-foreground">{nextGoal.estimatedDateLabel}</p>
               <div className="pt-1 space-y-1">
                 <Progress value={nextGoal.coveragePercent} className="h-1.5" />
-                <p className="text-[10px] text-muted-foreground tabular-nums">
+                <p className="text-[11px] text-muted-foreground tabular-nums">
                   {nextGoal.coveragePercent}% de la secuencia hasta acá, cubierto con tu capital
                   líquido de hoy
                 </p>

@@ -196,7 +196,7 @@ export function StockTradeModal({
               />
             ) : type === "buy" ? (
               watchlist.length === 0 ? (
-                <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 p-3 text-xs text-amber-500 flex items-center gap-2">
+                <div className="rounded-xl border border-warning/20 bg-warning/10 p-3 text-xs text-warning flex items-center gap-2">
                   <AlertTriangle className="size-4 shrink-0" />
                   <span>Tu lista de seguimiento está vacía. Agregá acciones a tu seguimiento primero.</span>
                 </div>
@@ -276,7 +276,7 @@ export function StockTradeModal({
                   <button
                     type="button"
                     onClick={() => setShares(sharesOwned)}
-                    className="text-[10px] font-bold text-primary hover:underline cursor-pointer"
+                    className="text-[11px] font-bold text-primary hover:underline cursor-pointer"
                   >
                     Usar máx ({sharesOwned})
                   </button>
@@ -401,7 +401,7 @@ export function StockTradeModal({
             type="submit"
             disabled={!canSubmit || loading}
             size="lg"
-            className="mt-2 w-full font-semibold h-11 rounded-xl bg-primary text-primary-foreground shadow-lg shadow-primary/20 cursor-pointer"
+            className="mt-2 w-full font-semibold h-11"
           >
             {loading ? (
               <>

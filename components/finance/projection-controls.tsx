@@ -181,7 +181,7 @@ export function ProjectionControls({
           <div className="flex items-center justify-between rounded-xl border border-border/40 bg-muted/20 p-3">
             <div className="space-y-0.5">
               <div className="flex items-center gap-2">
-                <Flame className="size-4 text-orange-400" />
+                <Flame className="size-4 text-chart-2" />
                 <span className="text-xs font-semibold">Ajustar por Inflación Real</span>
               </div>
               <p className="text-[11px] text-muted-foreground">
@@ -201,7 +201,7 @@ export function ProjectionControls({
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <CardTitle className="text-sm font-semibold flex items-center gap-2">
-              <DollarSign className="size-4 text-emerald-400" />
+              <DollarSign className="size-4 text-success" />
               Patrimonio Inicial y Capacidad de Ahorro
             </CardTitle>
 
@@ -226,7 +226,7 @@ export function ProjectionControls({
             </Label>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <span className="text-[10px] text-muted-foreground mb-1 block">Saldo ARS</span>
+                <span className="text-[11px] text-muted-foreground mb-1 block">Saldo ARS</span>
                 <Input
                   type="number"
                   disabled={useRealAccounts}
@@ -237,7 +237,7 @@ export function ProjectionControls({
                 />
               </div>
               <div>
-                <span className="text-[10px] text-muted-foreground mb-1 block">Saldo USD</span>
+                <span className="text-[11px] text-muted-foreground mb-1 block">Saldo USD</span>
                 <Input
                   type="number"
                   disabled={useRealAccounts}
@@ -251,8 +251,8 @@ export function ProjectionControls({
             {!useRealAccounts &&
               (initialARS < realARSBalance * 0.5 || initialUSD < realLiquidUSD * 0.5) &&
               (realARSBalance > 0 || realLiquidUSD > 0) && (
-                <div className="mt-2 rounded-lg border border-amber-500/40 bg-amber-500/10 p-2.5 space-y-1.5">
-                  <p className="text-[11px] text-amber-500">
+                <div className="mt-2 rounded-lg border border-warning/40 bg-warning/10 p-2.5 space-y-1.5">
+                  <p className="text-[11px] text-warning">
                     Estás simulando con un patrimonio menor al que tienen tus cuentas hoy ($
                     {realARSBalance.toLocaleString("es-AR", { maximumFractionDigits: 0 })} y US$
                     {realLiquidUSD.toLocaleString("es-AR", { maximumFractionDigits: 0 })}). Con menos
@@ -264,7 +264,7 @@ export function ProjectionControls({
                       variant="outline"
                       size="sm"
                       onClick={onUseRealBalances}
-                      className="h-6 px-2 text-[10px] font-semibold border-amber-500/40 text-amber-500 hover:bg-amber-500/10 cursor-pointer"
+                      className="h-6 px-2 text-[11px] font-semibold border-warning/40 text-warning hover:bg-warning/10"
                     >
                       Usar mis saldos reales
                     </Button>
@@ -272,7 +272,7 @@ export function ProjectionControls({
                 </div>
               )}
             {(overdueARS > 0 || overdueUSD > 0) && (
-              <p className="text-[10px] text-amber-500/90 mt-1.5">
+              <p className="text-[11px] text-warning/90 mt-1.5">
                 − {overdueARS > 0 && `$${overdueARS.toLocaleString("es-AR", { maximumFractionDigits: 0 })}`}
                 {overdueARS > 0 && overdueUSD > 0 && " y "}
                 {overdueUSD > 0 && `US$${overdueUSD.toLocaleString("es-AR", { maximumFractionDigits: 0 })}`}{" "}
@@ -280,7 +280,7 @@ export function ProjectionControls({
               </p>
             )}
             {portfolioUSD > 0 && (
-              <p className="text-[10px] text-muted-foreground mt-1.5">
+              <p className="text-[11px] text-muted-foreground mt-1.5">
                 + US${portfolioUSD.toLocaleString("es-AR", { maximumFractionDigits: 0 })} en cartera
                 de acciones. Suma al patrimonio proyectado, pero no financia metas: habría que
                 venderla primero.
@@ -298,7 +298,7 @@ export function ProjectionControls({
                 usesEstimatedSavings ? (
                   <Badge
                     variant="secondary"
-                    className="text-[10px] font-medium bg-primary/10 text-primary border-primary/20"
+                    className="text-[11px] font-medium bg-primary/10 text-primary border-primary/20"
                   >
                     Calculado de tus movimientos
                   </Badge>
@@ -308,7 +308,7 @@ export function ProjectionControls({
                     variant="ghost"
                     size="sm"
                     onClick={onUseEstimatedSavings}
-                    className="h-6 px-2 text-[10px] font-semibold text-primary hover:bg-primary/10 cursor-pointer"
+                    className="h-6 px-2 text-[11px] font-semibold text-primary hover:bg-primary/10"
                     title={`Mediana de ingresos menos gastos de tus últimos ${savingsEstimate.monthsUsed} meses cerrados`}
                   >
                     Volver a mi promedio real
@@ -318,7 +318,7 @@ export function ProjectionControls({
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <span className="text-[10px] text-muted-foreground mb-1 block">+ ARS / mes</span>
+                <span className="text-[11px] text-muted-foreground mb-1 block">+ ARS / mes</span>
                 <Input
                   type="number"
                   value={Number.isFinite(savingsARS) ? savingsARS : ""}
@@ -328,7 +328,7 @@ export function ProjectionControls({
                 />
               </div>
               <div>
-                <span className="text-[10px] text-muted-foreground mb-1 block">+ USD / mes</span>
+                <span className="text-[11px] text-muted-foreground mb-1 block">+ USD / mes</span>
                 <Input
                   type="number"
                   value={Number.isFinite(savingsUSD) ? savingsUSD : ""}
@@ -339,13 +339,13 @@ export function ProjectionControls({
               </div>
             </div>
             {savingsARS === 0 && savingsUSD === 0 && (
-              <p className="text-[11px] text-amber-500 mt-1.5">
+              <p className="text-[11px] text-warning mt-1.5">
                 Con un ahorro de cero, el patrimonio no crece y ninguna meta se alcanza nunca.
                 Cargá cuánto te queda por mes.
               </p>
             )}
             {savingsEstimate && savingsEstimate.monthsUsed > 0 && !usesEstimatedSavings && (
-              <p className="text-[10px] text-muted-foreground mt-1.5">
+              <p className="text-[11px] text-muted-foreground mt-1.5">
                 Tus movimientos de los últimos {savingsEstimate.monthsUsed}{" "}
                 {savingsEstimate.monthsUsed === 1 ? "mes cerrado" : "meses cerrados"} dan una
                 mediana de ${savingsEstimate.ARS.toLocaleString("es-AR")} y US$
@@ -367,9 +367,9 @@ export function ProjectionControls({
                   size="sm"
                   onClick={onSyncMacro}
                   disabled={isSyncingMacro}
-                  className="h-7 text-[11px] gap-1.5 border-primary/30 text-primary hover:bg-primary/10 cursor-pointer shadow-xs"
+                  className="h-7 text-[11px] gap-1.5 border-primary/30 text-primary hover:bg-primary/10"
                 >
-                  <Sparkles className={`size-3 text-amber-400 ${isSyncingMacro ? "animate-spin" : ""}`} />
+                  <Sparkles className={`size-3 text-warning ${isSyncingMacro ? "animate-spin" : ""}`} />
                   {isSyncingMacro ? "Actualizando..." : "Actualizar cotización"}
                 </Button>
               )}
@@ -387,20 +387,20 @@ export function ProjectionControls({
             {/* Live Dollar Badges */}
             {dollarRates && (
               <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                <Badge variant="secondary" className="text-[10px] font-mono font-semibold bg-emerald-500/10 text-emerald-400 border-emerald-500/20">
+                <Badge variant="secondary" className="text-[11px] font-mono font-semibold bg-success/10 text-success border-success/20">
                   Blue: ${dollarRates.blue}
                 </Badge>
-                <Badge variant="secondary" className="text-[10px] font-mono font-semibold bg-primary/10 text-primary border-primary/20">
+                <Badge variant="secondary" className="text-[11px] font-mono font-semibold bg-primary/10 text-primary border-primary/20">
                   MEP: ${dollarRates.mep}
                 </Badge>
-                <Badge variant="secondary" className="text-[10px] font-mono font-semibold bg-muted text-muted-foreground">
+                <Badge variant="secondary" className="text-[11px] font-mono font-semibold bg-muted text-muted-foreground">
                   Oficial: ${dollarRates.oficial}
                 </Badge>
               </div>
             )}
 
             {lastMacroSyncDate && (
-              <p className="text-[10px] text-muted-foreground font-mono">
+              <p className="text-[11px] text-muted-foreground font-mono">
                 Última actualización guardada: {new Date(lastMacroSyncDate).toLocaleString("es-AR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
               </p>
             )}
@@ -421,7 +421,7 @@ export function ProjectionControls({
             className="w-full flex items-center justify-between gap-2 text-left select-none cursor-pointer rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
             <CardTitle className="text-sm font-semibold flex items-center gap-2">
-              <Percent className="size-4 text-cyan-400" />
+              <Percent className="size-4 text-chart-3" />
               Ajustes Macroeconómicos Avanzados
             </CardTitle>
             <span className="h-7 px-2 inline-flex items-center text-xs font-mono text-muted-foreground">
@@ -444,7 +444,7 @@ export function ProjectionControls({
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label className="text-xs font-medium flex items-center gap-1.5">
-                  <Flame className="size-3.5 text-rose-400" /> Inflación Anual Esperada
+                  <Flame className="size-3.5 text-destructive" /> Inflación Anual Esperada
                 </Label>
                 <div className="flex items-center gap-1">
                   <Input
@@ -469,7 +469,7 @@ export function ProjectionControls({
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label className="text-xs font-medium flex items-center gap-1.5">
-                  <ArrowRightLeft className="size-3.5 text-amber-400" /> Devaluación Anual Esperada (Peso/USD)
+                  <ArrowRightLeft className="size-3.5 text-warning" /> Devaluación Anual Esperada (Peso/USD)
                 </Label>
                 <div className="flex items-center gap-1">
                   <Input
@@ -494,7 +494,7 @@ export function ProjectionControls({
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label className="text-xs font-medium flex items-center gap-1.5">
-                  <TrendingUp className="size-3.5 text-emerald-400" /> Rendimiento Anual en Pesos
+                  <TrendingUp className="size-3.5 text-success" /> Rendimiento Anual en Pesos
                 </Label>
                 <div className="flex items-center gap-1">
                   <Input
@@ -513,7 +513,7 @@ export function ProjectionControls({
                 max={200}
                 step={1}
               />
-              <p className="text-[10px] text-muted-foreground">
+              <p className="text-[11px] text-muted-foreground">
                 Plazo fijo, cuenta remunerada o fondo money market.
               </p>
             </div>
@@ -522,7 +522,7 @@ export function ProjectionControls({
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label className="text-xs font-medium flex items-center gap-1.5">
-                  <TrendingUp className="size-3.5 text-cyan-400" /> Rendimiento Anual en Dólares
+                  <TrendingUp className="size-3.5 text-chart-3" /> Rendimiento Anual en Dólares
                 </Label>
                 <div className="flex items-center gap-1">
                   <Input
@@ -541,7 +541,7 @@ export function ProjectionControls({
                 max={60}
                 step={1}
               />
-              <p className="text-[10px] text-muted-foreground">
+              <p className="text-[11px] text-muted-foreground">
                 Acciones, ETFs o bonos en dólares.
               </p>
             </div>

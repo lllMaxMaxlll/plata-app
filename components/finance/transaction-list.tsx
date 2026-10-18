@@ -1,19 +1,12 @@
 "use client"
 
+import type { ReactNode } from "react"
 import { ArrowDownLeft, ArrowUpRight, ArrowLeftRight, Paperclip } from "lucide-react"
 import { accountLabel, formatShort, type Transaction, transactionCurrency } from "@/lib/finance-data"
 import { useFinance } from "./finance-provider"
-import { Badge } from "@/components/ui/badge"
+import { useUI } from "./ui-context"
 import { cn, clickableRowProps, focusRing } from "@/lib/utils"
-
-function relativeDate(iso: string) {
-  const d = new Date(iso)
-  const diffDays = Math.floor((Date.now() - d.getTime()) / 86400000)
-  if (diffDays <= 0) return "Hoy"
-  if (diffDays === 1) return "Ayer"
-  if (diffDays < 7) return `Hace ${diffDays} días`
-  return d.toLocaleDateString("es-AR", { day: "2-digit", month: "short" })
-}
+import { relativeDate } from "@/lib/relative-date"
 
 function TransactionRow({
   tx,
@@ -23,6 +16,7 @@ function TransactionRow({
   onEditTransaction?: (tx: Transaction) => void
 }) {
   const { getAccount, vehicles } = useFinance()
+  const { mask } = useUI()
   const account = getAccount(tx.accountId)
   const toAccount = tx.toAccountId ? getAccount(tx.toAccountId) : undefined
   const vehicle = tx.vehicleId ? vehicles?.find((v) => v.id === tx.vehicleId) : undefined
@@ -30,17 +24,17 @@ function TransactionRow({
   const config = {
     income: {
       Icon: ArrowDownLeft,
-      tone: "text-emerald-400",
-      bg: "bg-emerald-500/10 border-emerald-500/20",
+      tone: "text-success",
+      bg: "bg-success/10 border-success/20",
       sign: "+",
-      amountClass: "text-emerald-400 font-mono font-bold",
+      amountClass: "text-success font-mono font-bold",
     },
     expense: {
       Icon: ArrowUpRight,
-      tone: "text-red-400",
-      bg: "bg-red-500/10 border-red-500/20",
+      tone: "text-destructive",
+      bg: "bg-destructive/10 border-destructive/20",
       sign: "-",
-      amountClass: "text-red-400 font-mono font-bold",
+      amountClass: "text-destructive font-mono font-bold",
     },
     transfer: {
       Icon: ArrowLeftRight,
@@ -81,10 +75,9 @@ function TransactionRow({
       </div>
       <div className="text-right font-mono">
         <p className={`text-xs ${config.amountClass}`}>
-          {config.sign}
-          {formatShort(tx.amount, transactionCurrency(tx, account) ?? "ARS")}
+          {mask(`${config.sign}${formatShort(tx.amount, transactionCurrency(tx, account) ?? "ARS")}`)}
         </p>
-        <p className="text-[10px] text-muted-foreground">{relativeDate(tx.date)}</p>
+        <p className="text-[11px] text-muted-foreground">{relativeDate(tx.date)}</p>
       </div>
     </li>
   )
@@ -93,14 +86,17 @@ function TransactionRow({
 export function TransactionList({
   transactions,
   onEditTransaction,
+  empty = "No hay movimientos.",
 }: {
   transactions: Transaction[]
   onEditTransaction?: (tx: Transaction) => void
+  /** Qué mostrar sin movimientos: depende de si hay un filtro aplicado o no. */
+  empty?: ReactNode
 }) {
   if (transactions.length === 0) {
     return (
-      <div className="py-8 text-center text-xs font-mono text-muted-foreground border border-dashed border-border rounded-md">
-        No hay eventos para este filtro.
+      <div className="flex flex-col items-center gap-3 py-8 text-center text-xs text-muted-foreground border border-dashed border-border rounded-md">
+        {empty}
       </div>
     )
   }

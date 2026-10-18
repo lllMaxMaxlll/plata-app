@@ -2,11 +2,12 @@
 
 import { useState, useEffect, useMemo, useRef, useId } from "react"
 import { useFinance } from "./finance-provider"
+import { PageHeader } from "./page-header"
+import { useUI } from "./ui-context"
 import { formatShort, type StockTransaction } from "@/lib/finance-data"
 import {
   TrendingUp,
   TrendingDown,
-  ArrowLeft,
   Plus,
   Search,
   Trash2,
@@ -38,17 +39,9 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { getApiAuthHeaders } from "@/lib/supabase/client"
+import { relativeDate } from "@/lib/relative-date"
 
 type HistoryFilter = "all" | "buy" | "sell"
-
-function relativeDate(iso: string) {
-  const d = new Date(iso)
-  const diffDays = Math.floor((Date.now() - d.getTime()) / 86400000)
-  if (diffDays <= 0) return "Hoy"
-  if (diffDays === 1) return "Ayer"
-  if (diffDays < 7) return `Hace ${diffDays} días`
-  return d.toLocaleDateString("es-AR", { day: "2-digit", month: "short", year: "numeric" })
-}
 
 /** Agrupa por mes leyendo el prefijo del texto: construir un Date con una fecha
  *  sin hora la interpreta como UTC y en nuestro huso cae en el mes anterior. */
@@ -68,7 +61,7 @@ function monthLabelOf(key: string) {
   return label.charAt(0).toUpperCase() + label.slice(1)
 }
 
-export function StocksView({ onBack }: { onBack?: () => void }) {
+export function StocksView() {
   const {
     watchlist,
     stockTransactions,
@@ -81,6 +74,7 @@ export function StocksView({ onBack }: { onBack?: () => void }) {
     removeWatchlistStock,
     accounts,
   } = useFinance()
+  const { mask } = useUI()
 
   const [activeTab, setActiveTab] = useState<"holdings" | "watchlist" | "history">("holdings")
   const [tradeOpen, setTradeOpen] = useState(false)
@@ -250,36 +244,16 @@ export function StocksView({ onBack }: { onBack?: () => void }) {
   return (
     <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 pt-4 pb-12 font-sans space-y-5">
       {/* Encabezado */}
-      <div className="flex items-center justify-between gap-3 border-b border-border/40 pb-4">
-        <div className="flex items-center gap-3 min-w-0">
-          {onBack && (
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={onBack}
-              className="size-10 sm:size-8 rounded-lg shrink-0"
-              aria-label="Volver"
-            >
-              <ArrowLeft className="size-4" />
-            </Button>
-          )}
-          <div className="min-w-0">
-            <h1 className="text-xl font-bold tracking-tight truncate">Portafolio</h1>
-            <p className="text-xs text-muted-foreground">
-              Tus tenencias, la lista de seguimiento y el historial de operaciones.
-            </p>
-          </div>
-        </div>
-        <Button
-          size="sm"
-          onClick={() => handleOpenTrade("", "buy")}
-          disabled={!hasUSDAccount}
-          className="h-9 sm:h-8 shrink-0 gap-1 rounded-full text-xs font-semibold px-3"
-        >
-          <Plus className="size-3.5" />
-          Operar
-        </Button>
-      </div>
+      <PageHeader
+        route="stocks"
+        description="Tus tenencias, la lista de seguimiento y el historial de operaciones."
+        actions={
+          <Button onClick={() => handleOpenTrade("", "buy")} disabled={!hasUSDAccount}>
+            <Plus className="size-4" />
+            Operar
+          </Button>
+        }
+      />
 
       {/* Valor del portafolio */}
       <Card className="relative overflow-hidden rounded-xl p-5 shadow-lg isolate border-border">
@@ -288,7 +262,7 @@ export function StocksView({ onBack }: { onBack?: () => void }) {
           Valor del Portafolio
         </p>
         <p className="mt-2 text-3xl font-extrabold tracking-tight tabular-nums text-foreground">
-          {formatShort(portfolioTotalValue, "USD")}
+          {mask(formatShort(portfolioTotalValue, "USD"))}
         </p>
         <div className="mt-4 flex flex-wrap items-center gap-2">
           <Badge
@@ -301,16 +275,16 @@ export function StocksView({ onBack }: { onBack?: () => void }) {
               <TrendingDown className="size-3" />
             )}
             {portfolioTotalProfitLoss >= 0 ? "+" : ""}
-            {formatShort(portfolioTotalProfitLoss, "USD")} ({portfolioTotalProfitLossPercent}%)
+            {mask(formatShort(portfolioTotalProfitLoss, "USD"))} ({portfolioTotalProfitLossPercent}%)
           </Badge>
-          <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+          <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
             Rendimiento Histórico
           </span>
         </div>
       </Card>
 
       {!hasUSDAccount && (
-        <div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 p-3.5 text-xs text-amber-500">
+        <div className="rounded-2xl border border-warning/20 bg-warning/10 p-3.5 text-xs text-warning">
           ⚠️ <strong>Atención:</strong> Para comprar o vender acciones necesitás tener al menos una
           cuenta en Dólares (USD) registrada en la pestaña Cuentas.
         </div>
@@ -363,7 +337,7 @@ export function StocksView({ onBack }: { onBack?: () => void }) {
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
                           <span className="text-sm font-bold text-foreground">{h.symbol}</span>
-                          <Badge variant="secondary" className="px-1.5 py-0.5 text-[10px]">
+                          <Badge variant="secondary" className="px-1.5 py-0.5 text-[11px]">
                             {h.shares} {h.shares === 1 ? "acción" : "acciones"}
                           </Badge>
                         </div>
@@ -371,7 +345,7 @@ export function StocksView({ onBack }: { onBack?: () => void }) {
                       </div>
                       <div className="text-right shrink-0">
                         <p className="text-sm font-bold tabular-nums">
-                          {formatShort(h.currentValue, "USD")}
+                          {mask(formatShort(h.currentValue, "USD"))}
                         </p>
                         <p className="text-xs text-muted-foreground mt-0.5">
                           P. Promedio: {formatShort(h.avgBuyPrice, "USD")}
@@ -384,11 +358,11 @@ export function StocksView({ onBack }: { onBack?: () => void }) {
                         <span className="text-xs text-muted-foreground">Rendimiento:</span>
                         <span
                           className={`flex items-center gap-0.5 text-xs font-bold ${
-                            h.profitLoss >= 0 ? "text-emerald-500" : "text-rose-500"
+                            h.profitLoss >= 0 ? "text-success" : "text-destructive"
                           }`}
                         >
                           {h.profitLoss >= 0 ? "+" : ""}
-                          {formatShort(h.profitLoss, "USD")} ({h.profitLossPercent}%)
+                          {mask(formatShort(h.profitLoss, "USD"))} ({h.profitLossPercent}%)
                         </span>
                       </div>
                       <div className="flex gap-1.5">
@@ -506,7 +480,7 @@ export function StocksView({ onBack }: { onBack?: () => void }) {
                         }`}
                       >
                         <span className="font-bold text-foreground shrink-0">{item.symbol}</span>
-                        <span className="truncate text-[10px] text-muted-foreground">
+                        <span className="truncate text-[11px] text-muted-foreground">
                           {alreadyWatched ? "Ya en seguimiento" : item.name}
                         </span>
                       </button>
@@ -545,7 +519,7 @@ export function StocksView({ onBack }: { onBack?: () => void }) {
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="text-sm font-bold text-foreground">{w.symbol}</span>
                             {ownedShares > 0 && (
-                              <Badge variant="secondary" className="px-1.5 py-0.5 text-[10px]">
+                              <Badge variant="secondary" className="px-1.5 py-0.5 text-[11px]">
                                 {ownedShares} en cartera
                               </Badge>
                             )}
@@ -561,7 +535,7 @@ export function StocksView({ onBack }: { onBack?: () => void }) {
                               </p>
                               <p
                                 className={`mt-0.5 flex items-center justify-end gap-0.5 text-xs font-bold tabular-nums ${
-                                  isPositive ? "text-emerald-500" : "text-rose-500"
+                                  isPositive ? "text-success" : "text-destructive"
                                 }`}
                               >
                                 {isPositive ? (
@@ -662,7 +636,7 @@ export function StocksView({ onBack }: { onBack?: () => void }) {
                   )}
                 </div>
 
-                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
                   {(
                     [
                       { key: "all", label: `Todas (${stockTransactions.length})`, tone: "primary" },
@@ -678,11 +652,11 @@ export function StocksView({ onBack }: { onBack?: () => void }) {
                           : "bg-muted/40 text-muted-foreground hover:bg-muted hover:text-foreground border border-border/40"
                         : tone === "emerald"
                         ? active
-                          ? "bg-emerald-600 text-white shadow-xs"
-                          : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20"
+                          ? "bg-success text-white shadow-xs"
+                          : "bg-success/10 text-success dark:text-success hover:bg-success/20 border border-success/20"
                         : active
-                        ? "bg-rose-600 text-white shadow-xs"
-                        : "bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-500/20 border border-rose-500/20"
+                        ? "bg-destructive text-white shadow-xs"
+                        : "bg-destructive/10 text-destructive dark:text-destructive hover:bg-destructive/20 border border-destructive/20"
                     return (
                       <button
                         key={key}
@@ -700,23 +674,23 @@ export function StocksView({ onBack }: { onBack?: () => void }) {
                 {/* Totales de lo que se está viendo */}
                 <div className="grid grid-cols-3 gap-2 border-t border-border/40 pt-3">
                   <div>
-                    <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                    <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
                       Invertido
                     </p>
-                    <p className="text-sm font-bold tabular-nums text-rose-500">
-                      {formatShort(historyTotals.invested, "USD")}
+                    <p className="text-sm font-bold tabular-nums text-destructive">
+                      {mask(formatShort(historyTotals.invested, "USD"))}
                     </p>
                   </div>
                   <div>
-                    <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                    <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
                       Recuperado
                     </p>
-                    <p className="text-sm font-bold tabular-nums text-emerald-500">
-                      {formatShort(historyTotals.recovered, "USD")}
+                    <p className="text-sm font-bold tabular-nums text-success">
+                      {mask(formatShort(historyTotals.recovered, "USD"))}
                     </p>
                   </div>
                   <div>
-                    <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                    <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
                       Operaciones
                     </p>
                     <p className="text-sm font-bold tabular-nums">{historyTotals.count}</p>
@@ -757,11 +731,11 @@ export function StocksView({ onBack }: { onBack?: () => void }) {
                           </h2>
                           <span
                             className={`text-xs font-bold tabular-nums ${
-                              net >= 0 ? "text-emerald-500" : "text-rose-500"
+                              net >= 0 ? "text-success" : "text-destructive"
                             }`}
                           >
                             {net >= 0 ? "+" : "−"}
-                            {formatShort(Math.abs(net), "USD")}
+                            {mask(formatShort(Math.abs(net), "USD"))}
                           </span>
                         </div>
 
@@ -776,8 +750,8 @@ export function StocksView({ onBack }: { onBack?: () => void }) {
                                     aria-hidden
                                     className={`flex size-9 shrink-0 items-center justify-center rounded-xl border ${
                                       isBuy
-                                        ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-500"
-                                        : "bg-rose-500/10 border-rose-500/20 text-rose-500"
+                                        ? "bg-success/10 border-success/20 text-success"
+                                        : "bg-destructive/10 border-destructive/20 text-destructive"
                                     }`}
                                   >
                                     {isBuy ? (
@@ -790,7 +764,7 @@ export function StocksView({ onBack }: { onBack?: () => void }) {
                                   <div className="min-w-0 flex-1">
                                     <div className="flex items-center gap-1.5">
                                       <span className="text-sm font-bold">{tx.symbol}</span>
-                                      <span className="text-[10px] font-semibold uppercase text-muted-foreground">
+                                      <span className="text-[11px] font-semibold uppercase text-muted-foreground">
                                         {isBuy ? "Compra" : "Venta"}
                                       </span>
                                     </div>
@@ -802,7 +776,7 @@ export function StocksView({ onBack }: { onBack?: () => void }) {
 
                                   <p
                                     className={`text-sm font-bold tabular-nums shrink-0 ${
-                                      isBuy ? "text-rose-500" : "text-emerald-500"
+                                      isBuy ? "text-destructive" : "text-success"
                                     }`}
                                   >
                                     {isBuy ? "−" : "+"}

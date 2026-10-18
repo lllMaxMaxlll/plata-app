@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Search, Sparkles, CalendarRange, RefreshCw, X, Info } from "lucide-react"
+import { Search, CalendarRange, RefreshCw, X, Info } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
@@ -10,6 +10,7 @@ import { useFinance } from "./finance-provider"
 import { useSemanticSearch, type UnavailableReason } from "./use-semantic-search"
 import { TransactionList } from "./transaction-list"
 import { cn } from "@/lib/utils"
+import { PageHeader } from "./page-header"
 
 const EXAMPLES = [
   "cuánto gasté en el auto el verano pasado",
@@ -46,16 +47,11 @@ export function SearchView({
 
   return (
     <div className="mx-auto w-full max-w-3xl px-4 pb-24 pt-4 md:px-6">
-      <header className="mb-4">
-        <h2 className="flex items-center gap-2 text-base font-bold tracking-tight text-foreground">
-          <Sparkles className="size-4 text-primary" />
-          Búsqueda inteligente
-        </h2>
-        <p className="mt-1 text-xs text-muted-foreground">
-          Preguntá en tus palabras. Devuelve tus movimientos reales, no un resumen escrito por
-          una IA.
-        </p>
-      </header>
+      <PageHeader
+        route="search"
+        className="mb-4"
+        description="Preguntá en tus palabras. Devuelve tus movimientos reales, no un resumen escrito por una IA."
+      />
 
       <form onSubmit={handleSubmit} className="flex gap-2">
         <div className="relative flex-1">
@@ -72,7 +68,7 @@ export function SearchView({
               type="button"
               onClick={handleClear}
               aria-label="Limpiar búsqueda"
-              className="absolute right-2 top-1/2 flex size-6 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground cursor-pointer"
+              className="absolute right-1.5 top-1/2 flex size-8 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground cursor-pointer"
             >
               <X className="size-3.5" />
             </button>
@@ -81,7 +77,7 @@ export function SearchView({
         <Button
           type="submit"
           disabled={searching || !query.trim()}
-          className="h-11 rounded-xl px-5 text-sm font-semibold"
+          className="h-11 px-5 text-sm font-semibold"
         >
           {searching ? (
             <span className="size-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
@@ -128,7 +124,7 @@ export function SearchView({
               {result.dateRange && (
                 <Badge
                   variant="secondary"
-                  className="flex items-center gap-1 text-[10px] font-medium"
+                  className="flex items-center gap-1 text-[11px] font-medium"
                 >
                   <CalendarRange className="size-3" />
                   {result.dateRange.label}
@@ -142,7 +138,7 @@ export function SearchView({
                   key={currency}
                   className={cn(
                     "font-bold",
-                    total < 0 ? "text-red-400" : "text-emerald-400"
+                    total < 0 ? "text-destructive" : "text-success"
                   )}
                 >
                   {formatCurrency(total, currency as Currency)}
@@ -219,7 +215,7 @@ function IndexStatus({
         variant="outline"
         disabled={syncing}
         onClick={onSync}
-        className="h-8 gap-1.5 rounded-lg text-xs"
+        className="h-8 gap-1.5 text-xs"
       >
         <RefreshCw className={cn("size-3.5", syncing && "animate-spin")} />
         {syncing ? "Indexando" : "Indexar ahora"}

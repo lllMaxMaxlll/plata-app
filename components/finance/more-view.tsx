@@ -22,11 +22,14 @@ import {
 } from "lucide-react"
 import { useFinance } from "./finance-provider"
 import { useUI } from "./ui-context"
+import { ROUTES } from "@/lib/routes"
+import { useRouteSeen } from "@/lib/seen-routes"
 import { formatShort } from "@/lib/finance-data"
 import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { PageHeader } from "./page-header"
 
 export function MoreView() {
   const [nowTime] = useState(() => Date.now())
@@ -72,12 +75,7 @@ export function MoreView() {
 
   return (
     <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 pt-4 pb-12 font-sans">
-      <header>
-        <h1 className="text-xl font-semibold tracking-tight text-foreground">Explorar</h1>
-        <p className="mt-1 text-xs text-muted-foreground">
-          Tus herramientas avanzadas y la configuración de la cuenta.
-        </p>
-      </header>
+      <PageHeader route="more" description="Tus herramientas avanzadas y la configuración de la cuenta." />
 
       {/* Perfil */}
       <Link href="/profile" className="mt-4 block">
@@ -104,44 +102,36 @@ export function MoreView() {
 
       <Section title="Análisis y planificación">
         <Row
-          href="/search"
+          href={ROUTES.search.href}
           Icon={Search}
           tone="bg-primary/10 text-primary border-primary/20"
-          title="Búsqueda Inteligente"
+          title={ROUTES.search.label}
           description="Preguntá en tus palabras: “cuánto gasté en el auto el verano pasado”"
-          trailing={
-            <Badge variant="outline" className="border-primary/30 text-[10px] font-bold text-primary">
-              Nuevo
-            </Badge>
-          }
+          isNew
         />
         <Row
-          href="/analytics"
+          href={ROUTES.analytics.href}
           Icon={PieChart}
-          tone="bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
-          title="Análisis & Métricas"
+          tone="bg-success/10 text-success border-success/20"
+          title={ROUTES.analytics.label}
           description="Gastos por categoría, tendencias y comparativas"
         />
         <Row
-          href="/dashboard/proyecciones"
+          href={ROUTES.projections.href}
           Icon={Target}
-          tone="bg-cyan-500/10 text-cyan-400 border-cyan-500/20"
-          title="Proyección Financiera"
+          tone="bg-chart-3/10 text-chart-3 border-chart-3/20"
+          title={ROUTES.projections.label}
           description="Simulá tu patrimonio a 1-5 años con inflación y metas"
-          trailing={
-            <Badge variant="outline" className="border-cyan-500/30 text-[10px] font-bold text-cyan-400">
-              Nuevo
-            </Badge>
-          }
+          isNew
         />
       </Section>
 
       <Section title="Activos y seguimiento">
         <Row
-          href="/dashboard/vencimientos"
+          href={ROUTES.dueItems.href}
           Icon={CalendarClock}
-          tone="bg-purple-500/10 text-purple-500 border-purple-500/20"
-          title="Vencimientos y Servicios"
+          tone="bg-chart-5/10 text-chart-5 border-chart-5/20"
+          title={ROUTES.dueItems.label}
           description={
             pendingDueCount === 0
               ? "Al día, sin facturas pendientes"
@@ -151,7 +141,7 @@ export function MoreView() {
             pendingDueCount > 0 ? (
               <Badge
                 variant="secondary"
-                className="border-purple-500/20 bg-purple-500/10 text-[10px] font-bold text-purple-400"
+                className="border-chart-5/20 bg-chart-5/10 text-[11px] font-bold text-chart-5"
               >
                 {pendingDueCount}
               </Badge>
@@ -159,20 +149,20 @@ export function MoreView() {
           }
         />
         <Row
-          href="/stocks"
+          href={ROUTES.stocks.href}
           Icon={LineChart}
-          tone="bg-teal-500/10 text-teal-500 border-teal-500/20"
-          title="Inversiones & Stocks"
+          tone="bg-chart-3/10 text-chart-3 border-chart-3/20"
+          title={ROUTES.stocks.label}
           description={
             portfolioTotalValue > 0
-              ? `Valuación: ${formatShort(portfolioTotalValue, "USD")}`
+              ? `Valuación: ${ui.mask(formatShort(portfolioTotalValue, "USD"))}`
               : "Trading de acciones en tiempo real"
           }
           trailing={
             portfolioTotalValue > 0 ? (
               <Badge
                 variant={profitLossPercentVal >= 0 ? "default" : "destructive"}
-                className="flex items-center gap-0.5 text-[10px] font-bold"
+                className="flex items-center gap-0.5 text-[11px] font-bold"
               >
                 {profitLossPercentVal >= 0 ? (
                   <TrendingUp className="size-2.5" />
@@ -186,10 +176,10 @@ export function MoreView() {
           }
         />
         <Row
-          href="/vehicles"
+          href={ROUTES.vehicles.href}
           Icon={Bike}
-          tone="bg-orange-500/10 text-orange-500 border-orange-500/20"
-          title="Control Vehicular"
+          tone="bg-chart-2/10 text-chart-2 border-chart-2/20"
+          title={ROUTES.vehicles.label}
           description={
             vehicles.length === 0
               ? "Cargá y controlá tus vehículos"
@@ -197,7 +187,7 @@ export function MoreView() {
           }
           trailing={
             alertCount > 0 ? (
-              <Badge variant="destructive" className="flex items-center gap-1 text-[10px] font-bold">
+              <Badge variant="destructive" className="flex items-center gap-1 text-[11px] font-bold">
                 <AlertTriangle className="size-3" />
                 {alertCount}
               </Badge>
@@ -208,10 +198,10 @@ export function MoreView() {
 
       <Section title="Cuenta">
         <Row
-          href="/activity"
+          href={ROUTES.activity.href}
           Icon={ReceiptText}
-          tone="bg-indigo-500/10 text-indigo-500 border-indigo-500/20"
-          title="Historial de Movimientos"
+          tone="bg-chart-1/10 text-chart-1 border-chart-1/20"
+          title={ROUTES.activity.label}
           description={
             transactions.length === 0
               ? "Sin movimientos registrados"
@@ -219,15 +209,15 @@ export function MoreView() {
           }
         />
         <Row
-          href="/profile"
+          href={ROUTES.profile.href}
           Icon={User}
-          tone="bg-slate-500/10 text-slate-400 border-slate-500/20"
-          title="Perfil & Ajustes"
+          tone="bg-muted text-muted-foreground border-border"
+          title={ROUTES.profile.label}
           description="Categorías, notificaciones, seguridad y sesión"
         />
       </Section>
 
-      <p className="mt-8 text-center text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+      <p className="mt-8 text-center text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
         PLATA · Finanzas Personales v1.0
       </p>
     </div>
@@ -248,7 +238,7 @@ function QuickAction({
       type="button"
       variant="outline"
       onClick={onClick}
-      className="h-auto flex-col gap-1.5 rounded-2xl border-border bg-card/60 px-2 py-3 text-[11px] font-semibold text-foreground"
+      className="h-auto flex-col gap-1.5 border-border bg-card/60 px-2 py-3 text-[11px] font-semibold text-foreground"
     >
       <Icon className="size-4.5 text-primary" />
       {label}
@@ -274,6 +264,7 @@ function Row({
   title,
   description,
   trailing,
+  isNew = false,
 }: {
   href: string
   Icon: LucideIcon
@@ -281,7 +272,17 @@ function Row({
   title: string
   description: string
   trailing?: React.ReactNode
+  /** Muestra "Nuevo" hasta que el usuario abre la pantalla por primera vez. */
+  isNew?: boolean
 }) {
+  const seen = useRouteSeen(href)
+  const badge =
+    isNew && !seen ? (
+      <Badge variant="outline" className="border-primary/30 text-[11px] font-bold text-primary">
+        Nuevo
+      </Badge>
+    ) : null
+
   return (
     <Link
       href={href}
@@ -302,7 +303,7 @@ function Row({
       </div>
 
       <div className="flex shrink-0 items-center gap-2">
-        {trailing}
+        {trailing ?? badge}
         <ChevronRight className="size-4.5 text-muted-foreground" />
       </div>
     </Link>

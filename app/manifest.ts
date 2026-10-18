@@ -7,8 +7,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "Finanzas personales en pesos y dólares, en un solo lugar.",
     start_url: "/",
     display: "standalone",
-    background_color: "#17191f",
-    theme_color: "#e87524",
+    background_color: "#090b0c",
+    theme_color: "#090b0c",
     icons: [
       { src: "/icon-512.png", sizes: "512x512", type: "image/png" },
       { src: "/apple-icon.png", sizes: "180x180", type: "image/png" },

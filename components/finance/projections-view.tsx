@@ -2,6 +2,8 @@
 
 import React, { useState, useMemo, useEffect, useRef } from "react"
 import { useFinance } from "./finance-provider"
+import { PageHeader } from "./page-header"
+import { useConfirm } from "./confirm-dialog"
 import { ProjectionControls } from "./projection-controls"
 import { ProjectionChart } from "./projection-chart"
 import { ProjectionKPIs } from "./projection-kpis"
@@ -9,7 +11,6 @@ import { GoalModal, type GoalDraft } from "./goal-modal"
 import { runSimulation } from "@/lib/simulation-engine"
 import { estimateMonthlySavings, sumOverdueLiabilities } from "@/lib/savings-capacity"
 import {
-  TrendingUp,
   Sparkles,
   ArrowUp,
   ArrowDown,
@@ -47,6 +48,7 @@ export function ProjectionsView() {
     deleteGoal,
     reorderGoals,
   } = useFinance()
+  const confirm = useConfirm()
 
   // Saldos reales, calculados desde las cuentas del usuario. La cartera va
   // aparte: suma al patrimonio, pero no es plata con la que se pueda pagar una
@@ -197,8 +199,11 @@ export function ProjectionsView() {
     else await addGoal(draft)
   }
 
-  const handleRemoveGoal = async (idToRemove: string) => {
-    await deleteGoal(idToRemove)
+  const handleRemoveGoal = async (goal: { id: string; name: string }) => {
+    const confirmed = await confirm({ title: `¿Eliminar la meta "${goal.name}"?` })
+    if (!confirmed) return false
+    await deleteGoal(goal.id)
+    return true
   }
 
   const handleMovePriority = (index: number, direction: "up" | "down") => {
@@ -242,34 +247,16 @@ export function ProjectionsView() {
   return (
     <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 pt-4 pb-12 font-sans space-y-6">
       {/* Header Banner */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-border/40 pb-5">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="flex size-9 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-              <TrendingUp className="size-5" />
-            </span>
-            <div>
-              <h1 className="text-xl font-bold tracking-tight text-foreground flex items-center gap-2">
-                Proyección Financiera & Escenarios
-              </h1>
-              <p className="text-xs text-muted-foreground">
-                Planifica tus metas secuenciales y calcula la fecha estimada de llegada según tu capacidad de ahorro.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Button
-            size="sm"
-            onClick={handleOpenAddGoal}
-            className="h-9 text-xs gap-1.5 font-semibold bg-primary hover:bg-primary/90 text-primary-foreground cursor-pointer shadow-sm"
-          >
-            <Plus className="size-3.5" />
-            Añadir Meta a la Secuencia
+      <PageHeader
+        route="projections"
+        description="Planificá tus metas y calculá cuándo llegás a cada una según tu capacidad de ahorro."
+        actions={
+          <Button onClick={handleOpenAddGoal}>
+            <Plus className="size-4" />
+            Nueva meta
           </Button>
-        </div>
-      </div>
+        }
+      />
 
       {/* KPI Cards Summary */}
       <ProjectionKPIs
@@ -285,7 +272,7 @@ export function ProjectionsView() {
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/40 pb-3">
             <div>
               <CardTitle className="text-base font-semibold flex items-center gap-2">
-                <Sparkles className="size-4.5 text-purple-400" />
+                <Sparkles className="size-4.5 text-chart-5" />
                 Línea de Tiempo de Metas Secuenciales (En Cascada)
               </CardTitle>
               <p className="text-xs text-muted-foreground mt-0.5">
@@ -306,7 +293,7 @@ export function ProjectionsView() {
                 variant="ghost"
                 size="sm"
                 onClick={handleOpenAddGoal}
-                className="h-8 text-xs font-semibold text-primary hover:bg-primary/10 cursor-pointer"
+                className="h-8 text-xs font-semibold text-primary hover:bg-primary/10"
               >
                 + Crear mi primera meta
               </Button>
@@ -321,7 +308,7 @@ export function ProjectionsView() {
                     key={goal.id}
                     className={`relative flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 rounded-xl border transition-all ${
                       isAchievedInHorizon
-                        ? "border-emerald-500/30 bg-emerald-500/5 hover:border-emerald-500/50"
+                        ? "border-success/30 bg-success/5 hover:border-success/50"
                         : "border-border/60 bg-muted/20 hover:border-border"
                     }`}
                   >
@@ -337,15 +324,15 @@ export function ProjectionsView() {
                           </span>
                           <Badge
                             variant={goal.kind === "reserve" ? "secondary" : "outline"}
-                            className="text-[10px] font-mono gap-1"
+                            className="text-[11px] font-mono gap-1"
                           >
                             {goal.kind === "reserve" ? (
                               <>
-                                <ShieldCheck className="size-3 text-emerald-500" /> Reserva
+                                <ShieldCheck className="size-3 text-success" /> Reserva
                               </>
                             ) : (
                               <>
-                                <ShoppingBag className="size-3 text-purple-400" /> Compra
+                                <ShoppingBag className="size-3 text-chart-5" /> Compra
                               </>
                             )}
                           </Badge>
@@ -417,7 +404,7 @@ export function ProjectionsView() {
                           type="button"
                           variant="ghost"
                           size="icon"
-                          onClick={() => handleRemoveGoal(goal.id)}
+                          onClick={() => handleRemoveGoal(goal)}
                           className="size-9 sm:size-7 text-muted-foreground hover:text-destructive cursor-pointer"
                           title="Eliminar"
                         >
@@ -524,9 +511,7 @@ export function ProjectionsView() {
         onOpenChange={setIsGoalModalOpen}
         currentGoal={editingGoal}
         onSaveGoal={handleSaveGoal}
-        onRemoveGoal={async () => {
-          if (editingGoal) await handleRemoveGoal(editingGoal.id)
-        }}
+        onRemoveGoal={async () => (editingGoal ? handleRemoveGoal(editingGoal) : false)}
       />
     </div>
   )

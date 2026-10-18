@@ -20,7 +20,7 @@ export default function NotFound() {
         render={<Link href="/" />}
         nativeButton={false}
         variant="default"
-        className="mt-6 flex items-center gap-2 rounded-xl text-xs font-semibold"
+        className="mt-6 flex items-center gap-2 text-xs font-semibold"
       >
         <Home className="size-4" />
         Volver al panel principal

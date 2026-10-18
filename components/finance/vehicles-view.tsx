@@ -8,7 +8,6 @@ import { formatShort, type Vehicle, type VehicleLog, type VehicleLogType } from 
 import {
   Bike,
   Car,
-  ArrowLeft,
   Truck,
   Milestone,
   Plus,
@@ -24,7 +23,7 @@ import {
   Settings,
   ShoppingBag,
   ShieldAlert,
-  Sparkles
+  Sparkles,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -32,17 +31,19 @@ import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { cn, clickableRowProps, focusRing } from "@/lib/utils"
+import { PageHeader } from "./page-header"
+import { OptionSelect } from "./option-select"
 
 const LOG_METADATA: Record<VehicleLogType, { label: string; Icon: any; color: string }> = {
-  fuel: { label: "Combustible", Icon: Fuel, color: "text-orange-500 bg-orange-500/10 border-orange-500/20" },
-  service: { label: "Service", Icon: Wrench, color: "text-blue-500 bg-blue-500/10 border-blue-500/20" },
-  part: { label: "Repuesto", Icon: Settings, color: "text-purple-500 bg-purple-500/10 border-purple-500/20" },
-  gear: { label: "Indumentaria", Icon: ShoppingBag, color: "text-pink-500 bg-pink-500/10 border-pink-500/20" },
-  insurance: { label: "Seguro/Patente", Icon: ShieldAlert, color: "text-red-500 bg-red-500/10 border-red-500/20" },
-  other: { label: "Otro", Icon: Sparkles, color: "text-slate-500 bg-slate-500/10 border-slate-500/20" },
+  fuel: { label: "Combustible", Icon: Fuel, color: "text-chart-2 bg-chart-2/10 border-chart-2/20" },
+  service: { label: "Service", Icon: Wrench, color: "text-chart-1 bg-chart-1/10 border-chart-1/20" },
+  part: { label: "Repuesto", Icon: Settings, color: "text-chart-5 bg-chart-5/10 border-chart-5/20" },
+  gear: { label: "Indumentaria", Icon: ShoppingBag, color: "text-chart-5 bg-chart-5/10 border-chart-5/20" },
+  insurance: { label: "Seguro/Patente", Icon: ShieldAlert, color: "text-destructive bg-destructive/10 border-destructive/20" },
+  other: { label: "Otro", Icon: Sparkles, color: "text-muted-foreground bg-muted border-border" },
 }
 
-export function VehiclesView({ isDesktop = false, onBack }: { isDesktop?: boolean; onBack?: () => void }) {
+export function VehiclesView() {
   const { vehicles, vehicleLogs } = useFinance()
   const [activeVehId, setActiveVehId] = useState<string>("")
   const [vehicleSheetOpen, setVehicleSheetOpen] = useState(false)
@@ -253,6 +254,7 @@ export function VehiclesView({ isDesktop = false, onBack }: { isDesktop?: boolea
 
   return (
     <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 pt-4 pb-12 font-sans space-y-6">
+      <PageHeader route="vehicles" description="Combustible, services, seguro y gastos de cada vehículo." />
 
       {vehicles.length === 0 ? (
         <div className="max-w-md mx-auto mt-12 text-center border border-border rounded-xl bg-card p-8 flex flex-col items-center shadow-sm">
@@ -274,7 +276,7 @@ export function VehiclesView({ isDesktop = false, onBack }: { isDesktop?: boolea
       ) : (
         <>
           {/* Selector de Vehículo Activo */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 -mx-4 px-4 scrollbar-none">
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 -mx-4 px-4 no-scrollbar">
             {vehicles.map((v) => {
               const active = v.id === activeVehicle?.id
               return (
@@ -287,7 +289,7 @@ export function VehiclesView({ isDesktop = false, onBack }: { isDesktop?: boolea
                 >
                   {getVehicleIcon(v.type)}
                   <span>{v.name}</span>
-                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0.5">
+                  <Badge variant="secondary" className="text-[11px] px-1.5 py-0.5">
                     {v.odometer} Km
                   </Badge>
                 </Button>
@@ -296,7 +298,7 @@ export function VehiclesView({ isDesktop = false, onBack }: { isDesktop?: boolea
             <Button
               onClick={handleAddVehicle}
               size="sm"
-              className="flex items-center gap-1 text-xs font-semibold rounded-xl"
+              className="flex items-center gap-1 text-xs font-semibold"
             >
               <Plus className="size-4" />
               Añadir vehículo
@@ -312,28 +314,28 @@ export function VehiclesView({ isDesktop = false, onBack }: { isDesktop?: boolea
                   {/* Kilometraje */}
                   <Card className="p-4 shadow-sm flex flex-col justify-between min-h-24">
                     <div className="flex items-center justify-between text-muted-foreground">
-                      <p className="text-[10px] font-bold uppercase tracking-wider">Kilometraje</p>
-                      <Gauge className="size-4 text-blue-500" />
+                      <p className="text-[11px] font-bold uppercase tracking-wider">Kilometraje</p>
+                      <Gauge className="size-4 text-chart-1" />
                     </div>
                     <div>
                       <p className="text-xl font-bold tracking-tight mt-2 tabular-nums">
                         {activeVehicle.odometer.toLocaleString("es-AR")}
                       </p>
-                      <p className="text-[10px] text-muted-foreground mt-0.5">Kilómetros totales</p>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">Kilómetros totales</p>
                     </div>
                   </Card>
 
                   {/* Consumo Medio */}
                   <Card className="p-4 shadow-sm flex flex-col justify-between min-h-24">
                     <div className="flex items-center justify-between text-muted-foreground">
-                      <p className="text-[10px] font-bold uppercase tracking-wider">Consumo Medio</p>
-                      <Fuel className="size-4 text-orange-500" />
+                      <p className="text-[11px] font-bold uppercase tracking-wider">Consumo Medio</p>
+                      <Fuel className="size-4 text-chart-2" />
                     </div>
                     <div>
                       <p className="text-xl font-bold tracking-tight mt-2 tabular-nums">
                         {stats.averageKmPerLiter > 0 ? `${stats.averageKmPerLiter.toFixed(2)} Km/L` : "—"}
                       </p>
-                      <p className="text-[10px] text-muted-foreground mt-0.5">
+                      <p className="text-[11px] text-muted-foreground mt-0.5">
                         {stats.lastKmPerLiter > 0 ? `Última: ${stats.lastKmPerLiter.toFixed(1)} Km/L` : "Requiere 2 tanques llenos"}
                       </p>
                     </div>
@@ -342,36 +344,36 @@ export function VehiclesView({ isDesktop = false, onBack }: { isDesktop?: boolea
                   {/* Costo por Kilómetro */}
                   <Card className="p-4 shadow-sm flex flex-col justify-between min-h-24">
                     <div className="flex items-center justify-between text-muted-foreground">
-                      <p className="text-[10px] font-bold uppercase tracking-wider">Costo por Km</p>
-                      <TrendingUp className="size-4 text-emerald-500" />
+                      <p className="text-[11px] font-bold uppercase tracking-wider">Costo por Km</p>
+                      <TrendingUp className="size-4 text-success" />
                     </div>
                     <div>
                       <p className="text-xl font-bold tracking-tight mt-2 tabular-nums">
                         {stats.costPerKm > 0 ? `$${stats.costPerKm.toFixed(1)}` : "—"}
                       </p>
-                      <p className="text-[10px] text-muted-foreground mt-0.5">Gastos / kms recorridos</p>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">Gastos / kms recorridos</p>
                     </div>
                   </Card>
 
                   {/* Gasto Total */}
                   <Card className="p-4 shadow-sm flex flex-col justify-between min-h-24">
                     <div className="flex items-center justify-between text-muted-foreground">
-                      <p className="text-[10px] font-bold uppercase tracking-wider">Total Gastado</p>
-                      <DollarSign className="size-4 text-purple-500" />
+                      <p className="text-[11px] font-bold uppercase tracking-wider">Total Gastado</p>
+                      <DollarSign className="size-4 text-chart-5" />
                     </div>
                     <div>
                       <p className="text-xl font-bold tracking-tight mt-2 tabular-nums">
                         {formatShort(stats.totalSpent, "ARS")}
                       </p>
-                      <p className="text-[10px] text-muted-foreground mt-0.5">Suma de bitácora</p>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">Suma de bitácora</p>
                     </div>
                   </Card>
                 </div>
 
                 {/* Alerts and Reminders section */}
                 {alerts.length > 0 && (
-                  <section className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4 flex flex-col gap-3">
-                    <div className="flex items-center gap-2 text-amber-600 font-bold text-xs uppercase tracking-wide">
+                  <section className="rounded-2xl border border-warning/20 bg-warning/5 p-4 flex flex-col gap-3">
+                    <div className="flex items-center gap-2 text-warning font-bold text-xs uppercase tracking-wide">
                       <AlertTriangle className="size-4.5" />
                       Alertas de Mantenimiento y Services
                     </div>
@@ -380,8 +382,8 @@ export function VehiclesView({ isDesktop = false, onBack }: { isDesktop?: boolea
                         <li
                           key={al.id}
                           className={`flex items-start gap-2.5 p-3 rounded-xl border text-xs ${al.type === "critical"
-                            ? "bg-red-500/10 text-red-500 border-red-500/20 font-medium"
-                            : "bg-amber-500/10 text-amber-500 border-amber-500/20"
+                            ? "bg-destructive/10 text-destructive border-destructive/20 font-medium"
+                            : "bg-warning/10 text-warning border-warning/20"
                             }`}
                         >
                           <span className="font-semibold">{al.title}</span>
@@ -455,19 +457,21 @@ export function VehiclesView({ isDesktop = false, onBack }: { isDesktop?: boolea
 
                   <div className="flex items-center gap-2">
                     <Filter className="size-3.5 text-muted-foreground shrink-0" />
-                    <select
+                    <OptionSelect
+                      ariaLabel="Filtrar registros por tipo"
                       value={typeFilter}
-                      onChange={(e) => setTypeFilter(e.target.value as any)}
-                      className="h-10 rounded-xl border border-input bg-transparent px-3 py-2 text-xs font-semibold outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer"
-                    >
-                      <option value="all">Todos los registros</option>
-                      <option value="fuel">Sólo Combustible</option>
-                      <option value="service">Sólo Services</option>
-                      <option value="part">Sólo Repuestos</option>
-                      <option value="gear">Sólo Indumentaria</option>
-                      <option value="insurance">Sólo Seguro/Patente</option>
-                      <option value="other">Otros registros</option>
-                    </select>
+                      onValueChange={setTypeFilter}
+                      className="w-auto"
+                      options={[
+                        { value: "all", label: "Todos los registros" },
+                        { value: "fuel", label: "Sólo combustible" },
+                        { value: "service", label: "Sólo services" },
+                        { value: "part", label: "Sólo repuestos" },
+                        { value: "gear", label: "Sólo indumentaria" },
+                        { value: "insurance", label: "Sólo seguro/patente" },
+                        { value: "other", label: "Otros registros" },
+                      ]}
+                    />
                   </div>
                 </div>
 
@@ -478,7 +482,7 @@ export function VehiclesView({ isDesktop = false, onBack }: { isDesktop?: boolea
                       <p className="text-xs font-semibold text-muted-foreground">
                         No se encontraron registros.
                       </p>
-                      <p className="text-[10px] text-muted-foreground mt-1 max-w-xs">
+                      <p className="text-[11px] text-muted-foreground mt-1 max-w-xs">
                         Comenzá agregando un gasto con el botón superior o cambiá los términos de búsqueda.
                       </p>
                     </div>
@@ -512,7 +516,7 @@ export function VehiclesView({ isDesktop = false, onBack }: { isDesktop?: boolea
                                 <p className="truncate text-xs font-bold text-foreground">
                                   {details}
                                 </p>
-                                <p className="text-[10px] text-muted-foreground mt-0.5">
+                                <p className="text-[11px] text-muted-foreground mt-0.5">
                                   {l.odometer} Km {l.note && l.note !== l.itemName ? `· ${l.note}` : ""}
                                 </p>
                               </div>
@@ -522,7 +526,7 @@ export function VehiclesView({ isDesktop = false, onBack }: { isDesktop?: boolea
                               <p className="text-xs font-bold tabular-nums text-foreground">
                                 -{formatShort(l.amount, "ARS")}
                               </p>
-                              <p className="text-[9px] text-muted-foreground mt-0.5">
+                              <p className="text-[11px] text-muted-foreground mt-0.5">
                                 {formatLogDate(l.date)}
                               </p>
                             </div>
