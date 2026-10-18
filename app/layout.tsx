@@ -4,6 +4,12 @@ import './globals.css'
 import { Toaster } from 'sonner'
 import { Providers } from './providers'
 import { AppShell } from './shell'
+import { Noto_Sans, EB_Garamond } from "next/font/google";
+import { cn } from "@/lib/utils";
+
+const ebGaramondHeading = EB_Garamond({subsets:['latin'],variable:'--font-heading'});
+
+const notoSans = Noto_Sans({subsets:['latin'],variable:'--font-sans'});
 
 export const metadata: Metadata = {
   title: 'PLATA — Finanzas Cloud Dashboard',
@@ -45,7 +51,7 @@ export default function RootLayout({
   return (
     <html
       lang="es"
-      className="bg-background"
+      className={cn("dark bg-background", "font-sans", notoSans.variable, ebGaramondHeading.variable)}
     >
       <body className="bg-background font-sans antialiased text-foreground">
         <Providers>

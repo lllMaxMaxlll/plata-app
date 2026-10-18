@@ -1,53 +1,51 @@
-"use client"
+import { Slider as SliderPrimitive } from "@base-ui/react/slider"
+import { cn } from "cn"
 
-import * as React from "react"
-import { cn } from "@/lib/utils"
+function Slider({
+  className,
+  defaultValue,
+  value,
+  min = 0,
+  max = 100,
+  ...props
+}: SliderPrimitive.Root.Props) {
+  const _values = Array.isArray(value)
+    ? value
+    : Array.isArray(defaultValue)
+      ? defaultValue
+      : [min, max]
 
-export interface SliderProps
-  extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "onChange" | "value"> {
-  value: number
-  onValueChange: (value: number) => void
-  min?: number
-  max?: number
-  step?: number
-}
-
-const Slider = React.forwardRef<HTMLInputElement, SliderProps>(
-  ({ className, value, onValueChange, min = 0, max = 100, step = 1, disabled, ...props }, ref) => {
-    const percentage = Math.min(100, Math.max(0, ((value - min) / (max - min)) * 100))
-
-    return (
-      <div className={cn("relative flex w-full touch-none select-none items-center py-1.5", className)}>
-        <div className="relative h-2 w-full overflow-hidden rounded-full bg-secondary/80">
-          <div
-            className="h-full bg-primary transition-all duration-75"
-            style={{ width: `${percentage}%` }}
+  return (
+    <SliderPrimitive.Root
+      className={cn("data-horizontal:w-full data-vertical:h-full", className)}
+      data-slot="slider"
+      defaultValue={defaultValue}
+      value={value}
+      min={min}
+      max={max}
+      thumbAlignment="edge"
+      {...props}
+    >
+      <SliderPrimitive.Control className="relative flex w-full touch-none items-center select-none data-disabled:opacity-50 data-vertical:h-full data-vertical:min-h-40 data-vertical:w-auto data-vertical:flex-col">
+        <SliderPrimitive.Track
+          data-slot="slider-track"
+          className="relative grow overflow-hidden rounded-full bg-input/90 select-none data-horizontal:h-2 data-horizontal:w-full data-vertical:h-full data-vertical:w-2"
+        >
+          <SliderPrimitive.Indicator
+            data-slot="slider-range"
+            className="bg-primary select-none data-horizontal:h-full data-vertical:w-full"
           />
-        </div>
-        <input
-          type="range"
-          ref={ref}
-          min={min}
-          max={max}
-          step={step}
-          value={value}
-          disabled={disabled}
-          onChange={(e) => onValueChange(Number(e.target.value))}
-          className={cn(
-            "absolute inset-0 h-full w-full opacity-0 cursor-pointer disabled:cursor-not-allowed",
-            className
-          )}
-          {...props}
-        />
-        <div
-          className="pointer-events-none absolute size-4 rounded-full border-2 border-primary bg-background shadow-md transition-all -translate-x-1/2 ring-offset-background group-hover:scale-110"
-          style={{ left: `${percentage}%` }}
-        />
-      </div>
-    )
-  }
-)
-
-Slider.displayName = "Slider"
+        </SliderPrimitive.Track>
+        {Array.from({ length: _values.length }, (_, index) => (
+          <SliderPrimitive.Thumb
+            data-slot="slider-thumb"
+            key={index}
+            className="block h-4 w-6 shrink-0 rounded-full bg-white shadow-md ring-1 ring-black/10 transition-[color,box-shadow,background-color] select-none not-dark:bg-clip-padding hover:ring-4 hover:ring-ring/30 focus-visible:ring-4 focus-visible:ring-ring/30 focus-visible:outline-hidden disabled:pointer-events-none disabled:opacity-50 data-vertical:h-6 data-vertical:w-4"
+          />
+        ))}
+      </SliderPrimitive.Control>
+    </SliderPrimitive.Root>
+  )
+}
 
 export { Slider }

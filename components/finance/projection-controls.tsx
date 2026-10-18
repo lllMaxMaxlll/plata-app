@@ -457,8 +457,8 @@ export function ProjectionControls({
                 </div>
               </div>
               <Slider
-                value={annualInflation}
-                onValueChange={onAnnualInflationChange}
+                value={[annualInflation]}
+                onValueChange={(v) => onAnnualInflationChange(Array.isArray(v) ? v[0] : v)}
                 min={0}
                 max={200}
                 step={1}
@@ -482,8 +482,8 @@ export function ProjectionControls({
                 </div>
               </div>
               <Slider
-                value={annualDevaluation}
-                onValueChange={onAnnualDevaluationChange}
+                value={[annualDevaluation]}
+                onValueChange={(v) => onAnnualDevaluationChange(Array.isArray(v) ? v[0] : v)}
                 min={0}
                 max={200}
                 step={1}
@@ -507,8 +507,8 @@ export function ProjectionControls({
                 </div>
               </div>
               <Slider
-                value={annualReturnARS}
-                onValueChange={onAnnualReturnARSChange}
+                value={[annualReturnARS]}
+                onValueChange={(v) => onAnnualReturnARSChange(Array.isArray(v) ? v[0] : v)}
                 min={-20}
                 max={200}
                 step={1}
@@ -535,8 +535,8 @@ export function ProjectionControls({
                 </div>
               </div>
               <Slider
-                value={annualReturnUSD}
-                onValueChange={onAnnualReturnUSDChange}
+                value={[annualReturnUSD]}
+                onValueChange={(v) => onAnnualReturnUSDChange(Array.isArray(v) ? v[0] : v)}
                 min={-20}
                 max={60}
                 step={1}

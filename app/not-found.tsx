@@ -17,14 +17,13 @@ export default function NotFound() {
       </p>
 
       <Button
-        asChild
+        render={<Link href="/" />}
+        nativeButton={false}
         variant="default"
         className="mt-6 flex items-center gap-2 rounded-xl text-xs font-semibold"
       >
-        <Link href="/">
-          <Home className="size-4" />
-          Volver al panel principal
-        </Link>
+        <Home className="size-4" />
+        Volver al panel principal
       </Button>
     </div>
   )

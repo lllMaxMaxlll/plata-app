@@ -46,14 +46,13 @@ export default function Error({
           Reintentar
         </Button>
         <Button
-          asChild
+          render={<Link href="/" />}
+          nativeButton={false}
           variant="outline"
           className="flex items-center gap-2 rounded-xl text-xs font-semibold"
         >
-          <Link href="/">
-            <Home className="size-4" />
-            Ir al inicio
-          </Link>
+          <Home className="size-4" />
+          Ir al inicio
         </Button>
       </div>
     </div>
