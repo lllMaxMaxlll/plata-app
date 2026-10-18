@@ -38,7 +38,7 @@ export async function updateSession(request: NextRequest) {
   // with the Supabase client, your users may be randomly logged out.
   // Refresca la sesión y nada más.
   //
-  // PLATA no redirige a una pantalla de login: el gate de autenticación vive en
+  // La app no redirige a una pantalla de login: el gate de autenticación vive en
   // AppShell, que muestra <AuthView /> cuando no hay usuario. El scaffolding
   // original redirigía a /auth/login, una ruta que esta app no tiene — habría
   // sido un 404 el día que alguien enganchara este middleware.

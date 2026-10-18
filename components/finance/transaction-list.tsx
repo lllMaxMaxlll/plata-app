@@ -7,13 +7,16 @@ import { useFinance } from "./finance-provider"
 import { useUI } from "./ui-context"
 import { cn, clickableRowProps, focusRing } from "@/lib/utils"
 import { relativeDate } from "@/lib/relative-date"
+import { IconTile } from "./lucas-ui"
 
 function TransactionRow({
   tx,
   onEditTransaction,
+  showDate,
 }: {
   tx: Transaction
   onEditTransaction?: (tx: Transaction) => void
+  showDate: boolean
 }) {
   const { getAccount, vehicles } = useFinance()
   const { mask } = useUI()
@@ -22,27 +25,9 @@ function TransactionRow({
   const vehicle = tx.vehicleId ? vehicles?.find((v) => v.id === tx.vehicleId) : undefined
 
   const config = {
-    income: {
-      Icon: ArrowDownLeft,
-      tone: "text-success",
-      bg: "bg-success/10 border-success/20",
-      sign: "+",
-      amountClass: "text-success font-mono font-bold",
-    },
-    expense: {
-      Icon: ArrowUpRight,
-      tone: "text-destructive",
-      bg: "bg-destructive/10 border-destructive/20",
-      sign: "-",
-      amountClass: "text-destructive font-mono font-bold",
-    },
-    transfer: {
-      Icon: ArrowLeftRight,
-      tone: "text-primary",
-      bg: "bg-primary/10 border-primary/20",
-      sign: "",
-      amountClass: "text-foreground font-mono font-bold",
-    },
+    income: { Icon: ArrowDownLeft, tile: "bg-lime", sign: "+", amountClass: "text-success" },
+    expense: { Icon: ArrowUpRight, tile: "bg-coral", sign: "−", amountClass: "text-foreground" },
+    transfer: { Icon: ArrowLeftRight, tile: "bg-sky", sign: "", amountClass: "text-muted-foreground" },
   }[tx.type]
 
   const subtitle =
@@ -59,25 +44,23 @@ function TransactionRow({
         `Editar movimiento ${tx.note || tx.category}`
       )}
       className={cn(
-        "flex cursor-pointer items-center gap-3 py-2.5 px-3 transition-colors hover:bg-muted/40 rounded-md border border-transparent hover:border-border -mx-1",
+        "-mx-1.5 flex cursor-pointer items-center gap-3 rounded-lg px-1.5 py-2.5 transition-colors hover:bg-lime/20",
         focusRing
       )}
     >
-      <span className={`flex size-8 shrink-0 items-center justify-center rounded-md border ${config.bg} ${config.tone}`}>
-        <config.Icon className="size-4" />
-      </span>
+      <IconTile Icon={config.Icon} className={config.tile} />
       <div className="min-w-0 flex-1">
-        <p className="flex items-center gap-1.5 truncate text-xs font-semibold text-foreground">
+        <p className="flex items-center gap-1.5 truncate text-sm font-semibold">
           {tx.note || tx.category}
           {tx.receiptName && <Paperclip className="size-3 shrink-0 text-muted-foreground" />}
         </p>
-        <p className="truncate text-[11px] font-mono text-muted-foreground">{subtitle}</p>
+        <p className="truncate text-xs text-muted-foreground">{subtitle}</p>
       </div>
-      <div className="text-right font-mono">
-        <p className={`text-xs ${config.amountClass}`}>
+      <div className="shrink-0 text-right">
+        <p className={cn("font-mono text-sm font-semibold", config.amountClass)}>
           {mask(`${config.sign}${formatShort(tx.amount, transactionCurrency(tx, account) ?? "ARS")}`)}
         </p>
-        <p className="text-[11px] text-muted-foreground">{relativeDate(tx.date)}</p>
+        {showDate && <p className="font-mono text-[11px] text-muted-foreground">{relativeDate(tx.date)}</p>}
       </div>
     </li>
   )
@@ -87,23 +70,26 @@ export function TransactionList({
   transactions,
   onEditTransaction,
   empty = "No hay movimientos.",
+  showDate = true,
 }: {
   transactions: Transaction[]
   onEditTransaction?: (tx: Transaction) => void
   /** Qué mostrar sin movimientos: depende de si hay un filtro aplicado o no. */
   empty?: ReactNode
+  /** false cuando la lista ya viene agrupada por día y la fecha sobra. */
+  showDate?: boolean
 }) {
   if (transactions.length === 0) {
     return (
-      <div className="flex flex-col items-center gap-3 py-8 text-center text-xs text-muted-foreground border border-dashed border-border rounded-md">
+      <div className="my-2 flex flex-col items-center gap-3 rounded-xl border-2 border-dashed border-foreground/30 py-8 text-center text-sm text-muted-foreground">
         {empty}
       </div>
     )
   }
   return (
-    <ul className="flex flex-col gap-1 mt-1">
+    <ul className="divide-y-[1.5px] divide-dashed divide-foreground/15">
       {transactions.map((tx) => (
-        <TransactionRow key={tx.id} tx={tx} onEditTransaction={onEditTransaction} />
+        <TransactionRow key={tx.id} tx={tx} onEditTransaction={onEditTransaction} showDate={showDate} />
       ))}
     </ul>
   )

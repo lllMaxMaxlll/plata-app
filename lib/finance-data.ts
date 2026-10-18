@@ -133,14 +133,6 @@ export function formatCompact(amount: number, currency: Currency): string {
   })}`
 }
 
-export const ACCENT_BY_KIND: Record<Account["kind"], string> = {
-  bank: "oklch(0.7 0.13 230)",
-  wallet: "oklch(0.78 0.15 75)",
-  cash: "oklch(0.76 0.16 156)",
-  crypto: "oklch(0.78 0.15 75)",
-  savings: "oklch(0.66 0.18 350)",
-}
-
 export const CATEGORY_COLORS: Record<string, string> = {
   Comida: "var(--chart-1)",
   Servicios: "var(--chart-2)",

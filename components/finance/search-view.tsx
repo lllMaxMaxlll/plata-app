@@ -1,16 +1,15 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Search, CalendarRange, RefreshCw, X, Info } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
-import { formatCurrency, type Currency, type Transaction } from "@/lib/finance-data"
+import { formatShort, type Currency, type Transaction } from "@/lib/finance-data"
 import { useFinance } from "./finance-provider"
 import { useSemanticSearch, type UnavailableReason } from "./use-semantic-search"
 import { TransactionList } from "./transaction-list"
 import { cn } from "@/lib/utils"
 import { PageHeader } from "./page-header"
+import { pageClass } from "./lucas-ui"
 
 const EXAMPLES = [
   "cuánto gasté en el auto el verano pasado",
@@ -21,11 +20,14 @@ const EXAMPLES = [
 
 export function SearchView({
   onEditTransaction,
+  initialQuery = "",
 }: {
   onEditTransaction?: (tx: Transaction) => void
+  /** Pregunta que llega desde la barra Anotar: se busca apenas abre la pantalla. */
+  initialQuery?: string
 }) {
   const { user, transactions, accounts, vehicles } = useFinance()
-  const [query, setQuery] = useState("")
+  const [query, setQuery] = useState(initialQuery)
 
   const { result, search, clear, sync, searching, syncing, pending, available, reason } =
     useSemanticSearch({
@@ -34,6 +36,13 @@ export function SearchView({
       accounts,
       vehicles: vehicles ?? [],
     })
+
+  const askedInitial = useRef(false)
+  useEffect(() => {
+    if (askedInitial.current || !initialQuery.trim()) return
+    askedInitial.current = true
+    void search(initialQuery)
+  }, [initialQuery, search])
 
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault()
@@ -46,120 +55,123 @@ export function SearchView({
   }
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-4 pb-24 pt-4 md:px-6">
+    <div className={pageClass}>
       <PageHeader
         route="search"
-        className="mb-4"
         description="Preguntá en tus palabras. Devuelve tus movimientos reales, no un resumen escrito por una IA."
       />
 
-      <form onSubmit={handleSubmit} className="flex gap-2">
-        <div className="relative flex-1">
-          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="¿Cuánto gasté en el auto el verano pasado?"
-            aria-label="Buscar movimientos"
-            className="h-11 rounded-xl pl-9 pr-9 text-sm"
-          />
-          {query && (
-            <button
-              type="button"
-              onClick={handleClear}
-              aria-label="Limpiar búsqueda"
-              className="absolute right-1.5 top-1/2 flex size-8 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground cursor-pointer"
-            >
-              <X className="size-3.5" />
-            </button>
-          )}
-        </div>
-        <Button
-          type="submit"
-          disabled={searching || !query.trim()}
-          className="h-11 px-5 text-sm font-semibold"
-        >
-          {searching ? (
-            <span className="size-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-          ) : (
-            "Buscar"
-          )}
-        </Button>
-      </form>
-
-      {!result && !searching && (
-        <div className="mt-4 flex flex-wrap gap-2">
-          {EXAMPLES.map((example) => (
-            <Badge
-              key={example}
-              variant="outline"
-              onClick={() => {
-                setQuery(example)
-                void search(example)
-              }}
-              className="cursor-pointer px-3 py-1 text-xs font-normal text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground"
-            >
-              {example}
-            </Badge>
-          ))}
-        </div>
-      )}
-
-      <IndexStatus
-        available={available}
-        reason={reason}
-        pending={pending}
-        syncing={syncing}
-        onSync={() => void sync()}
-      />
-
-      {result && (
-        <section className="mt-6">
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border pb-3">
-            <div className="flex items-center gap-2">
-              <p className="text-xs font-semibold text-foreground">
-                {result.transactions.length}{" "}
-                {result.transactions.length === 1 ? "movimiento" : "movimientos"}
-              </p>
-              {result.dateRange && (
-                <Badge
-                  variant="secondary"
-                  className="flex items-center gap-1 text-[11px] font-medium"
+      <div className="mt-4 grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
+        <div className="min-w-0 space-y-5">
+          <form onSubmit={handleSubmit} className="flex gap-2">
+            <div className="relative flex-1">
+              <Search className="pointer-events-none absolute top-1/2 left-4 size-5 -translate-y-1/2" />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="¿Cuánto gasté en el auto el verano pasado?"
+                aria-label="Buscar movimientos"
+                enterKeyHint="search"
+                className="h-14 w-full rounded-2xl border-2 border-foreground bg-card pr-11 pl-12 text-base font-semibold shadow-md outline-none placeholder:font-normal placeholder:text-muted-foreground focus-visible:ring-3 focus-visible:ring-lime"
+              />
+              {query && (
+                <button
+                  type="button"
+                  onClick={handleClear}
+                  aria-label="Limpiar búsqueda"
+                  className="absolute top-1/2 right-2 flex size-9 -translate-y-1/2 cursor-pointer items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                 >
-                  <CalendarRange className="size-3" />
-                  {result.dateRange.label}
-                </Badge>
+                  <X className="size-4" />
+                </button>
               )}
             </div>
+            <Button type="submit" disabled={searching || !query.trim()} className="h-14 px-5 text-base font-extrabold">
+              {searching ? (
+                <span className="size-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+              ) : (
+                "Buscar"
+              )}
+            </Button>
+          </form>
 
-            <div className="flex items-center gap-3 font-mono text-xs tabular-nums">
-              {Object.entries(result.totals).map(([currency, total]) => (
-                <span
-                  key={currency}
-                  className={cn(
-                    "font-bold",
-                    total < 0 ? "text-destructive" : "text-success"
+          <IndexStatus
+            available={available}
+            reason={reason}
+            pending={pending}
+            syncing={syncing}
+            onSync={() => void sync()}
+          />
+
+          {result ? (
+            <section className="space-y-4">
+              <div className="rounded-2xl border-2 border-foreground bg-sky p-4 text-ink shadow-sm">
+                <div className="flex flex-wrap items-center gap-2 font-mono text-[11px] font-semibold">
+                  <span>
+                    {result.transactions.length} {result.transactions.length === 1 ? "movimiento" : "movimientos"}
+                  </span>
+                  {result.dateRange && (
+                    <span className="inline-flex items-center gap-1 rounded-full border-[1.5px] border-ink bg-white/70 px-2 py-0.5">
+                      <CalendarRange className="size-3" />
+                      {result.dateRange.label}
+                    </span>
                   )}
-                >
-                  {formatCurrency(total, currency as Currency)}
-                </span>
-              ))}
-            </div>
-          </div>
+                </div>
+                <div className="mt-1 flex flex-wrap gap-x-5">
+                  {Object.keys(result.totals).length === 0 ? (
+                    <p className="text-3xl font-extrabold tracking-tighter">$0</p>
+                  ) : (
+                    Object.entries(result.totals).map(([currency, total]) => (
+                      <p key={currency} className="text-3xl font-extrabold tracking-tighter">
+                        {formatShort(total, currency as Currency)}
+                      </p>
+                    ))
+                  )}
+                </div>
+              </div>
 
-          {result.transactions.length === 0 ? (
-            <p className="mt-6 rounded-md border border-dashed border-border py-8 text-center text-xs text-muted-foreground">
-              No encontré movimientos que coincidan.
-              {result.dateRange && ` El filtro de fecha fue: ${result.dateRange.label}.`}
-            </p>
+              {result.transactions.length === 0 ? (
+                <p className="rounded-2xl border-2 border-dashed border-foreground/30 py-8 text-center text-sm text-muted-foreground">
+                  No encontré movimientos que coincidan.
+                  {result.dateRange && ` El filtro de fecha fue: ${result.dateRange.label}.`}
+                </p>
+              ) : (
+                <div className="rounded-2xl border-2 border-foreground bg-card px-3.5 py-1">
+                  <TransactionList transactions={result.transactions} onEditTransaction={onEditTransaction} />
+                </div>
+              )}
+            </section>
           ) : (
-            <TransactionList
-              transactions={result.transactions}
-              onEditTransaction={onEditTransaction}
-            />
+            !searching && (
+              <p className="rounded-2xl border-2 border-dashed border-foreground/30 px-4 py-8 text-center text-sm text-muted-foreground">
+                El <b className="text-foreground">qué</b> lo entiendo por significado y el{" "}
+                <b className="text-foreground">cuándo</b> lo leo de la frase: “el verano pasado”, “en marzo”, “este año”.
+              </p>
+            )
           )}
-        </section>
-      )}
+        </div>
+
+        <aside className="space-y-3 lg:sticky lg:top-0">
+          <p className="text-sm font-extrabold">Probá con</p>
+          <div className="flex flex-wrap gap-2">
+            {EXAMPLES.map((example) => (
+              <button
+                key={example}
+                type="button"
+                onClick={() => {
+                  setQuery(example)
+                  void search(example)
+                }}
+                className="cursor-pointer rounded-full border-2 border-foreground bg-card px-3 py-1 text-left text-xs font-semibold transition-colors hover:bg-lime hover:text-ink"
+              >
+                {example}
+              </button>
+            ))}
+          </div>
+          <p className="pt-1 text-xs text-muted-foreground">
+            También podés preguntar desde Anotar (⌘K): si empieza con “cuánto” o “qué”, busca acá.
+          </p>
+        </aside>
+      </div>
     </div>
   )
 }
@@ -193,7 +205,7 @@ function IndexStatus({
 }) {
   if (!available) {
     return (
-      <p className="mt-4 flex items-start gap-2 rounded-lg border border-dashed border-border bg-muted/30 p-3 text-xs text-muted-foreground">
+      <p className="flex items-start gap-2 rounded-2xl border-2 border-dashed border-foreground/30 p-3 text-xs text-muted-foreground">
         <Info className="mt-0.5 size-3.5 shrink-0" />
         <span>{UNAVAILABLE_COPY[reason ?? "no-binding"]}</span>
       </p>
@@ -203,7 +215,7 @@ function IndexStatus({
   if (pending === 0 && !syncing) return null
 
   return (
-    <div className="mt-4 flex items-center justify-between gap-3 rounded-lg border border-border bg-muted/30 p-3">
+    <div className="flex items-center justify-between gap-3 rounded-2xl border-2 border-foreground bg-card p-3">
       <p className="text-xs text-muted-foreground">
         {syncing
           ? "Indexando movimientos…"

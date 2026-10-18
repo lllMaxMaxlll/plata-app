@@ -2,87 +2,64 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Home, Wallet, Plus, ReceiptText, LayoutGrid } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { findRoute, ROUTES } from "@/lib/routes"
+import { Home, Coins, Plus, CalendarDays, User, type LucideIcon } from "lucide-react"
+import { activeTab, ROUTES, type RouteKey } from "@/lib/routes"
+import { cn } from "@/lib/utils"
 
-const ITEMS: { href: string; label: string; Icon: typeof Home }[] = [
-  { ...ROUTES.home, Icon: Home },
-  { ...ROUTES.accounts, Icon: Wallet },
-  { ...ROUTES.activity, Icon: ReceiptText },
-  { ...ROUTES.more, Icon: LayoutGrid },
-]
+const ICONS: Record<"home" | "plata" | "agenda" | "profile", LucideIcon> = {
+  home: Home,
+  plata: Coins,
+  agenda: CalendarDays,
+  profile: User,
+}
 
-export function BottomNav({ onAdd }: { onAdd: () => void }) {
+/**
+ * Barra flotante de tinta con Anotar en el medio. Anotar está siempre: es la
+ * forma de cargar y de preguntar, no sólo un "+" para algunas pantallas.
+ */
+export function BottomNav({ onAnotar }: { onAnotar: () => void }) {
   const pathname = usePathname()
-  const left = ITEMS.slice(0, 2)
-  const right = ITEMS.slice(2)
-
-  // Contextual FAB: Only show when creating a general transaction is relevant
-  const showFab = ["/", "/accounts", "/activity"].includes(pathname)
+  const current = activeTab(pathname)
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 mx-auto max-w-md">
-      <div className="relative border-t border-border bg-card/95 px-2 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] pt-2 backdrop-blur-md">
-        <div className="flex items-center justify-between">
-          <div className="flex flex-1 justify-around">
-            {left.map((item) => (
-              <NavButton key={item.href} item={item} currentPath={pathname} />
-            ))}
-          </div>
-
-          {/* Hueco del FAB: sin FAB, las cuatro pestañas se reparten el ancho. */}
-          {showFab && <div className="w-14" aria-hidden />}
-
-          <div className="flex flex-1 justify-around">
-            {right.map((item) => (
-              <NavButton key={item.href} item={item} currentPath={pathname} />
-            ))}
-          </div>
-        </div>
-
-        {/* Center FAB with Shadcn Button */}
-        <Button
-          onClick={onAdd}
-          aria-label="Agregar movimiento"
-          size="icon"
-          className={`absolute -top-5 left-1/2 flex size-12 -translate-x-1/2 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-all duration-300 active:scale-95 cursor-pointer ${
-            showFab ? "scale-100 opacity-100 pointer-events-auto" : "scale-0 opacity-0 pointer-events-none"
-          }`}
+    <nav
+      aria-label="Principal"
+      className="fixed inset-x-0 bottom-0 z-40 mx-auto max-w-md px-3 pb-[calc(env(safe-area-inset-bottom)+0.625rem)]"
+    >
+      <div className="flex h-16 items-center justify-around rounded-3xl bg-ink px-1 text-paper shadow-md dark:border-2 dark:border-border">
+        <Tab route="home" current={current} />
+        <Tab route="plata" current={current} />
+        <button
+          type="button"
+          onClick={onAnotar}
+          aria-label="Anotar o preguntar"
+          className="flex size-12 cursor-pointer items-center justify-center rounded-2xl border-2 border-lime bg-lime text-ink transition-transform active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lime"
         >
-          <Plus className="size-5" />
-        </Button>
+          <Plus className="size-6" strokeWidth={2.5} />
+        </button>
+        <Tab route="agenda" current={current} />
+        <Tab route="profile" current={current} />
       </div>
     </nav>
   )
 }
 
-function isTabActive(href: string, currentPath: string): boolean {
-  if (href === currentPath) return true
-  // Las pantallas que cuelgan de "Más" mantienen esa pestaña activa.
-  if (href === ROUTES.more.href) return findRoute(currentPath)?.parent === ROUTES.more.href
-  return false
-}
+function Tab({ route, current }: { route: keyof typeof ICONS & RouteKey; current: string | undefined }) {
+  const { href, label } = ROUTES[route]
+  const Icon = ICONS[route]
+  const active = current === href
 
-function NavButton({
-  item,
-  currentPath,
-}: {
-  item: { href: string; label: string; Icon: typeof Home }
-  currentPath: string
-}) {
-  const isActive = isTabActive(item.href, currentPath)
   return (
     <Link
-      href={item.href}
-      aria-current={isActive ? "page" : undefined}
-      className={`flex min-h-11 min-w-14 flex-col items-center justify-center gap-0.5 px-2 py-1 text-[11px] font-medium transition-colors cursor-pointer ${
-        isActive ? "text-primary font-semibold" : "text-muted-foreground hover:text-foreground"
-      }`}
+      href={href}
+      aria-current={active ? "page" : undefined}
+      className={cn(
+        "flex min-h-11 min-w-14 flex-col items-center justify-center gap-0.5 rounded-xl px-2 text-[11px] font-semibold transition-colors",
+        active ? "text-lime" : "text-paper/60 hover:text-paper"
+      )}
     >
-      <item.Icon className="size-4.5" />
-      {item.label}
+      <Icon className="size-5" strokeWidth={active ? 2.5 : 2} />
+      {label}
     </Link>
   )
 }
-

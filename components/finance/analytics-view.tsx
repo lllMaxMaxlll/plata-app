@@ -1,48 +1,16 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import {
-  Calendar,
-  TrendingUp,
-  TrendingDown,
-  ChevronDown,
-  ChevronUp,
-  DollarSign,
-  Bike,
-  Car,
-  Truck,
-} from "lucide-react"
+import { Bike, Car, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, TrendingDown, TrendingUp, Truck } from "lucide-react"
 import { useFinance } from "./finance-provider"
-import { formatShort, formatCurrency, transactionCurrency, type Transaction, type Currency } from "@/lib/finance-data"
-import { Card } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Progress } from "@/components/ui/progress"
-import {
-  BarChart,
-  Bar,
-  AreaChart,
-  Area,
-  PieChart,
-  Pie,
-  Cell,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-} from "recharts"
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-  ChartLegend,
-  ChartLegendContent,
-  type ChartConfig,
-} from "@/components/ui/chart"
-import { BarChart3, LineChart as LineChartIcon } from "lucide-react"
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
-import { cn, clickableRowProps, focusRing } from "@/lib/utils"
+import { formatCompact, formatShort, transactionCurrency, type Transaction, type Currency } from "@/lib/finance-data"
+import { Button } from "@/components/ui/button"
+import { cn, focusRing } from "@/lib/utils"
 import { PageHeader } from "./page-header"
 import { OptionSelect } from "./option-select"
 import { Segmented } from "./segmented"
+import { TransactionList } from "./transaction-list"
+import { IconTile, pageClass } from "./lucas-ui"
 
 interface AnalyticsViewProps {
   onEditTransaction: (tx: Transaction) => void
@@ -107,7 +75,6 @@ export function AnalyticsView({ onEditTransaction }: AnalyticsViewProps) {
   )
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null)
   const [trendMonths, setTrendMonths] = useState<3 | 6 | 12>(6)
-  const [chartMode, setChartMode] = useState<"stacked_bar" | "area">("stacked_bar")
   const [categorySortMode, setCategorySortMode] = useState<"amount_desc" | "diff_desc" | "name_asc">("amount_desc")
 
   useEffect(() => {
@@ -239,22 +206,6 @@ export function AnalyticsView({ onEditTransaction }: AnalyticsViewProps) {
     }
   }, [availableMonths, expenseTransactions, selectedCurrency, getAccount, trendMonths])
 
-  const chartConfig = useMemo(() => {
-    const cfg: ChartConfig = {
-      total: {
-        label: "Gasto Total",
-        color: "var(--primary)",
-      },
-    }
-    categories.forEach((c) => {
-      cfg[c.name] = {
-        label: c.name,
-        color: c.color || "var(--chart-1)",
-      }
-    })
-    return cfg
-  }, [categories])
-
   const sortedCategoryRows = useMemo(() => {
     if (!analyticsData.rows) return []
     const list = [...analyticsData.rows]
@@ -269,15 +220,6 @@ export function AnalyticsView({ onEditTransaction }: AnalyticsViewProps) {
     }
     return list
   }, [analyticsData.rows, categorySortMode])
-
-  const pieChartData = useMemo(() => {
-    if (!analyticsData.rows || analyticsData.rows.length === 0) return []
-    return analyticsData.rows.map((r) => ({
-      name: r.category,
-      amount: r.amount,
-      fill: getCategoryColor(r.category),
-    }))
-  }, [analyticsData.rows])
 
   const vehicleSpendData = useMemo(() => {
     if (!vehicles || !vehicleLogs) return []
@@ -324,598 +266,382 @@ export function AnalyticsView({ onEditTransaction }: AnalyticsViewProps) {
   }, [vehicles, vehicleLogs, selectedMonth, selectedCurrency, getAccount])
 
   const maxRowVal = analyticsData.rows[0]?.amount ?? 1
+  const monthIndex = availableMonths.indexOf(selectedMonth)
+  const compareLabel = comparisonMonth === "none" ? null : formatMonthName(comparisonMonth)
+  const vsAverage = trendData.avgTotal > 0 ? (analyticsData.total - trendData.avgTotal) / trendData.avgTotal : null
+
+  function selectMonth(month: string) {
+    setSelectedMonth(month)
+    setExpandedCategory(null)
+    if (month === comparisonMonth) {
+      const idx = availableMonths.indexOf(month)
+      setComparisonMonth(availableMonths[idx + 1] || "none")
+    }
+  }
 
   return (
-    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 pt-4 pb-12 font-sans space-y-6 text-foreground">
-      {/* Header */}
-      <PageHeader route="analytics" description="Distribución y comparación de tus consumos." />
+    <div className={cn(pageClass, "space-y-6")}>
+      <PageHeader route="analytics" description="En qué se te va la plata, mes a mes." />
 
-      {/* Selectors and Currency Controls */}
-      <Card className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-6 p-4 shadow-sm">
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex flex-col gap-1">
-            <span className="text-[11px] text-muted-foreground font-bold uppercase tracking-wider pl-1">Mes a analizar</span>
-            <div className="relative">
-              <OptionSelect
-                ariaLabel="Mes a analizar"
-                value={selectedMonth}
-                onValueChange={(month) => {
-                  setSelectedMonth(month)
-                  if (month === comparisonMonth) {
-                    const idx = availableMonths.indexOf(month)
-                    setComparisonMonth(availableMonths[idx + 1] || "none")
-                  }
-                }}
-                className="w-48"
-                options={availableMonths.map((m) => ({ value: m, label: formatMonthName(m) }))}
-              />
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <span className="text-[11px] text-muted-foreground font-bold uppercase tracking-wider pl-1">Comparar con</span>
-            <div className="relative">
-              <OptionSelect
-                ariaLabel="Comparar con"
-                value={comparisonMonth}
-                onValueChange={setComparisonMonth}
-                className="w-48"
-                options={[
-                  { value: "none", label: "Ninguno (solo ver el mes)" },
-                  ...availableMonths
-                    .filter((m) => m !== selectedMonth)
-                    .map((m) => ({ value: m, label: formatMonthName(m) })),
-                ]}
-              />
-            </div>
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-1 self-end md:self-auto">
-          <span className="text-[11px] text-muted-foreground font-bold uppercase tracking-wider pl-1 self-end md:self-auto">Moneda</span>
-          <ToggleGroup
-            value={[selectedCurrency]}
-            onValueChange={(values) => {
-              const currency = values[0] as Currency | undefined
-              if (currency) handleCurrencyChange(currency)
-            }}
-            multiple={false}
+      {/* Controles */}
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="flex items-center gap-1.5">
+          <Button
             variant="outline"
-            spacing={0}
-            aria-label="Moneda de los movimientos"
+            size="icon"
+            aria-label="Mes anterior"
+            disabled={monthIndex >= availableMonths.length - 1}
+            onClick={() => selectMonth(availableMonths[monthIndex + 1])}
           >
-            <ToggleGroupItem value="ARS" className="gap-2 px-3 text-xs font-bold">
-              ARS ($)
-              <Badge variant="secondary" className="px-1.5 text-[11px] tabular-nums">
-                {currencyActivity.ARS}
-              </Badge>
-            </ToggleGroupItem>
-            <ToggleGroupItem value="USD" className="gap-2 px-3 text-xs font-bold">
-              USD (US$)
-              <Badge variant="secondary" className="px-1.5 text-[11px] tabular-nums">
-                {currencyActivity.USD}
-              </Badge>
-            </ToggleGroupItem>
-          </ToggleGroup>
+            <ChevronLeft />
+          </Button>
+          <OptionSelect
+            ariaLabel="Mes a analizar"
+            value={selectedMonth}
+            onValueChange={selectMonth}
+            className="w-44 font-bold"
+            options={availableMonths.map((m) => ({ value: m, label: formatMonthName(m) }))}
+          />
+          <Button
+            variant="outline"
+            size="icon"
+            aria-label="Mes siguiente"
+            disabled={monthIndex <= 0}
+            onClick={() => selectMonth(availableMonths[monthIndex - 1])}
+          >
+            <ChevronRight />
+          </Button>
         </div>
-      </Card>
 
-      {/* Main KPI MoM Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
-        <Card className="p-5 shadow-sm relative overflow-hidden flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">
-                Total Gastado
-              </span>
-              <Badge variant="secondary" className="px-2 py-0.5 text-[11px] font-bold uppercase">
-                {selectedCurrency}
-              </Badge>
-            </div>
-            <p className="text-2xl font-extrabold tracking-tight tabular-nums">
-              {formatCurrency(analyticsData.total, selectedCurrency)}
-            </p>
-          </div>
-          <p className="text-xs text-muted-foreground mt-4 font-medium">
-            En {formatMonthName(selectedMonth)}
-          </p>
-          <div className="absolute right-0 bottom-0 translate-x-2 translate-y-2 opacity-5 pointer-events-none">
-            <DollarSign className="size-32" />
-          </div>
-        </Card>
+        <div className="flex items-center gap-2">
+          <span className="font-mono text-[11px] font-semibold text-muted-foreground">vs</span>
+          <OptionSelect
+            ariaLabel="Comparar con"
+            value={comparisonMonth}
+            onValueChange={setComparisonMonth}
+            className="w-44"
+            options={[
+              { value: "none", label: "Sin comparar" },
+              ...availableMonths.filter((m) => m !== selectedMonth).map((m) => ({ value: m, label: formatMonthName(m) })),
+            ]}
+          />
+        </div>
 
-        {comparisonMonth !== "none" && (
-          <>
-            <Card className="p-5 shadow-sm relative overflow-hidden flex flex-col justify-between">
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">
-                    Total Referencia
-                  </span>
-                  <Badge variant="secondary" className="px-2 py-0.5 text-[11px] font-bold uppercase">
-                    {selectedCurrency}
-                  </Badge>
-                </div>
-                <p className="text-2xl font-extrabold tracking-tight tabular-nums text-muted-foreground">
-                  {formatCurrency(analyticsData.comparisonTotal, selectedCurrency)}
-                </p>
-              </div>
-              <p className="text-xs text-muted-foreground mt-4 font-medium">
-                En {formatMonthName(comparisonMonth)}
-              </p>
-              <div className="absolute right-0 bottom-0 translate-x-2 translate-y-2 opacity-5 pointer-events-none">
-                <Calendar className="size-32" />
-              </div>
-            </Card>
-
-            <Card className="p-5 shadow-sm relative overflow-hidden flex flex-col justify-between">
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">
-                    Variación Mensual
-                  </span>
-                  <Badge
-                    variant={analyticsData.totalDiff > 0 ? "destructive" : "default"}
-                    className="flex items-center gap-0.5 text-[11px] font-extrabold"
-                  >
-                    {analyticsData.totalDiff > 0 ? (
-                      <TrendingUp className="size-3" />
-                    ) : (
-                      <TrendingDown className="size-3" />
-                    )}
-                    {analyticsData.totalPercentChange !== null 
-                      ? `${analyticsData.totalDiff > 0 ? "+" : ""}${analyticsData.totalPercentChange.toFixed(1)}%`
-                      : "Nuevo"
-                    }
-                  </Badge>
-                </div>
-                <p className={`text-2xl font-extrabold tracking-tight tabular-nums ${
-                  analyticsData.totalDiff > 0 ? "text-destructive" : "text-success"
-                }`}>
-                  {analyticsData.totalDiff > 0 ? "+" : ""}{formatShort(analyticsData.totalDiff, selectedCurrency)}
-                </p>
-              </div>
-              <p className="text-xs text-muted-foreground mt-4 font-medium">
-                {analyticsData.totalDiff > 0 
-                  ? "Gastaste más que el mes de comparación" 
-                  : "¡Ahorraste respecto al mes de comparación!"
-                }
-              </p>
-            </Card>
-          </>
-        )}
+        <Segmented
+          ariaLabel="Moneda de los movimientos"
+          value={selectedCurrency}
+          onValueChange={handleCurrencyChange}
+          className="sm:ml-auto"
+          options={[
+            { value: "ARS", label: <>ARS <span className="font-mono text-[10px] opacity-70">{currencyActivity.ARS}</span></> },
+            { value: "USD", label: <>USD <span className="font-mono text-[10px] opacity-70">{currencyActivity.USD}</span></> },
+          ]}
+        />
       </div>
 
-      {/* Historical Trend Chart (Shadcn UI / Recharts) */}
-      <Card className="p-6 shadow-sm mb-8">
-        <div className="flex flex-wrap items-center justify-between gap-4 mb-4 border-b border-border/60 pb-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <TrendingUp className="size-4.5 text-primary" />
-              <h2 className="text-base font-bold tracking-tight">Tendencia Histórica de Gastos</h2>
-            </div>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Evolución del consumo en {selectedCurrency} ({trendMonths} meses)
-            </p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3">
-            <Segmented
-              ariaLabel="Meses a mostrar"
-              size="sm"
-              value={String(trendMonths) as "3" | "6" | "12"}
-              onValueChange={(m) => setTrendMonths(Number(m) as 3 | 6 | 12)}
-              options={[
-                { value: "3", label: "3M" },
-                { value: "6", label: "6M" },
-                { value: "12", label: "12M" },
-              ]}
-            />
-
-            <Segmented
-              ariaLabel="Tipo de gráfico"
-              size="sm"
-              value={chartMode}
-              onValueChange={setChartMode}
-              options={[
-                {
-                  value: "stacked_bar",
-                  label: <><BarChart3 className="size-3.5" /><span className="hidden sm:inline">Barras</span></>,
-                },
-                {
-                  value: "area",
-                  label: <><LineChartIcon className="size-3.5" /><span className="hidden sm:inline">Tendencia</span></>,
-                },
-              ]}
-            />
-          </div>
-        </div>
-
-        {/* Monthly Average Banner */}
-        <div className="mb-4 flex items-center justify-between bg-muted/30 border border-border/40 rounded-lg px-4 py-2 text-xs font-mono">
-          <span className="text-muted-foreground">Promedio mensual del período:</span>
-          <span className="font-bold text-foreground tabular-nums">
-            {formatCurrency(trendData.avgTotal, selectedCurrency)}
-          </span>
-        </div>
-
-        {trendData.chartData.length === 0 || trendData.maxTotal === 1 ? (
-          <div className="h-48 flex items-center justify-center border border-dashed border-border rounded-2xl bg-muted/20">
-            <p className="text-xs text-muted-foreground">No hay datos suficientes para graficar la tendencia en {selectedCurrency}.</p>
-          </div>
-        ) : (
-          <ChartContainer config={chartConfig} className="h-64 sm:h-80 w-full">
-            {chartMode === "stacked_bar" ? (
-              <BarChart data={trendData.chartData} margin={{ top: 15, right: 10, left: -15, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-border/40" />
-                <XAxis dataKey="label" tickLine={false} axisLine={false} className="text-xs font-mono" />
-                <YAxis
-                  tickLine={false}
-                  axisLine={false}
-                  tickFormatter={(val) => formatShort(val, selectedCurrency)}
-                  className="text-xs font-mono"
-                />
-                <ChartTooltip
-                  content={
-                    <ChartTooltipContent
-                      labelFormatter={(lbl) => `Mes: ${lbl}`}
-                      formatter={(val, name) => (
-                        <div className="flex items-center justify-between w-full gap-4">
-                          <span className="text-muted-foreground font-sans">{name}</span>
-                          <span className="font-mono font-bold text-foreground tabular-nums">
-                            {formatCurrency(Number(val), selectedCurrency)}
-                          </span>
-                        </div>
-                      )}
-                    />
-                  }
-                />
-                <ChartLegend content={<ChartLegendContent />} />
-                {trendData.categories.map((cat, idx) => (
-                  <Bar
-                    key={cat}
-                    dataKey={cat}
-                    name={cat}
-                    stackId="a"
-                    fill={getCategoryColor(cat)}
-                    radius={idx === trendData.categories.length - 1 ? [4, 4, 0, 0] : [0, 0, 0, 0]}
-                  />
-                ))}
-              </BarChart>
+      {/* Resumen del mes */}
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+        <section className="rounded-3xl border-2 border-foreground bg-lime p-4 text-ink shadow-md md:col-span-2">
+          <p className="text-sm font-bold">Gastaste en {formatMonthName(selectedMonth)}</p>
+          <p className="mt-1 text-[2.5rem] leading-none font-extrabold tracking-tighter">
+            {formatShort(analyticsData.total, selectedCurrency)}
+          </p>
+          <div className="mt-3 flex flex-wrap items-center gap-2 font-mono text-[11px] font-semibold">
+            {compareLabel === null ? (
+              <span>Elegí un mes para comparar</span>
+            ) : analyticsData.totalPercentChange === null ? (
+              <span>{compareLabel}: sin gastos para comparar</span>
             ) : (
-              <AreaChart data={trendData.chartData} margin={{ top: 15, right: 10, left: -15, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="areaTrendGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.4} />
-                    <stop offset="95%" stopColor="var(--primary)" stopOpacity={0.0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-border/40" />
-                <XAxis dataKey="label" tickLine={false} axisLine={false} className="text-xs font-mono" />
-                <YAxis
-                  tickLine={false}
-                  axisLine={false}
-                  tickFormatter={(val) => formatShort(val, selectedCurrency)}
-                  className="text-xs font-mono"
-                />
-                <ChartTooltip
-                  content={
-                    <ChartTooltipContent
-                      labelFormatter={(lbl) => `Mes: ${lbl}`}
-                      formatter={(val) => (
-                        <div className="flex items-center justify-between w-full gap-4">
-                          <span className="text-muted-foreground font-sans">Total consumido</span>
-                          <span className="font-mono font-bold text-foreground tabular-nums">
-                            {formatCurrency(Number(val), selectedCurrency)}
-                          </span>
-                        </div>
-                      )}
-                    />
-                  }
-                />
-                <Area
-                  type="monotone"
-                  dataKey="total"
-                  name="Gasto Total"
-                  stroke="var(--primary)"
-                  fill="url(#areaTrendGradient)"
-                  strokeWidth={2.5}
-                  dot={{ r: 4, fill: "var(--primary)" }}
-                  activeDot={{ r: 6, stroke: "var(--background)", strokeWidth: 2 }}
-                />
-              </AreaChart>
+              <>
+                <span
+                  className={cn(
+                    "inline-flex items-center gap-1 rounded-full border-2 border-ink px-2 py-0.5",
+                    analyticsData.totalDiff > 0 ? "bg-coral" : "bg-white"
+                  )}
+                >
+                  {analyticsData.totalDiff > 0 ? <TrendingUp className="size-3" /> : <TrendingDown className="size-3" />}
+                  {analyticsData.totalDiff > 0 ? "+" : ""}
+                  {analyticsData.totalPercentChange.toFixed(1)}%
+                </span>
+                <span>
+                  {analyticsData.totalDiff > 0 ? "más" : "menos"} que en {compareLabel} (
+                  {formatShort(analyticsData.comparisonTotal, selectedCurrency)})
+                </span>
+              </>
             )}
-          </ChartContainer>
-        )}
-      </Card>
-
-      {/* Gastos por Vehículo */}
-      {vehicleSpendData.length > 0 && (
-        <Card className="p-6 shadow-sm mb-8">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="text-base font-bold tracking-tight">Gastos por Vehículo</h2>
-              <p className="text-xs text-muted-foreground mt-0.5">Control de gastos individuales de mantenimiento y combustible en {formatMonthName(selectedMonth)}</p>
-            </div>
-            <Badge variant="secondary" className="text-xs font-semibold uppercase tracking-wider">
-              {selectedCurrency}
-            </Badge>
           </div>
+        </section>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {vehicleSpendData.map((v) => {
-              const maxVehicleSpent = Math.max(...vehicleSpendData.map(d => d.amount), 1)
-              const percent = (v.amount / maxVehicleSpent) * 100
-              
-              const getVehicleIcon = (typeStr: string) => {
-                switch (typeStr) {
-                  case "motorcycle":
-                    return Bike
-                  case "car":
-                    return Car
-                  case "truck":
-                    return Truck
-                  default:
-                    return Car
-                }
-              }
-              const VehicleIcon = getVehicleIcon(v.type)
+        <section className="rounded-3xl border-2 border-foreground bg-card p-4">
+          <p className="text-sm font-bold">Promedio de {trendMonths} meses</p>
+          <p className="mt-1 text-3xl font-extrabold tracking-tighter">{formatShort(trendData.avgTotal, selectedCurrency)}</p>
+          <p className="mt-3 font-mono text-[11px] text-muted-foreground">
+            {vsAverage === null
+              ? "sin historial para promediar"
+              : `${formatMonthName(selectedMonth).split(" ")[0]} está ${Math.abs(Math.round(vsAverage * 100))}% ${vsAverage > 0 ? "arriba" : "abajo"}`}
+          </p>
+        </section>
+      </div>
 
-              return (
-                <div key={v.id} className="border border-border bg-card p-4 rounded-2xl flex flex-col justify-between gap-3 shadow-sm">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20 shadow-sm">
-                        <VehicleIcon className="size-4.5" />
-                      </span>
-                      <div className="min-w-0">
-                        <h3 className="text-xs font-extrabold text-foreground truncate">{v.name}</h3>
-                        {v.plate && <p className="text-[11px] text-muted-foreground font-semibold tracking-wider uppercase mt-0.5">{v.plate}</p>}
-                      </div>
-                    </div>
-                    <span className="text-sm font-extrabold tabular-nums text-foreground/90 shrink-0">
-                      {formatCurrency(v.amount, selectedCurrency)}
-                    </span>
-                  </div>
-
-                  <Progress value={percent} className="h-2" />
-                </div>
-              )
-            })}
-          </div>
-        </Card>
-      )}
-
-      {/* Category Breakdown & MoM Comparative Table */}
-      <Card className="p-6 shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-4 mb-6 border-b border-border/60 pb-4">
+      {/* Mes a mes */}
+      <section className="rounded-2xl border-2 border-foreground bg-card p-4">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
           <div>
-            <h2 className="text-base font-bold tracking-tight">Distribución por Categorías</h2>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Análisis del mes seleccionado • Hacé clic para auditar movimientos
-            </p>
+            <h2 className="text-base font-extrabold tracking-tight">Mes a mes</h2>
+            <p className="text-xs text-muted-foreground">Tocá una barra para ver ese mes. La línea es tu promedio.</p>
           </div>
+          <Segmented
+            ariaLabel="Meses a mostrar"
+            size="sm"
+            value={String(trendMonths) as "3" | "6" | "12"}
+            onValueChange={(v) => setTrendMonths(Number(v) as 3 | 6 | 12)}
+            options={[
+              { value: "3", label: "3M" },
+              { value: "6", label: "6M" },
+              { value: "12", label: "12M" },
+            ]}
+          />
+        </div>
+        <TrendBars
+          data={trendData.chartData}
+          categories={trendData.categories}
+          max={trendData.maxTotal}
+          average={trendData.avgTotal}
+          selected={selectedMonth}
+          currency={selectedCurrency}
+          colorOf={getCategoryColor}
+          onSelect={selectMonth}
+        />
+      </section>
 
-          <div className="flex flex-wrap items-center gap-3">
-            <Segmented
-              ariaLabel="Ordenar categorías por"
-              size="sm"
-              value={categorySortMode}
-              onValueChange={setCategorySortMode}
-              options={[
-                { value: "amount_desc", label: "Monto" },
-                ...(comparisonMonth !== "none" ? [{ value: "diff_desc" as const, label: "Variación" }] : []),
-                { value: "name_asc", label: "Nombre" },
-              ]}
-            />
-
-            <Badge variant="secondary" className="text-xs font-semibold uppercase tracking-wider">
-              {selectedCurrency}
-            </Badge>
+      {/* Por categoría */}
+      <section className="rounded-2xl border-2 border-foreground bg-card p-4">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 className="text-base font-extrabold tracking-tight">Por categoría</h2>
+            <p className="text-xs text-muted-foreground">Tocá una categoría para ver sus movimientos.</p>
           </div>
+          <Segmented
+            ariaLabel="Ordenar categorías"
+            size="sm"
+            value={categorySortMode}
+            onValueChange={setCategorySortMode}
+            options={[
+              { value: "amount_desc", label: "Monto" },
+              { value: "diff_desc", label: "Variación" },
+              { value: "name_asc", label: "A-Z" },
+            ]}
+          />
         </div>
 
         {analyticsData.rows.length === 0 ? (
-          <p className="text-sm text-muted-foreground py-8 text-center bg-muted/10 border border-dashed border-border rounded-2xl">
-            No se encontraron gastos registrados en esta moneda para el mes seleccionado.
+          <p className="rounded-2xl border-2 border-dashed border-foreground/30 py-8 text-center text-sm text-muted-foreground">
+            No hay gastos en {selectedCurrency} en {formatMonthName(selectedMonth)}.
           </p>
         ) : (
-          <div className="flex flex-col gap-6">
-            {/* Donut Distribution Visualizer */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center border border-border/40 bg-muted/20 rounded-xl p-4">
-              <div className="md:col-span-1 flex justify-center">
-                <ChartContainer config={chartConfig} className="h-44 w-44">
-                  <PieChart>
-                    <ChartTooltip
-                      content={
-                        <ChartTooltipContent
-                          formatter={(val, name) => (
-                            <div className="flex items-center justify-between w-full gap-3">
-                              <span className="text-muted-foreground font-sans">{name}</span>
-                              <span className="font-mono font-bold text-foreground tabular-nums">
-                                {formatCurrency(Number(val), selectedCurrency)}
-                              </span>
-                            </div>
-                          )}
-                        />
-                      }
-                    />
-                    <Pie
-                      data={pieChartData}
-                      dataKey="amount"
-                      nameKey="name"
-                      innerRadius={42}
-                      outerRadius={68}
-                      paddingAngle={2}
-                      stroke="none"
-                    >
-                      {pieChartData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.fill} />
-                      ))}
-                    </Pie>
-                  </PieChart>
-                </ChartContainer>
-              </div>
-
-              <div className="md:col-span-2 flex flex-col justify-center gap-1.5">
-                <div className="flex items-baseline justify-between border-b border-border/40 pb-2">
-                  <span className="text-xs text-muted-foreground font-mono">Gasto total del mes:</span>
-                  <span className="text-lg font-mono font-bold text-foreground tabular-nums">
-                    {formatCurrency(analyticsData.total, selectedCurrency)}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between text-xs font-mono text-muted-foreground pt-1">
-                  <span>Categorías activas:</span>
-                  <span className="font-bold text-foreground">{analyticsData.rows.length}</span>
-                </div>
-                <p className="text-[11px] text-muted-foreground/80 mt-1 italic">
-                  * Toca cualquier categoría abajo para ver sus movimientos registrados.
-                </p>
-              </div>
+          <>
+            <div className="flex h-6 overflow-hidden rounded-lg border-2 border-foreground">
+              {analyticsData.rows.map((r) => (
+                <span
+                  key={r.category}
+                  className="h-full border-r-2 border-foreground last:border-r-0"
+                  style={{ width: `${(r.amount / analyticsData.total) * 100}%`, background: getCategoryColor(r.category) }}
+                  title={`${r.category} ${Math.round((r.amount / analyticsData.total) * 100)}%`}
+                />
+              ))}
             </div>
 
-            {/* List of Categories with Shadcn UI Progress & Badges */}
-            <ul className="flex flex-col gap-4">
+            <ul className="mt-4 divide-y-[1.5px] divide-dashed divide-foreground/15">
               {sortedCategoryRows.map((r) => {
-                const color = getCategoryColor(r.category)
-                const percentOfTotal = analyticsData.total > 0 ? (r.amount / analyticsData.total) * 100 : 0
                 const isExpanded = expandedCategory === r.category
-
-                const categoryTxs = analyticsData.transactions
-                  .filter((t) => t.category === r.category)
-                  .sort((a, b) => b.date.localeCompare(a.date))
-
+                const share = r.amount / analyticsData.total
+                const categoryTxs = analyticsData.transactions.filter((t) => t.category === r.category)
                 return (
-                  <li
-                    key={r.category}
-                    className="border-b border-border/50 last:border-b-0 pb-4 last:pb-0"
-                  >
-                    <div
-                      {...clickableRowProps(
-                        () => setExpandedCategory(isExpanded ? null : r.category),
-                        `${isExpanded ? "Contraer" : "Expandir"} ${r.category}`
-                      )}
+                  <li key={r.category}>
+                    <button
+                      type="button"
                       aria-expanded={isExpanded}
-                      className={cn(
-                        "flex flex-col gap-2 cursor-pointer group hover:bg-muted/30 p-2 rounded-lg transition-all",
-                        focusRing
-                      )}
+                      onClick={() => setExpandedCategory(isExpanded ? null : r.category)}
+                      className={cn("w-full cursor-pointer py-3 text-left", focusRing)}
                     >
-                      <div className="flex items-center justify-between text-xs sm:text-sm">
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <span className="size-3 rounded-full shrink-0 shadow-xs" style={{ background: color }} />
-                          <span className="font-bold truncate group-hover:text-primary transition-colors">
-                            {r.category}
-                          </span>
-                          <Badge variant="secondary" className="text-[11px] font-mono font-semibold px-1.5 py-0.2 shrink-0">
-                            {percentOfTotal.toFixed(1)}%
-                          </Badge>
-                        </div>
-
-                        <div className="flex items-center gap-3 shrink-0 tabular-nums">
-                          <div className="text-right">
-                            <span className="font-mono font-bold block text-foreground">
-                              {formatCurrency(r.amount, selectedCurrency)}
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="flex min-w-0 items-center gap-2">
+                          <span
+                            className="size-3 shrink-0 rounded-[4px] border-[1.5px] border-foreground"
+                            style={{ background: getCategoryColor(r.category) }}
+                          />
+                          <span className="truncate font-bold">{r.category}</span>
+                          <span className="shrink-0 font-mono text-[11px] text-muted-foreground">{Math.round(share * 100)}%</span>
+                        </span>
+                        <span className="flex shrink-0 items-center gap-2">
+                          {r.percentChange !== null && (
+                            <span
+                              className={cn(
+                                "rounded-full border-[1.5px] border-foreground px-1.5 py-0.5 font-mono text-[10px] font-semibold",
+                                Math.round(r.percentChange) > 0 ? "bg-coral text-ink" : "bg-card"
+                              )}
+                            >
+                              {Math.round(r.percentChange) === 0
+                                ? "= 0%"
+                                : `${r.percentChange > 0 ? "▲" : "▼"} ${Math.abs(Math.round(r.percentChange))}%`}
                             </span>
-
-                            {comparisonMonth !== "none" && (
-                              <div className="flex justify-end mt-0.5">
-                                {r.compAmount === 0 ? (
-                                  <Badge variant="outline" className="text-[11px] font-mono px-1 py-0 border-primary/30 text-primary">
-                                    Nueva
-                                  </Badge>
-                                ) : (
-                                  <span
-                                    className={`inline-flex items-center gap-0.5 text-[11px] font-mono font-bold px-1.5 py-0.2 rounded ${
-                                      r.diff > 0
-                                        ? "bg-destructive/10 text-destructive"
-                                        : r.diff < 0
-                                        ? "bg-success/10 text-success dark:text-success"
-                                        : "bg-muted text-muted-foreground"
-                                    }`}
-                                  >
-                                    {r.diff > 0 ? (
-                                      <TrendingUp className="size-3" />
-                                    ) : r.diff < 0 ? (
-                                      <TrendingDown className="size-3" />
-                                    ) : null}
-                                    {r.diff > 0 ? `+${Math.abs(r.percentChange ?? 0).toFixed(0)}%` : `${r.percentChange?.toFixed(0)}%`}
-                                  </span>
-                                )}
-                              </div>
-                            )}
-                          </div>
-
-                          {isExpanded ? (
-                            <ChevronUp className="size-4 text-muted-foreground group-hover:text-foreground transition-colors shrink-0" />
-                          ) : (
-                            <ChevronDown className="size-4 text-muted-foreground group-hover:text-foreground transition-colors shrink-0" />
                           )}
-                        </div>
+                          <span className="font-mono text-sm font-semibold">{formatShort(r.amount, selectedCurrency)}</span>
+                          {isExpanded ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
+                        </span>
                       </div>
-
-                      {/* Native Shadcn UI Progress Bar */}
-                      <Progress value={Math.max((r.amount / maxRowVal) * 100, 2)} className="h-1.5" />
-                    </div>
-
+                      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
+                        <div className="h-full rounded-full bg-foreground" style={{ width: `${(r.amount / maxRowVal) * 100}%` }} />
+                      </div>
+                    </button>
                     {isExpanded && (
-                      <div className="mt-3 ml-3 pl-4 border-l-2 border-primary/40 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
-                        <div className="flex items-center justify-between border-b border-border/60 pb-1.5 mb-2">
-                          <span className="text-[11px] text-muted-foreground font-semibold uppercase tracking-wider">
-                            Movimientos del Mes
-                          </span>
-                          <span className="text-[11px] text-muted-foreground font-mono">
-                            {categoryTxs.length} registros
-                          </span>
-                        </div>
-
-                        {categoryTxs.length === 0 ? (
-                          <p className="text-xs text-muted-foreground py-2 font-mono">No hay transacciones registradas.</p>
-                        ) : (
-                          <ul className="flex flex-col gap-2">
-                            {categoryTxs.map((tx) => {
-                              const acc = getAccount(tx.accountId)
-                              const dateLabel = new Date(tx.date).toLocaleDateString("es-AR", {
-                                day: "2-digit",
-                                month: "short",
-                              })
-                              return (
-                                <li
-                                  key={tx.id}
-                                  {...clickableRowProps(
-                                    () => onEditTransaction(tx),
-                                    `Editar movimiento ${tx.note || "sin descripción"}`
-                                  )}
-                                  className={cn(
-                                    "flex items-center justify-between hover:bg-accent/40 p-2 rounded-lg transition-all cursor-pointer group/item text-xs",
-                                    focusRing
-                                  )}
-                                >
-                                  <div className="min-w-0 flex-1 pr-4">
-                                    <p className="font-semibold truncate group-hover/item:text-primary transition-colors">
-                                      {tx.note || "Sin descripción"}
-                                    </p>
-                                    <p className="text-[11px] text-muted-foreground truncate font-mono">
-                                      {dateLabel} · Cuenta: <span className="font-medium text-foreground/80">{acc?.name ?? "Desconocida"}</span>
-                                    </p>
-                                  </div>
-                                  <span className="font-mono font-bold tabular-nums text-foreground shrink-0">
-                                    {formatCurrency(tx.amount, selectedCurrency)}
-                                  </span>
-                                </li>
-                              )
-                            })}
-                          </ul>
-                        )}
+                      <div className="mb-3 rounded-xl border-2 border-foreground/20 bg-background px-3 py-1">
+                        <TransactionList transactions={categoryTxs} onEditTransaction={onEditTransaction} />
                       </div>
                     )}
                   </li>
                 )
               })}
             </ul>
-          </div>
+          </>
         )}
-      </Card>
+      </section>
+
+      {/* Vehículos */}
+      {vehicleSpendData.length > 0 && (
+        <section className="rounded-2xl border-2 border-foreground bg-card p-4">
+          <h2 className="mb-3 text-base font-extrabold tracking-tight">Vehículos · {formatMonthName(selectedMonth)}</h2>
+          <ul className="space-y-3">
+            {vehicleSpendData.map((v) => {
+              const Icon = v.type === "motorcycle" ? Bike : v.type === "truck" ? Truck : Car
+              return (
+                <li key={v.id} className="flex items-center gap-3">
+                  <IconTile Icon={Icon} className="bg-sky" />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <span className="truncate font-bold">{v.name}</span>
+                      <span className="font-mono text-sm font-semibold">{formatShort(v.amount, selectedCurrency)}</span>
+                    </div>
+                    <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-muted">
+                      <div
+                        className="h-full rounded-full bg-foreground"
+                        style={{ width: `${(v.amount / (vehicleSpendData[0]?.amount || 1)) * 100}%` }}
+                      />
+                    </div>
+                  </div>
+                </li>
+              )
+            })}
+          </ul>
+        </section>
+      )}
+    </div>
+  )
+}
+
+/**
+ * Barras apiladas por categoría, una por mes, con la línea del promedio. Hechas
+ * a mano y no con recharts: con bordes de tinta y sin animaciones se leen como
+ * el resto de la app, y en un teléfono no hay tooltips que perseguir.
+ */
+function TrendBars({
+  data,
+  categories,
+  max,
+  average,
+  selected,
+  currency,
+  colorOf,
+  onSelect,
+}: {
+  data: Record<string, number | string>[]
+  categories: string[]
+  max: number
+  average: number
+  selected: string
+  currency: Currency
+  colorOf: (category: string) => string
+  onSelect: (month: string) => void
+}) {
+  const many = data.length > 6
+  return (
+    <div>
+      <div className="relative flex h-48 items-end gap-1.5 border-b-2 border-foreground sm:gap-3">
+        {average > 0 && (
+          <div
+            className="pointer-events-none absolute inset-x-0 z-10 border-t-2 border-dashed border-foreground/60"
+            style={{ bottom: `${(average / max) * 100}%` }}
+            aria-hidden
+          />
+        )}
+        {data.map((row) => {
+          const month = String(row.month)
+          const total = Number(row.total) || 0
+          const active = month === selected
+          return (
+            <button
+              key={month}
+              type="button"
+              onClick={() => onSelect(month)}
+              aria-pressed={active}
+              aria-label={`${row.label}: ${formatShort(total, currency)}`}
+              className="group flex h-full min-w-0 flex-1 cursor-pointer flex-col items-center justify-end"
+            >
+              <span
+                className={cn(
+                  "mb-1 font-mono text-[10px] font-semibold whitespace-nowrap",
+                  many && "hidden sm:block",
+                  active ? "text-foreground" : "text-muted-foreground"
+                )}
+              >
+                {total > 0 ? formatCompact(total, currency) : ""}
+              </span>
+              <span
+                className={cn(
+                  "flex w-full max-w-14 flex-col-reverse overflow-hidden rounded-t-md border-2 border-b-0 border-foreground transition-opacity",
+                  !active && "opacity-60 group-hover:opacity-90"
+                )}
+                style={{ height: `${(total / max) * 100}%` }}
+              >
+                {categories.map((category) => {
+                  const value = Number(row[category]) || 0
+                  if (value <= 0) return null
+                  return (
+                    <span
+                      key={category}
+                      className="w-full border-t-[1.5px] border-foreground first:border-t-0"
+                      style={{ height: `${(value / total) * 100}%`, background: colorOf(category) }}
+                    />
+                  )
+                })}
+              </span>
+            </button>
+          )
+        })}
+      </div>
+      <div className="mt-1.5 flex gap-1.5 sm:gap-3">
+        {data.map((row) => (
+          <span
+            key={String(row.month)}
+            className={cn(
+              "min-w-0 flex-1 truncate text-center font-mono text-[10px]",
+              String(row.month) === selected ? "rounded bg-lime font-semibold text-ink" : "text-muted-foreground"
+            )}
+          >
+            {String(row.label).split(" ")[0]}
+          </span>
+        ))}
+      </div>
+      {categories.length > 0 && (
+        <ul className="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-xs">
+          {categories.map((category) => (
+            <li key={category} className="flex items-center gap-1.5">
+              <span className="size-2.5 rounded-[3px] border-[1.5px] border-foreground" style={{ background: colorOf(category) }} />
+              {category}
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   )
 }

@@ -1,6 +1,6 @@
-# PLATA — Finanzas Personales ARS & USD
+# Lucas — Tu plata, anotada en criollo
 
-PLATA es una aplicación web progresiva (PWA) de finanzas personales diseñada especialmente para el contexto financiero argentino. Permite consolidar y gestionar de manera unificada cuentas en pesos (ARS) y dólares (USD), registrar transacciones, simular trading de acciones en mercados reales y realizar un control exhaustivo de vehículos y sus gastos.
+Lucas es una aplicación web progresiva (PWA) de finanzas personales diseñada especialmente para el contexto financiero argentino. Permite consolidar y gestionar de manera unificada cuentas en pesos (ARS) y dólares (USD), registrar transacciones, simular trading de acciones en mercados reales y realizar un control exhaustivo de vehículos y sus gastos.
 
 ---
 
@@ -19,7 +19,9 @@ PLATA es una aplicación web progresiva (PWA) de finanzas personales diseñada e
 - **Portafolio de Inversiones (Stocks):** Simulación de trading en tiempo real utilizando cotizaciones reales y seguimiento del rendimiento del portafolio (ganancias y pérdidas acumuladas).
 - **Seguridad e Identidad:** Autenticación con Supabase Auth: registro e inicio de sesión con correo y contraseña, verificación de email, recuperación y cambio seguro de contraseña.
 - **Sincronización en Tiempo Real:** Base de datos Postgres gestionada por Supabase, con Row Level Security y Realtime.
-- **Diseño Moderno e Inmersivo (Glassmorphism):** Interfaz fluida optimizada tanto para móviles como para computadoras de escritorio, con un diseño oscuro pulido, colores HSL armonizados y micro-animaciones dinámicas.
+- **Anotar en una línea:** El botón del medio (o ⌘K en escritorio) abre una barra donde escribís como hablás — *"nafta 52k mp ayer"* — con el mismo parser que el bot de Telegram. Muestra cómo lo entendió (monto, cuenta, categoría, día) antes de guardar, y si el texto empieza con *"cuánto"* o *"qué"* lo trata como pregunta y busca en el historial.
+- **Cuatro pestañas, nada escondido:** *Hoy* (saldo en ARS/USD con la cotización a la vista, ritmo de gasto de la semana contra tu promedio y lo que vence), *Plata* (dónde está tu plata, acciones, vehículos, en qué se va y metas), *Agenda* (vencimientos y services del vehículo en una sola línea de tiempo, con pago directo) y *Yo*.
+- **Diseño papel y tinta:** Bordes de tinta, sombras duras y un acento lima. Tema claro, oscuro o el del sistema, a elección y sin parpadeo al cargar.
 
 ---
 

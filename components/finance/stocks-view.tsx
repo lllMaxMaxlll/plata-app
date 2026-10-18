@@ -25,7 +25,6 @@ import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import {
@@ -40,8 +39,13 @@ import {
 } from "@/components/ui/alert-dialog"
 import { getApiAuthHeaders } from "@/lib/supabase/client"
 import { relativeDate } from "@/lib/relative-date"
+import { pageClass } from "./lucas-ui"
+import { cn } from "@/lib/utils"
 
 type HistoryFilter = "all" | "buy" | "sell"
+
+/** Tramos del reparto de la cartera, en orden; el último es "Otras". */
+const ALLOCATION_COLORS = ["bg-sky", "bg-grape", "bg-coral", "bg-paper", "bg-muted"]
 
 /** Agrupa por mes leyendo el prefijo del texto: construir un Date con una fecha
  *  sin hora la interpreta como UTC y en nuestro huso cae en el mes anterior. */
@@ -241,8 +245,18 @@ export function StocksView() {
   const sellCount = stockTransactions.length - buyCount
   const historyIsFiltered = historyType !== "all" || historyQuery.trim() !== ""
 
+  // Cómo se reparte la cartera: las cuatro posiciones más grandes y el resto junto.
+  const allocation = useMemo(() => {
+    if (portfolioTotalValue <= 0) return []
+    const sorted = [...holdings].sort((a, b) => b.currentValue - a.currentValue)
+    const top = sorted.slice(0, 4).map((h) => ({ symbol: h.symbol, value: h.currentValue }))
+    const rest = sorted.slice(4).reduce((sum, h) => sum + h.currentValue, 0)
+    if (rest > 0) top.push({ symbol: "Otras", value: rest })
+    return top.map((slice, i) => ({ ...slice, share: slice.value / portfolioTotalValue, color: ALLOCATION_COLORS[i] }))
+  }, [holdings, portfolioTotalValue])
+
   return (
-    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 pt-4 pb-12 font-sans space-y-5">
+    <div className={cn(pageClass, "space-y-5")}>
       {/* Encabezado */}
       <PageHeader
         route="stocks"
@@ -255,33 +269,44 @@ export function StocksView() {
         }
       />
 
-      {/* Valor del portafolio */}
-      <Card className="relative overflow-hidden rounded-xl p-5 shadow-lg isolate border-border">
-        <div aria-hidden className="absolute -right-16 -top-16 size-36 rounded-full bg-primary/10 blur-3xl" />
-        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          Valor del Portafolio
-        </p>
-        <p className="mt-2 text-3xl font-extrabold tracking-tight tabular-nums text-foreground">
-          {mask(formatShort(portfolioTotalValue, "USD"))}
-        </p>
-        <div className="mt-4 flex flex-wrap items-center gap-2">
-          <Badge
-            variant={portfolioTotalProfitLoss >= 0 ? "default" : "destructive"}
-            className="flex items-center gap-1 text-xs font-bold"
-          >
-            {portfolioTotalProfitLoss >= 0 ? (
-              <TrendingUp className="size-3" />
-            ) : (
-              <TrendingDown className="size-3" />
-            )}
+      {/* Valor del portafolio y cómo se reparte */}
+      <section className="rounded-3xl border-2 border-foreground bg-lime p-4 text-ink shadow-md sm:p-5">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <p className="text-sm font-bold">Tu cartera vale</p>
+            <p className="mt-1 text-[2.5rem] leading-none font-extrabold tracking-tighter">
+              {mask(formatShort(portfolioTotalValue, "USD"))}
+            </p>
+          </div>
+          <span className="inline-flex items-center gap-1 rounded-full border-2 border-ink bg-white px-2.5 py-1 font-mono text-xs font-semibold">
+            {portfolioTotalProfitLoss >= 0 ? <TrendingUp className="size-3.5" /> : <TrendingDown className="size-3.5" />}
             {portfolioTotalProfitLoss >= 0 ? "+" : ""}
-            {mask(formatShort(portfolioTotalProfitLoss, "USD"))} ({portfolioTotalProfitLossPercent}%)
-          </Badge>
-          <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-            Rendimiento Histórico
+            {mask(formatShort(portfolioTotalProfitLoss, "USD"))} · {portfolioTotalProfitLossPercent}%
           </span>
         </div>
-      </Card>
+        {allocation.length > 0 && (
+          <>
+            <div className="mt-4 flex h-5 overflow-hidden rounded-lg border-2 border-ink bg-white">
+              {allocation.map((slice) => (
+                <span
+                  key={slice.symbol}
+                  className={cn("h-full border-r-2 border-ink last:border-r-0", slice.color)}
+                  style={{ width: `${slice.share * 100}%` }}
+                  title={`${slice.symbol} ${Math.round(slice.share * 100)}%`}
+                />
+              ))}
+            </div>
+            <ul className="mt-2 flex flex-wrap gap-x-3 gap-y-1 font-mono text-[11px] font-semibold">
+              {allocation.map((slice) => (
+                <li key={slice.symbol} className="flex items-center gap-1.5">
+                  <span className={cn("size-2.5 rounded-[3px] border-[1.5px] border-ink", slice.color)} />
+                  {slice.symbol} {Math.round(slice.share * 100)}%
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+      </section>
 
       {!hasUSDAccount && (
         <div className="rounded-2xl border border-warning/20 bg-warning/10 p-3.5 text-xs text-warning">
@@ -329,64 +354,51 @@ export function StocksView() {
               </Button>
             </div>
           ) : (
-            <ul className="flex flex-col gap-3">
-              {holdings.map((h) => (
-                <li key={h.symbol}>
-                  <Card className="flex flex-col p-4 shadow-sm">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-bold text-foreground">{h.symbol}</span>
-                          <Badge variant="secondary" className="px-1.5 py-0.5 text-[11px]">
-                            {h.shares} {h.shares === 1 ? "acción" : "acciones"}
-                          </Badge>
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-0.5 truncate">{h.name}</p>
-                      </div>
-                      <div className="text-right shrink-0">
-                        <p className="text-sm font-bold tabular-nums">
-                          {mask(formatShort(h.currentValue, "USD"))}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          P. Promedio: {formatShort(h.avgBuyPrice, "USD")}
-                        </p>
-                      </div>
+            <ul className="grid grid-cols-2 gap-2.5 lg:grid-cols-3 xl:grid-cols-4">
+              {holdings.map((h) => {
+                const up = h.profitLoss >= 0
+                const share = portfolioTotalValue > 0 ? h.currentValue / portfolioTotalValue : 0
+                return (
+                  <li key={h.symbol} className="flex flex-col rounded-2xl border-2 border-foreground bg-card p-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <span className="text-lg leading-none font-extrabold tracking-tight">{h.symbol}</span>
+                      <span
+                        className={cn(
+                          "rounded-full border-[1.5px] border-foreground px-1.5 py-0.5 font-mono text-[10px] font-semibold text-ink",
+                          up ? "bg-lime" : "bg-coral"
+                        )}
+                      >
+                        {up ? "▲" : "▼"} {Math.abs(h.profitLossPercent)}%
+                      </span>
                     </div>
+                    <p className="mt-0.5 truncate text-xs text-muted-foreground">{h.name}</p>
 
-                    <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-border pt-3">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-muted-foreground">Rendimiento:</span>
-                        <span
-                          className={`flex items-center gap-0.5 text-xs font-bold ${
-                            h.profitLoss >= 0 ? "text-success" : "text-destructive"
-                          }`}
-                        >
-                          {h.profitLoss >= 0 ? "+" : ""}
-                          {mask(formatShort(h.profitLoss, "USD"))} ({h.profitLossPercent}%)
-                        </span>
-                      </div>
-                      <div className="flex gap-1.5">
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => handleOpenTrade(h.symbol, "sell")}
-                          className="h-8 font-bold"
-                        >
-                          Vender
-                        </Button>
-                        <Button
-                          size="sm"
-                          onClick={() => handleOpenTrade(h.symbol, "buy")}
-                          disabled={!hasUSDAccount}
-                          className="h-8 font-bold"
-                        >
-                          Comprar
-                        </Button>
-                      </div>
+                    <p className="mt-3 truncate text-xl font-extrabold tracking-tight">
+                      {mask(formatShort(h.currentValue, "USD"))}
+                    </p>
+                    <p className={cn("font-mono text-[11px] font-semibold", up ? "text-success" : "text-destructive")}>
+                      {up ? "+" : ""}
+                      {mask(formatShort(h.profitLoss, "USD"))}
+                    </p>
+
+                    <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted" title={`${Math.round(share * 100)}% de la cartera`}>
+                      <div className="h-full rounded-full bg-foreground" style={{ width: `${share * 100}%` }} />
                     </div>
-                  </Card>
-                </li>
-              ))}
+                    <p className="mt-1 truncate font-mono text-[10px] text-muted-foreground">
+                      {h.shares} {h.shares === 1 ? "acc" : "accs"} · prom {formatShort(h.avgBuyPrice, "USD")}
+                    </p>
+
+                    <div className="mt-3 grid grid-cols-2 gap-1.5">
+                      <Button variant="outline" size="sm" onClick={() => handleOpenTrade(h.symbol, "sell")} className="h-8 px-0 text-xs">
+                        Vender
+                      </Button>
+                      <Button size="sm" onClick={() => handleOpenTrade(h.symbol, "buy")} disabled={!hasUSDAccount} className="h-8 px-0 text-xs">
+                        Comprar
+                      </Button>
+                    </div>
+                  </li>
+                )
+              })}
             </ul>
           )}
         </TabsContent>
@@ -502,7 +514,7 @@ export function StocksView() {
               </p>
             </div>
           ) : (
-            <ul className="flex flex-col gap-3">
+            <ul className="grid grid-cols-2 gap-2.5 lg:grid-cols-3 xl:grid-cols-4">
               {watchlist.map((w) => {
                 const priceInfo = stockPrices[w.symbol]
                 const currentPrice = priceInfo?.price ?? 0
@@ -512,81 +524,47 @@ export function StocksView() {
                 const hasPrice = Boolean(priceInfo) && currentPrice > 0
 
                 return (
-                  <li key={w.symbol}>
-                    <Card className="flex flex-col p-4 shadow-sm">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-sm font-bold text-foreground">{w.symbol}</span>
-                            {ownedShares > 0 && (
-                              <Badge variant="secondary" className="px-1.5 py-0.5 text-[11px]">
-                                {ownedShares} en cartera
-                              </Badge>
-                            )}
-                          </div>
-                          <p className="text-xs text-muted-foreground mt-0.5 truncate">{w.name}</p>
-                        </div>
+                  <li key={w.symbol} className="flex flex-col rounded-2xl border-2 border-foreground bg-card p-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <span className="text-lg leading-none font-extrabold tracking-tight">{w.symbol}</span>
+                      <button
+                        type="button"
+                        onClick={() => setPendingRemoval(w.symbol)}
+                        className="-mt-1 -mr-1 flex size-7 cursor-pointer items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                        aria-label={`Quitar ${w.symbol} del seguimiento`}
+                      >
+                        <Trash2 className="size-3.5" />
+                      </button>
+                    </div>
+                    <p className="mt-0.5 truncate text-xs text-muted-foreground">{w.name}</p>
 
-                        <div className="text-right shrink-0">
-                          {hasPrice ? (
-                            <>
-                              <p className="text-sm font-bold tabular-nums">
-                                {formatShort(currentPrice, "USD")}
-                              </p>
-                              <p
-                                className={`mt-0.5 flex items-center justify-end gap-0.5 text-xs font-bold tabular-nums ${
-                                  isPositive ? "text-success" : "text-destructive"
-                                }`}
-                              >
-                                {isPositive ? (
-                                  <TrendingUp className="size-3" />
-                                ) : (
-                                  <TrendingDown className="size-3" />
-                                )}
-                                {isPositive ? "+" : ""}
-                                {dailyChange.toFixed(2)}%
-                              </p>
-                            </>
-                          ) : (
-                            <>
-                              <Skeleton className="h-5 w-20" />
-                              <Skeleton className="mt-1 h-3 w-12 ml-auto" />
-                              <span className="sr-only">Cargando cotización</span>
-                            </>
-                          )}
-                        </div>
+                    {hasPrice ? (
+                      <div className="mt-3 flex flex-wrap items-baseline justify-between gap-1">
+                        <span className="text-xl font-extrabold tracking-tight">{formatShort(currentPrice, "USD")}</span>
+                        <span className={cn("font-mono text-[11px] font-semibold", isPositive ? "text-success" : "text-destructive")}>
+                          {isPositive ? "▲" : "▼"} {Math.abs(dailyChange).toFixed(2)}% hoy
+                        </span>
                       </div>
+                    ) : (
+                      <div className="mt-3">
+                        <Skeleton className="h-6 w-24" />
+                        <span className="sr-only">Cargando cotización</span>
+                      </div>
+                    )}
+                    <p className="mt-1 font-mono text-[10px] text-muted-foreground">
+                      {ownedShares > 0 ? `${ownedShares} en cartera` : "sin posición"}
+                    </p>
 
-                      <div className="mt-4 flex items-center gap-1.5 border-t border-border pt-3">
-                        <Button
-                          size="sm"
-                          onClick={() => handleOpenTrade(w.symbol, "buy")}
-                          disabled={!hasUSDAccount}
-                          className="h-8 font-bold"
-                        >
-                          Comprar
+                    <div className={cn("mt-3 grid gap-1.5", ownedShares > 0 ? "grid-cols-2" : "grid-cols-1")}>
+                      {ownedShares > 0 && (
+                        <Button variant="outline" size="sm" onClick={() => handleOpenTrade(w.symbol, "sell")} className="h-8 px-0 text-xs">
+                          Vender
                         </Button>
-                        {ownedShares > 0 && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleOpenTrade(w.symbol, "sell")}
-                            className="h-8 font-bold"
-                          >
-                            Vender
-                          </Button>
-                        )}
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setPendingRemoval(w.symbol)}
-                          className="ml-auto size-9 sm:size-8 text-muted-foreground hover:text-destructive"
-                          aria-label={`Quitar ${w.symbol} del seguimiento`}
-                        >
-                          <Trash2 className="size-4" />
-                        </Button>
-                      </div>
-                    </Card>
+                      )}
+                      <Button size="sm" onClick={() => handleOpenTrade(w.symbol, "buy")} disabled={!hasUSDAccount} className="h-8 px-0 text-xs">
+                        Comprar
+                      </Button>
+                    </div>
                   </li>
                 )
               })}

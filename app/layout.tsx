@@ -1,21 +1,22 @@
 import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
-import { Toaster } from 'sonner'
 import { Providers } from './providers'
 import { AppShell } from './shell'
-import { Noto_Sans, EB_Garamond } from "next/font/google";
+import { Bricolage_Grotesque, JetBrains_Mono } from "next/font/google";
 import { cn } from "@/lib/utils";
+import { THEME_SCRIPT } from "@/lib/theme";
+import { ThemedToaster } from "@/components/finance/theme-toggle";
 
-const ebGaramondHeading = EB_Garamond({subsets:['latin'],variable:'--font-heading'});
+const bricolage = Bricolage_Grotesque({ subsets: ['latin'], variable: '--font-lucas-sans' });
 
-const notoSans = Noto_Sans({subsets:['latin'],variable:'--font-sans'});
+const jetbrainsMono = JetBrains_Mono({ subsets: ['latin'], variable: '--font-lucas-mono' });
 
 export const metadata: Metadata = {
-  title: 'PLATA — Finanzas personales',
+  title: 'Lucas — Tu plata, anotada en criollo',
   description:
-    'App de finanzas personales para Argentina: cuentas en pesos y dólares, ingresos, gastos y transferencias.',
-  appleWebApp: { capable: true, statusBarStyle: 'black-translucent', title: 'PLATA' },
+    'Finanzas personales para Argentina: cuentas en pesos y dólares, gastos anotados en una línea y todo lo que vence en una sola agenda.',
+  appleWebApp: { capable: true, statusBarStyle: 'default', title: 'Lucas' },
   icons: {
     icon: [
       {
@@ -26,6 +27,7 @@ export const metadata: Metadata = {
         url: '/icon-dark-32x32.png',
         media: '(prefers-color-scheme: dark)',
       },
+      { url: '/icon.svg', type: 'image/svg+xml' },
       { url: '/icon-512.png', type: 'image/png', sizes: '512x512' },
     ],
     apple: '/apple-icon.png',
@@ -33,8 +35,11 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  colorScheme: 'dark',
-  themeColor: '#090b0c',
+  colorScheme: 'light dark',
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#f3eee3' },
+    { media: '(prefers-color-scheme: dark)', color: '#141414' },
+  ],
   width: 'device-width',
   initialScale: 1,
   // Sin `userScalable: false` ni `maximumScale`: la app muestra muchos importes
@@ -48,15 +53,21 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
+    // El script de tema escribe data-theme antes de hidratar: el atributo no
+    // coincide con el HTML del servidor, y es a propósito.
     <html
       lang="es"
-      className={cn("dark bg-background", "font-sans", notoSans.variable, ebGaramondHeading.variable)}
+      suppressHydrationWarning
+      className={cn("bg-background", "font-sans", bricolage.variable, jetbrainsMono.variable)}
     >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+      </head>
       <body className="bg-background font-sans antialiased text-foreground">
         <Providers>
           <AppShell>{children}</AppShell>
+          <ThemedToaster />
         </Providers>
-        <Toaster theme="dark" position="top-center" closeButton richColors />
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>

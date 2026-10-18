@@ -1,25 +1,49 @@
 "use client"
 
 import { useState, useMemo } from "react"
-import { Plus, Wallet, Building2, CreditCard, Banknote, ShieldCheck, ArrowLeftRight, Pencil, Coins } from "lucide-react"
-import { ACCENT_BY_KIND, formatShort, formatCurrency, type Account, type Currency } from "@/lib/finance-data"
+import { Plus, Wallet, Banknote, ArrowLeftRight, Pencil, Landmark, PiggyBank, Bitcoin, type LucideIcon } from "lucide-react"
+import { formatShort, type Account, type Currency } from "@/lib/finance-data"
 import { useFinance } from "./finance-provider"
 import { PageHeader } from "./page-header"
-import { AccountIcon } from "./account-icon"
 import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { useUI } from "./ui-context"
+import { IconTile, pageClass } from "./lucas-ui"
+import { cn } from "@/lib/utils"
 
 type FilterKind = "all" | "bank" | "wallet" | "cash" | "savings" | "crypto"
 
-const KIND_LABELS: Record<FilterKind, { label: string; icon: any }> = {
-  all: { label: "Todas", icon: Wallet },
-  bank: { label: "Bancos", icon: Building2 },
-  wallet: { label: "Billeteras", icon: CreditCard },
-  cash: { label: "Efectivo", icon: Banknote },
-  savings: { label: "Ahorros/Inversión", icon: ShieldCheck },
-  crypto: { label: "Crypto", icon: Coins },
+const KIND_LABELS: Record<FilterKind, { label: string }> = {
+  all: { label: "Todas" },
+  bank: { label: "Bancos" },
+  wallet: { label: "Billeteras" },
+  cash: { label: "Efectivo" },
+  savings: { label: "Ahorro" },
+  crypto: { label: "Cripto" },
+}
+
+/** Nombre de cada tipo en singular, para la fila de la cuenta. */
+const KIND_NAMES: Record<Account["kind"], string> = {
+  bank: "Banco",
+  wallet: "Billetera",
+  cash: "Efectivo",
+  savings: "Ahorro",
+  crypto: "Cripto",
+}
+
+const KIND_ICONS: Record<Account["kind"], LucideIcon> = {
+  bank: Landmark,
+  wallet: Wallet,
+  cash: Banknote,
+  savings: PiggyBank,
+  crypto: Bitcoin,
+}
+
+const KIND_TONES: Record<Account["kind"], string> = {
+  bank: "bg-sky",
+  wallet: "bg-grape",
+  cash: "bg-lime",
+  savings: "bg-muted text-foreground",
+  crypto: "bg-coral",
 }
 
 export function AccountsView({
@@ -41,9 +65,9 @@ export function AccountsView({
     return accounts.filter((a) => a.kind === selectedKind)
   }, [accounts, selectedKind])
 
-  const groups: { currency: Currency; label: string; subtitle: string }[] = [
-    { currency: "ARS", label: "Cuentas en Pesos (ARS)", subtitle: "Pesos Argentinos" },
-    { currency: "USD", label: "Cuentas en Dólares (USD)", subtitle: "Dólares Estadounidenses" },
+  const groups: { currency: Currency; label: string }[] = [
+    { currency: "ARS", label: "En pesos" },
+    { currency: "USD", label: "En dólares" },
   ]
 
   // Count active account types
@@ -57,203 +81,138 @@ export function AccountsView({
 
   if (accounts.length === 0) {
     return (
-      <div className="px-4 sm:px-6 pt-4 pb-12 font-sans max-w-4xl mx-auto space-y-6">
-        <PageHeader route="accounts" description="Administrá tus fuentes y métodos de pago." />
-
-        <Card className="p-8 text-center border-dashed border-border/80 bg-card/40 flex flex-col items-center justify-center max-w-md mx-auto my-12">
-          <div className="mb-4 flex size-14 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
-            <AccountIcon kind="bank" className="size-7 text-primary" />
-          </div>
-          <h3 className="text-base font-bold text-foreground">No tenés cuentas registradas</h3>
-          <p className="mt-1 text-xs text-muted-foreground max-w-xs">
-            Agregá tus cuentas bancarias, billeteras digitales (Mercado Pago, Ualá) o efectivo para organizar tu dinero.
-          </p>
-          <Button
-            onClick={onAddAccount}
-            className="mt-5 h-9 text-xs font-semibold"
-          >
-            <Plus className="size-4" />
-            Crear mi primera cuenta
-          </Button>
-        </Card>
+      <div className={pageClass}>
+        <PageHeader route="accounts" description="Bancos, billeteras y efectivo." />
+        <button
+          type="button"
+          onClick={onAddAccount}
+          className="mx-auto mt-10 flex w-full max-w-md cursor-pointer flex-col items-center gap-2 rounded-2xl border-2 border-dashed border-foreground/40 px-6 py-10 text-center transition-colors hover:bg-lime/25"
+        >
+          <IconTile Icon={Plus} className="bg-lime" />
+          <span className="text-lg font-extrabold">Agregá tu primera cuenta</span>
+          <span className="text-sm text-muted-foreground">
+            Tu banco, Mercado Pago, Ualá o el efectivo de la billetera. Después Anotar sabe de dónde sale cada gasto.
+          </span>
+        </button>
       </div>
     )
   }
 
   return (
-    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 pt-4 pb-12 font-sans space-y-6">
-      {/* 1. Header Banner */}
+    <div className={cn(pageClass, "space-y-6")}>
       <PageHeader
         route="accounts"
-        description={`${accounts.length} ${accounts.length === 1 ? "cuenta activa" : "cuentas activas"}`}
+        description={`${accounts.length} ${accounts.length === 1 ? "cuenta" : "cuentas"}`}
         actions={
           <>
             <Button variant="outline" onClick={ui.handleOpenExchange}>
               <ArrowLeftRight className="size-4" />
-              Cambio / Transferir
+              Cambio
             </Button>
             <Button onClick={onAddAccount}>
               <Plus className="size-4" />
-              Nueva cuenta
+              Cuenta
             </Button>
           </>
         }
       />
 
-      {/* 2. Type Filter Pills */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar font-mono">
+      <div className="grid grid-cols-2 gap-3">
+        {groups.map((g) => (
+          <section
+            key={g.currency}
+            className={cn(
+              "rounded-3xl border-2 border-foreground p-4 text-ink shadow-md",
+              g.currency === "ARS" ? "bg-lime" : "bg-sky"
+            )}
+          >
+            <p className="text-sm font-bold">{g.label}</p>
+            <p className="mt-1 truncate text-2xl font-extrabold tracking-tighter sm:text-3xl">
+              {mask(formatShort(totalsByCurrency[g.currency] || 0, g.currency))}
+            </p>
+            <p className="mt-1 font-mono text-[11px]">
+              {accounts.filter((a) => a.currency === g.currency).length} cuentas
+            </p>
+          </section>
+        ))}
+      </div>
+
+      <div className="no-scrollbar -mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1" role="group" aria-label="Filtrar por tipo">
         {(Object.keys(KIND_LABELS) as FilterKind[]).map((kindKey) => {
-          const { label, icon: Icon } = KIND_LABELS[kindKey]
           const count = kindKey === "all" ? accounts.length : countsByKind[kindKey] || 0
-          if (kindKey !== "all" && count === 0) return null // Hide empty category filters
-
-          const isSelected = selectedKind === kindKey
-
+          if (kindKey !== "all" && count === 0) return null
+          const active = selectedKind === kindKey
           return (
             <button
               key={kindKey}
               type="button"
+              aria-pressed={active}
               onClick={() => setSelectedKind(kindKey)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all whitespace-nowrap cursor-pointer ${isSelected
-                ? "bg-primary text-primary-foreground font-bold shadow-xs"
-                : "bg-muted/40 text-muted-foreground hover:bg-muted hover:text-foreground border border-border/40"
-                }`}
+              className={cn(
+                "flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full border-2 border-foreground px-3 py-1 text-xs font-semibold transition-colors",
+                active ? "bg-lime text-ink" : "bg-card hover:bg-muted"
+              )}
             >
-              <Icon className="size-3.5" />
-              <span>{label}</span>
-              <span className={`ml-0.5 text-[11px] px-1.5 py-0.2 rounded-full ${isSelected ? "bg-primary-foreground/20 text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
-                {count}
-              </span>
+              {KIND_LABELS[kindKey].label}
+              <span className="font-mono text-[10px] opacity-70">{count}</span>
             </button>
           )
         })}
-
       </div>
 
-      {/* 3. Account Cards Grid (2 Columns on Desktop for ARS and USD) */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+      <div className="grid grid-cols-1 items-start gap-6 md:grid-cols-2">
         {groups.map((g) => {
           const groupAccounts = filteredAccounts.filter((a) => a.currency === g.currency)
           const totalBalance = totalsByCurrency[g.currency] || 0
-
-          if (groupAccounts.length === 0 && selectedKind !== "all") {
-            return null
-          }
+          if (groupAccounts.length === 0 && selectedKind !== "all") return null
 
           return (
-            <Card
-              key={g.currency}
-              className="rounded-xl border border-border/60 bg-card p-5 shadow-sm space-y-4"
-            >
-              {/* Group Header */}
-              <div className="flex items-center justify-between border-b border-border/50 pb-3">
-                <div>
-                  <h3 className="text-sm font-bold text-foreground">{g.label}</h3>
-                  <p className="text-[11px] font-mono text-muted-foreground">{g.subtitle}</p>
-                </div>
-                <div className="text-right font-mono">
-                  <span className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold block">
-                    TOTAL CONSOLIDADO
-                  </span>
-                  <span className={`text-base font-bold tabular-nums ${g.currency === "USD" ? "text-primary" : "text-foreground"}`}>
-                    {mask(formatCurrency(totalBalance, g.currency))}
-                  </span>
-                </div>
-              </div>
-
-              {/* Group Accounts List */}
-              {groupAccounts.length === 0 ? (
-                <div className="py-8 text-center border border-dashed border-border/60 rounded-lg bg-muted/20 font-mono">
-                  <p className="text-xs text-muted-foreground">Sin cuentas registradas en {g.currency}</p>
-                </div>
-              ) : (
-                <ul className="space-y-3">
+            <section key={g.currency}>
+              <h2 className="mb-2 text-base font-extrabold tracking-tight">{g.label}</h2>
+              {groupAccounts.length > 0 && (
+                <ul className="rounded-2xl border-2 border-foreground bg-card px-3.5 divide-y-[1.5px] divide-dashed divide-foreground/15">
                   {groupAccounts.map((acc) => {
-                    const pctShare = totalBalance > 0 ? (acc.balance / totalBalance) * 100 : 0
-
+                    const share = totalBalance > 0 ? acc.balance / totalBalance : 0
                     return (
                       <li key={acc.id}>
-                        <div
-                          role="button"
-                          tabIndex={0}
-                          aria-label={`Editar cuenta ${acc.name}`}
+                        <button
+                          type="button"
                           onClick={() => onEditAccount(acc)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" || e.key === " ") {
-                              e.preventDefault()
-                              onEditAccount(acc)
-                            }
-                          }}
-                          className="group relative flex flex-col p-3.5 rounded-xl border border-border/50 bg-muted/20 hover:bg-muted/50 hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-all cursor-pointer shadow-xs space-y-2.5"
+                          aria-label={`Editar cuenta ${acc.name}`}
+                          className="-mx-1.5 flex w-[calc(100%+0.75rem)] cursor-pointer items-center gap-3 rounded-lg px-1.5 py-3 text-left transition-colors hover:bg-lime/20"
                         >
-                          <div className="flex items-center justify-between gap-3">
-                            <div className="flex items-center gap-3 min-w-0">
-                              <span
-                                className="flex size-10 shrink-0 items-center justify-center rounded-xl text-foreground transition-transform group-hover:scale-105 shadow-xs"
-                                style={{ background: ACCENT_BY_KIND[acc.kind] + "22", color: ACCENT_BY_KIND[acc.kind] }}
-                              >
-                                <AccountIcon kind={acc.kind} className="size-5" />
-                              </span>
-                              <div className="min-w-0">
-                                <div className="flex items-center gap-2">
-                                  <p className="truncate text-xs font-bold text-foreground group-hover:text-primary transition-colors">
-                                    {acc.name}
-                                  </p>
-                                  <Badge
-                                    variant="outline"
-                                    className="px-1.5 py-0 text-[11px] uppercase tracking-wider border-border text-muted-foreground"
-                                  >
-                                    {acc.kind}
-                                  </Badge>
-                                </div>
-                                <p className="text-[11px] text-muted-foreground font-mono mt-0.5">
-                                  {pctShare > 0 ? `${pctShare.toFixed(1)}% del saldo ${acc.currency}` : "Sin saldo"}
-                                </p>
-                              </div>
-                            </div>
-
-                            <div className="text-right font-mono">
-                              <p className="text-sm font-bold text-foreground tabular-nums">
+                          <IconTile Icon={KIND_ICONS[acc.kind]} className={KIND_TONES[acc.kind]} />
+                          <span className="min-w-0 flex-1">
+                            <span className="flex items-baseline justify-between gap-2">
+                              <span className="truncate font-bold">{acc.name}</span>
+                              <span className="shrink-0 font-mono text-sm font-semibold">
                                 {mask(formatShort(acc.balance, acc.currency))}
-                              </p>
-                              <span className="mt-1 flex items-center justify-end gap-1 text-[11px] text-muted-foreground group-hover:text-primary transition-colors">
-                                <Pencil aria-hidden className="size-3" />
-                                Editar
                               </span>
-                            </div>
-                          </div>
-
-                          {/* Share Percentage Bar */}
-                          {totalBalance > 0 && (
-                            <div className="h-1 w-full overflow-hidden rounded-full bg-muted/60">
-                              <div
-                                className="h-full rounded-full transition-all duration-500"
-                                style={{
-                                  width: `${Math.max(pctShare, 2)}%`,
-                                  background: ACCENT_BY_KIND[acc.kind],
-                                }}
-                              />
-                            </div>
-                          )}
-                        </div>
+                            </span>
+                            <span className="mt-0.5 flex items-center justify-between gap-2 text-xs text-muted-foreground">
+                              <span>{KIND_NAMES[acc.kind]}</span>
+                              <span className="font-mono text-[11px]">{share > 0 ? `${Math.round(share * 100)}%` : "sin saldo"}</span>
+                            </span>
+                            <span className="mt-1.5 block h-1.5 overflow-hidden rounded-full bg-muted">
+                              <span className="block h-full rounded-full bg-foreground" style={{ width: `${share * 100}%` }} />
+                            </span>
+                          </span>
+                          <Pencil className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
+                        </button>
                       </li>
                     )
                   })}
                 </ul>
               )}
-
-              {/* Add Account Button inside group */}
-              <Button
-                variant="outline"
+              <button
+                type="button"
                 onClick={onAddAccount}
-                className="w-full flex items-center justify-center gap-2 py-2 border-dashed border-border/80 text-xs font-medium text-muted-foreground hover:border-primary hover:text-primary"
+                className="mt-2 flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-foreground/40 py-2.5 text-xs font-semibold text-muted-foreground transition-colors hover:border-foreground hover:text-foreground"
               >
                 <Plus className="size-3.5" />
-                Agregar Cuenta en {g.currency}
-              </Button>
-
-            </Card>
-
+                Cuenta en {g.currency === "ARS" ? "pesos" : "dólares"}
+              </button>
+            </section>
           )
         })}
       </div>

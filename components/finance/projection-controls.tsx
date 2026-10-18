@@ -125,12 +125,12 @@ export function ProjectionControls({
   return (
     <div className="flex flex-col gap-6">
       {/* 1. Global View Options: Currency, Horizon, Real vs Nominal */}
-      <Card className="border-border/50 bg-card/40 backdrop-blur-xl shadow-lg">
+      <Card className="shadow-none">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between flex-wrap gap-2">
-            <CardTitle className="text-base font-semibold flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-base font-extrabold tracking-tight">
               <SlidersHorizontal className="size-4 text-primary" />
-              Parámetros de Simulación
+              Cómo simular
             </CardTitle>
             <div className="flex items-center gap-2">
               <span className="text-xs text-muted-foreground font-medium">Visualización:</span>
@@ -139,7 +139,7 @@ export function ProjectionControls({
                 onValueChange={(val) => onCurrencyChange(val as Currency)}
                 className="h-8"
               >
-                <TabsList className="h-8 bg-muted/60 p-0.5">
+                <TabsList className="h-8">
                   <TabsTrigger value="ARS" className="h-7 px-3 text-xs font-semibold">
                     $ ARS
                   </TabsTrigger>
@@ -168,7 +168,7 @@ export function ProjectionControls({
               onValueChange={(val) => onHorizonChange(Number(val))}
               className="w-full"
             >
-              <TabsList className="grid w-full grid-cols-4 h-9 bg-muted/60 p-1">
+              <TabsList className="grid h-9 w-full grid-cols-4">
                 <TabsTrigger value="12" className="text-xs font-medium">1 Año</TabsTrigger>
                 <TabsTrigger value="24" className="text-xs font-medium">2 Años</TabsTrigger>
                 <TabsTrigger value="36" className="text-xs font-medium">3 Años</TabsTrigger>
@@ -178,10 +178,10 @@ export function ProjectionControls({
           </div>
 
           {/* Real vs Nominal Terms Switch */}
-          <div className="flex items-center justify-between rounded-xl border border-border/40 bg-muted/20 p-3">
+          <div className="flex items-center justify-between rounded-xl border-2 border-foreground/20 bg-background p-3">
             <div className="space-y-0.5">
               <div className="flex items-center gap-2">
-                <Flame className="size-4 text-chart-2" />
+                <Flame className="size-4" />
                 <span className="text-xs font-semibold">Ajustar por Inflación Real</span>
               </div>
               <p className="text-[11px] text-muted-foreground">
@@ -197,12 +197,12 @@ export function ProjectionControls({
       </Card>
 
       {/* 2. Initial Capital & Savings */}
-      <Card className="border-border/50 bg-card/40 backdrop-blur-xl shadow-lg">
+      <Card className="shadow-none">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-base font-extrabold tracking-tight">
               <DollarSign className="size-4 text-success" />
-              Patrimonio Inicial y Capacidad de Ahorro
+              De dónde partís y cuánto ahorrás
             </CardTitle>
 
             <div className="flex items-center gap-2">
@@ -298,7 +298,7 @@ export function ProjectionControls({
                 usesEstimatedSavings ? (
                   <Badge
                     variant="secondary"
-                    className="text-[11px] font-medium bg-primary/10 text-primary border-primary/20"
+                    className="text-[11px] font-medium border-foreground bg-lime text-ink"
                   >
                     Calculado de tus movimientos
                   </Badge>
@@ -308,7 +308,7 @@ export function ProjectionControls({
                     variant="ghost"
                     size="sm"
                     onClick={onUseEstimatedSavings}
-                    className="h-6 px-2 text-[11px] font-semibold text-primary hover:bg-primary/10"
+                    className="h-6 px-2 text-[11px] font-semibold hover:bg-lime hover:text-ink"
                     title={`Mediana de ingresos menos gastos de tus últimos ${savingsEstimate.monthsUsed} meses cerrados`}
                   >
                     Volver a mi promedio real
@@ -367,7 +367,7 @@ export function ProjectionControls({
                   size="sm"
                   onClick={onSyncMacro}
                   disabled={isSyncingMacro}
-                  className="h-7 text-[11px] gap-1.5 border-primary/30 text-primary hover:bg-primary/10"
+                  className="h-7 text-[11px] gap-1.5 border-primary/30 hover:bg-lime hover:text-ink"
                 >
                   <Sparkles className={`size-3 text-warning ${isSyncingMacro ? "animate-spin" : ""}`} />
                   {isSyncingMacro ? "Actualizando..." : "Actualizar cotización"}
@@ -390,7 +390,7 @@ export function ProjectionControls({
                 <Badge variant="secondary" className="text-[11px] font-mono font-semibold bg-success/10 text-success border-success/20">
                   Blue: ${dollarRates.blue}
                 </Badge>
-                <Badge variant="secondary" className="text-[11px] font-mono font-semibold bg-primary/10 text-primary border-primary/20">
+                <Badge variant="secondary" className="text-[11px] font-mono font-semibold border-foreground bg-lime text-ink">
                   MEP: ${dollarRates.mep}
                 </Badge>
                 <Badge variant="secondary" className="text-[11px] font-mono font-semibold bg-muted text-muted-foreground">
@@ -409,7 +409,7 @@ export function ProjectionControls({
       </Card>
 
       {/* 3. Advanced Economic Indicators (Collapsible) */}
-      <Card className="border-border/50 bg-card/40 backdrop-blur-xl shadow-lg overflow-hidden">
+      <Card className="shadow-none">
         {/* Es un botón de verdad: como div con onClick no había forma de abrirlo
             con el teclado ni de saber si estaba abierto con un lector. */}
         <CardHeader className="pb-3">
@@ -420,9 +420,9 @@ export function ProjectionControls({
             aria-controls="ajustes-macro"
             className="w-full flex items-center justify-between gap-2 text-left select-none cursor-pointer rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
-            <CardTitle className="text-sm font-semibold flex items-center gap-2">
-              <Percent className="size-4 text-chart-3" />
-              Ajustes Macroeconómicos Avanzados
+            <CardTitle className="flex items-center gap-2 text-base font-extrabold tracking-tight">
+              <Percent className="size-4" />
+              Inflación, dólar y rendimiento
             </CardTitle>
             <span className="h-7 px-2 inline-flex items-center text-xs font-mono text-muted-foreground">
               {showAdvanced ? "Ocultar" : "Personalizar"}
@@ -438,7 +438,7 @@ export function ProjectionControls({
         {showAdvanced && (
           <CardContent
             id="ajustes-macro"
-            className="space-y-5 border-t border-border/40 pt-4 animate-in fade-in slide-in-from-top-2 duration-200"
+            className="space-y-5 border-t-2 border-dashed border-foreground/15 pt-4 animate-in fade-in slide-in-from-top-2 duration-200"
           >
             {/* Annual Inflation Slider */}
             <div className="space-y-2">
@@ -522,7 +522,7 @@ export function ProjectionControls({
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label className="text-xs font-medium flex items-center gap-1.5">
-                  <TrendingUp className="size-3.5 text-chart-3" /> Rendimiento Anual en Dólares
+                  <TrendingUp className="size-3.5" /> Rendimiento Anual en Dólares
                 </Label>
                 <div className="flex items-center gap-1">
                   <Input

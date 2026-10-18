@@ -1,10 +1,19 @@
 "use client"
 
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react"
+import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react"
 import type { Account, Transaction } from "@/lib/finance-data"
+import {
+  applyTheme,
+  readThemePreference,
+  resolveTheme,
+  storeThemePreference,
+  type Theme,
+  type ThemePreference,
+} from "@/lib/theme"
 
 interface UIContextType {
   txOpen: boolean
+  anotarOpen: boolean
   accountOpen: boolean
   exchangeOpen: boolean
   exportOpen: boolean
@@ -15,6 +24,9 @@ interface UIContextType {
   handleAddAccount: () => void
   handleEditAccount: (acc: Account) => void
   handleAddTransaction: () => void
+  /** Abre la barra Anotar: carga en una línea o pregunta al historial. */
+  handleOpenAnotar: () => void
+  handleCloseAnotar: () => void
   handleEditTransaction: (tx: Transaction) => void
   handleOpenExchange: () => void
   handleCloseExchange: () => void
@@ -30,6 +42,11 @@ interface UIContextType {
   toggleBalancesHidden: () => void
   /** Reemplaza un importe por puntos cuando el usuario ocultó los saldos. */
   mask: (value: string) => string
+  /** Lo que eligió el usuario; "system" sigue al sistema operativo. */
+  themePreference: ThemePreference
+  /** El tema que se ve ahora. */
+  theme: Theme
+  setThemePreference: (preference: ThemePreference) => void
 }
 
 const UIContext = createContext<UIContextType | null>(null)
@@ -38,6 +55,7 @@ const BALANCES_HIDDEN_KEY = "plata:balances-hidden"
 
 export function UIProvider({ children }: { children: ReactNode }) {
   const [txOpen, setTxOpen] = useState(false)
+  const [anotarOpen, setAnotarOpen] = useState(false)
   const [accountOpen, setAccountOpen] = useState(false)
   const [exchangeOpen, setExchangeOpen] = useState(false)
   const [exportOpen, setExportOpen] = useState(false)
@@ -46,12 +64,39 @@ export function UIProvider({ children }: { children: ReactNode }) {
   const [editingAccount, setEditingAccount] = useState<Account | null>(null)
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null)
   const [balancesHidden, setBalancesHidden] = useState(false)
+  const [themePreference, setThemePreferenceState] = useState<ThemePreference>("system")
+  const [theme, setTheme] = useState<Theme>("light")
 
   // Se lee después de montar para no desincronizar el HTML del servidor.
   useEffect(() => {
     try {
       setBalancesHidden(localStorage.getItem(BALANCES_HIDDEN_KEY) === "1")
     } catch {}
+  }, [])
+
+  // El script del <head> ya pintó el tema correcto; acá sólo se sincroniza el
+  // estado y, si sigue al sistema, se escucha cuando el sistema cambia.
+  useEffect(() => {
+    setThemePreferenceState(readThemePreference())
+  }, [])
+
+  useEffect(() => {
+    applyTheme(themePreference)
+    setTheme(resolveTheme(themePreference))
+    if (themePreference !== "system") return
+
+    const media = window.matchMedia("(prefers-color-scheme: dark)")
+    const onChange = () => {
+      applyTheme("system")
+      setTheme(resolveTheme("system"))
+    }
+    media.addEventListener("change", onChange)
+    return () => media.removeEventListener("change", onChange)
+  }, [themePreference])
+
+  const setThemePreference = useCallback((preference: ThemePreference) => {
+    storeThemePreference(preference)
+    setThemePreferenceState(preference)
   }, [])
 
   function toggleBalancesHidden() {
@@ -79,6 +124,13 @@ export function UIProvider({ children }: { children: ReactNode }) {
   function handleAddTransaction() {
     setEditingTransaction(null)
     setTxOpen(true)
+  }
+
+  // Estable: el shell lo engancha a un atajo de teclado global.
+  const handleOpenAnotar = useCallback(() => setAnotarOpen(true), [])
+
+  function handleCloseAnotar() {
+    setAnotarOpen(false)
   }
 
   function handleEditTransaction(tx: Transaction) {
@@ -132,6 +184,7 @@ export function UIProvider({ children }: { children: ReactNode }) {
     <UIContext.Provider
       value={{
         txOpen,
+        anotarOpen,
         accountOpen,
         exchangeOpen,
         exportOpen,
@@ -142,6 +195,8 @@ export function UIProvider({ children }: { children: ReactNode }) {
         handleAddAccount,
         handleEditAccount,
         handleAddTransaction,
+        handleOpenAnotar,
+        handleCloseAnotar,
         handleEditTransaction,
         handleOpenExchange,
         handleCloseExchange,
@@ -156,6 +211,9 @@ export function UIProvider({ children }: { children: ReactNode }) {
         balancesHidden,
         toggleBalancesHidden,
         mask,
+        themePreference,
+        theme,
+        setThemePreference,
       }}
     >
       {children}

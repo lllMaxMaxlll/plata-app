@@ -1,10 +1,7 @@
 "use client"
 
 import React from "react"
-import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Progress } from "@/components/ui/progress"
-import { Target, PiggyBank, TrendingUp, Wallet, CheckCircle2 } from "lucide-react"
+import { CheckCircle2, PiggyBank, Target, TrendingUp } from "lucide-react"
 import { type SimulationResult, type Currency } from "@/lib/simulation-engine"
 import { formatShort } from "@/lib/finance-data"
 
@@ -27,16 +24,14 @@ function StatTile({
   hint?: React.ReactNode
 }) {
   return (
-    <Card className="border-border/50 bg-card/40 backdrop-blur-xl shadow-sm">
-      <CardContent className="p-4 space-y-1">
-        <div className="flex items-center gap-1.5 text-muted-foreground">
-          {icon}
-          <span className="text-[11px] font-medium">{label}</span>
-        </div>
-        <p className="text-xl font-semibold text-foreground">{value}</p>
-        {hint && <div className="text-[11px] text-muted-foreground">{hint}</div>}
-      </CardContent>
-    </Card>
+    <section className="rounded-2xl border-2 border-foreground bg-card p-4">
+      <p className="flex items-center gap-1.5 font-mono text-[10px] font-semibold uppercase text-muted-foreground">
+        {icon}
+        {label}
+      </p>
+      <p className="mt-1 truncate text-xl font-extrabold tracking-tight">{value}</p>
+      {hint && <p className="mt-1 text-[11px] text-muted-foreground">{hint}</p>}
+    </section>
   )
 }
 
@@ -55,83 +50,82 @@ export function ProjectionKPIs({
   const neutral = pick(finalNetWorth.neutral)
   const pessimistic = pick(finalNetWorth.pessimistic)
   const optimistic = pick(finalNetWorth.optimistic)
+  // Dónde cae el escenario neutro dentro del rango: el marcador de la barra.
+  const spread = optimistic - pessimistic
+  const neutralAt = spread > 0 ? Math.min(1, Math.max(0, (neutral - pessimistic) / spread)) : 0.5
 
   const hasGoals = sequentialGoalResults.length > 0
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
-      <StatTile
-        icon={<Wallet className="size-3.5" />}
-        label={`Patrimonio a ${years} ${years === 1 ? "año" : "años"}`}
-        value={formatShort(neutral, displayCurrency)}
-        hint={
-          <span className="flex items-center gap-2 flex-wrap">
-            <span className="flex items-center gap-1">
-              <span className="size-1.5 rounded-full bg-destructive" aria-hidden />
-              Pesimista {formatShort(pessimistic, displayCurrency)}
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="size-1.5 rounded-full bg-success" aria-hidden />
-              Optimista {formatShort(optimistic, displayCurrency)}
-            </span>
-          </span>
-        }
-      />
+    <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+      <section className="col-span-2 rounded-3xl border-2 border-foreground bg-lime p-4 text-ink shadow-md">
+        <p className="text-sm font-bold">
+          En {years} {years === 1 ? "año" : "años"} tendrías
+        </p>
+        <p className="mt-1 text-[2.25rem] leading-none font-extrabold tracking-tighter">
+          {formatShort(neutral, displayCurrency)}
+        </p>
+        <div className="mt-4">
+          <div className="relative h-3 rounded-full border-2 border-ink bg-white">
+            <span
+              className="absolute top-1/2 size-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-ink bg-ink"
+              style={{ left: `${neutralAt * 100}%` }}
+              aria-hidden
+            />
+          </div>
+          <div className="mt-1.5 flex justify-between gap-2 font-mono text-[11px] font-semibold">
+            <span>pesimista {formatShort(pessimistic, displayCurrency)}</span>
+            <span>optimista {formatShort(optimistic, displayCurrency)}</span>
+          </div>
+        </div>
+        <p className="mt-2 font-mono text-[10px]">{isRealTerms ? "en poder de compra de hoy" : "en valores nominales"}</p>
+      </section>
 
       <StatTile
         icon={<PiggyBank className="size-3.5" />}
-        label="Aportes acumulados"
+        label="Lo que ponés"
         value={formatShort(finalNetWorth.neutral.totalSaved, displayCurrency)}
-        hint="Lo que ponés vos, a tipo de cambio de hoy"
+        hint="Aportes, al tipo de cambio de hoy"
       />
 
       <StatTile
         icon={<TrendingUp className="size-3.5" />}
-        label="Rendimientos acumulados"
+        label="Lo que rinde"
         value={formatShort(finalNetWorth.neutral.totalReturns, displayCurrency)}
-        hint="Lo que genera el capital, escenario neutro"
+        hint="Rendimientos, escenario neutro"
       />
 
-      <Card className="border-chart-5/40 bg-chart-5/5 backdrop-blur-xl shadow-sm">
-        <CardContent className="p-4 space-y-1.5">
-          <div className="flex items-center gap-1.5 text-muted-foreground">
-            <Target className="size-3.5" />
-            <span className="text-[11px] font-medium">Próximo objetivo</span>
-          </div>
-
-          {!hasGoals ? (
-            <p className="text-xs text-muted-foreground pt-1">
-              Todavía no cargaste metas. Agregá una para ver la fecha estimada de llegada.
+      <section className="col-span-2 rounded-2xl border-2 border-foreground bg-grape p-4 text-ink xl:col-span-4">
+        <p className="flex items-center gap-1.5 font-mono text-[10px] font-semibold uppercase">
+          <Target className="size-3.5" />
+          Próxima meta
+        </p>
+        {!hasGoals ? (
+          <p className="mt-1 text-sm">Todavía no cargaste metas. Agregá una y te digo cuándo llegás.</p>
+        ) : !nextGoal ? (
+          <p className="mt-1 flex items-center gap-1.5 text-sm font-bold">
+            <CheckCircle2 className="size-4" />
+            Llegás a todas dentro del horizonte.
+          </p>
+        ) : (
+          <div className="mt-1 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+            <p className="text-lg font-extrabold tracking-tight">
+              {nextGoal.goal.name}{" "}
+              <span className="font-mono text-xs font-semibold">
+                {formatShort(nextGoal.goal.amount, nextGoal.goal.currency)}
+              </span>
             </p>
-          ) : !nextGoal ? (
-            <div className="flex items-center gap-1.5 pt-1">
-              <CheckCircle2 className="size-4 text-success" />
-              <p className="text-xs font-medium text-foreground">
-                Toda la secuencia entra en el horizonte.
+            <div className="min-w-48 flex-1 sm:max-w-sm">
+              <div className="h-3 overflow-hidden rounded-full border-2 border-ink bg-white">
+                <div className="h-full bg-ink" style={{ width: `${nextGoal.coveragePercent}%` }} />
+              </div>
+              <p className="mt-1 font-mono text-[10px]">
+                {nextGoal.coveragePercent}% cubierto con lo que tenés hoy · {nextGoal.estimatedDateLabel}
               </p>
             </div>
-          ) : (
-            <>
-              <div className="flex items-center gap-2 flex-wrap">
-                <p className="text-sm font-semibold text-foreground truncate">
-                  {nextGoal.goal.name}
-                </p>
-                <Badge variant="outline" className="text-[11px] font-mono border-chart-5/40">
-                  {formatShort(nextGoal.goal.amount, nextGoal.goal.currency)}
-                </Badge>
-              </div>
-              <p className="text-[11px] text-muted-foreground">{nextGoal.estimatedDateLabel}</p>
-              <div className="pt-1 space-y-1">
-                <Progress value={nextGoal.coveragePercent} className="h-1.5" />
-                <p className="text-[11px] text-muted-foreground tabular-nums">
-                  {nextGoal.coveragePercent}% de la secuencia hasta acá, cubierto con tu capital
-                  líquido de hoy
-                </p>
-              </div>
-            </>
-          )}
-        </CardContent>
-      </Card>
+          </div>
+        )}
+      </section>
     </div>
   )
 }

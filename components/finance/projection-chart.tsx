@@ -1,9 +1,7 @@
 "use client"
 
-import React, { useState, useId, useRef, useCallback } from "react"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { TrendingUp, Sparkles } from "lucide-react"
+import React, { useState, useRef, useCallback, useEffect } from "react"
+import { Sparkles } from "lucide-react"
 import { type ScenarioPoint, type Currency } from "@/lib/simulation-engine"
 import { formatShort, formatCompact } from "@/lib/finance-data"
 
@@ -25,8 +23,22 @@ export function ProjectionChart({
   })
 
   const [hoverIndex, setHoverIndex] = useState<number | null>(null)
-  const chartId = useId()
   const svgRef = useRef<SVGSVGElement | null>(null)
+  const boxRef = useRef<HTMLDivElement | null>(null)
+
+  // El viewBox sigue el ancho real del contenedor: con uno fijo de 800 el SVG
+  // se achicaba entero en el teléfono y las etiquetas quedaban en 4 px.
+  const [boxWidth, setBoxWidth] = useState(800)
+  useEffect(() => {
+    const el = boxRef.current
+    if (!el) return
+    const observer = new ResizeObserver(([entry]) => {
+      const w = Math.round(entry.contentRect.width)
+      if (w > 0) setBoxWidth(w)
+    })
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
 
   // El gráfico se leía sólo con el mouse: las bandas de interacción tenían
   // onMouseEnter y nada más, así que en el teléfono —donde se usa esta PWA— el
@@ -40,7 +52,7 @@ export function ProjectionChart({
       const rect = svg.getBoundingClientRect()
       if (rect.width === 0) return null
       // De píxeles de pantalla a unidades del viewBox.
-      const viewBoxX = ((clientX - rect.left) / rect.width) * 800
+      const viewBoxX = ((clientX - rect.left) / rect.width) * svg.viewBox.baseVal.width
       const ratio = (viewBoxX - left) / graphW
       const index = Math.round(ratio * (pointCount - 1))
       return Math.min(pointCount - 1, Math.max(0, index))
@@ -53,9 +65,9 @@ export function ProjectionChart({
   }
 
   // Calculate SVG bounds
-  const width = 800
-  const height = 340
-  const paddingLeft = 65
+  const width = boxWidth
+  const height = Math.max(220, Math.min(340, Math.round(boxWidth * 0.45)))
+  const paddingLeft = 58
   const paddingRight = 30
   const paddingTop = 30
   const paddingBottom = 45
@@ -93,14 +105,6 @@ export function ProjectionChart({
       .join(" ")
   }
 
-  const buildArea = (key: "optimistic" | "neutral" | "pessimistic") => {
-    const linePath = buildPath(key)
-    const lastX = getX(timeline.length - 1)
-    const firstX = getX(0)
-    const bottomY = getY(0)
-    return `${linePath} L ${lastX.toFixed(1)} ${bottomY.toFixed(1)} L ${firstX.toFixed(1)} ${bottomY.toFixed(1)} Z`
-  }
-
   // Y-axis Ticks (5 steps)
   const yTickCount = 5
   const yTicks = Array.from({ length: yTickCount }).map((_, i) => {
@@ -112,7 +116,8 @@ export function ProjectionChart({
   })
 
   // X-axis Ticks (Labels for months)
-  const xStep = Math.max(1, Math.floor(timeline.length / 6))
+  // En pantallas angostas, menos etiquetas: si no, se pisan.
+  const xStep = Math.max(1, Math.floor(timeline.length / (width < 500 ? 3 : 6)))
   const xTicks = timeline
     .map((pt, index) => ({ pt, index }))
     .filter(({ index }) => index % xStep === 0 || index === timeline.length - 1)
@@ -125,101 +130,67 @@ export function ProjectionChart({
     setActiveScenarios((prev) => ({ ...prev, [key]: !prev[key] }))
   }
 
+  // Banda entre el escenario pesimista y el optimista: el rango posible se lee
+  // de un vistazo, y la línea neutra queda como la referencia.
+  const bandPath = (() => {
+    const top = timeline.map((pt, i) => `${i === 0 ? "M" : "L"} ${getX(i).toFixed(1)} ${getY(pt.optimistic).toFixed(1)}`)
+    const bottom = timeline
+      .map((pt, i) => `L ${getX(i).toFixed(1)} ${getY(pt.pessimistic).toFixed(1)}`)
+      .reverse()
+    return `${top.join(" ")} ${bottom.join(" ")} Z`
+  })()
+
+  const goalPoints = timeline
+    .map((pt, index) => ({ pt, index }))
+    .filter(({ pt }) => pt.achievedGoalNames && pt.achievedGoalNames.length > 0)
+
+  const SCENARIOS = [
+    { key: "optimistic", label: "Optimista", swatch: "border-dashed border-success" },
+    { key: "neutral", label: "Neutro", swatch: "border-foreground" },
+    { key: "pessimistic", label: "Pesimista", swatch: "border-dashed border-destructive" },
+  ] as const
+
   return (
-    <Card className="border-border/50 bg-card/40 backdrop-blur-xl shadow-xl overflow-hidden">
-      <CardHeader className="pb-2">
-        <div className="flex items-center justify-between flex-wrap gap-3">
-          <div>
-            <CardTitle className="text-base font-semibold flex items-center gap-2">
-              <TrendingUp className="size-4.5 text-primary" />
-              Evolución Proyectada del Patrimonio
-            </CardTitle>
-            <CardDescription className="text-xs mt-0.5">
-              {isRealTerms
-                ? "Valores ajustados por inflación (Poder Adquisitivo Real)"
-                : "Valores Nominales Proyectados"}{" "}
-              en {displayCurrency}
-            </CardDescription>
-          </div>
-
-          {/* Interactive Legend / Scenario Toggles */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <button
-              onClick={() => toggleScenario("optimistic")}
-              aria-pressed={activeScenarios.optimistic}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer border ${
-                activeScenarios.optimistic
-                  ? "bg-success/10 text-success border-success/40"
-                  : "bg-muted/40 text-muted-foreground border-transparent opacity-50"
-              }`}
-            >
-              <span className="size-2 rounded-full bg-success" />
-              Optimista
-            </button>
-
-            <button
-              onClick={() => toggleScenario("neutral")}
-              aria-pressed={activeScenarios.neutral}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer border ${
-                activeScenarios.neutral
-                  ? "bg-chart-1/10 text-chart-1 border-chart-1/40"
-                  : "bg-muted/40 text-muted-foreground border-transparent opacity-50"
-              }`}
-            >
-              <span className="size-2 rounded-full bg-chart-1" />
-              Neutro
-            </button>
-
-            <button
-              onClick={() => toggleScenario("pessimistic")}
-              aria-pressed={activeScenarios.pessimistic}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer border ${
-                activeScenarios.pessimistic
-                  ? "bg-destructive/10 text-destructive border-destructive/40"
-                  : "bg-muted/40 text-muted-foreground border-transparent opacity-50"
-              }`}
-            >
-              <span className="size-2 rounded-full bg-destructive" />
-              Pesimista
-            </button>
-          </div>
+    <section className="rounded-2xl border-2 border-foreground bg-card p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="text-base font-extrabold tracking-tight">Cómo crece tu patrimonio</h2>
+          <p className="text-xs text-muted-foreground">
+            {isRealTerms ? "En poder de compra de hoy" : "En valores nominales"}, en {displayCurrency}. La banda es el rango
+            entre escenarios.
+          </p>
         </div>
-      </CardHeader>
 
-      <CardContent className="pt-2 px-3 sm:px-6">
-        {/* SVG Container */}
-        <div className="relative w-full aspect-[21/9] min-h-[260px] sm:min-h-[300px]">
+        <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Escenarios">
+          {SCENARIOS.map(({ key, label, swatch }) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => toggleScenario(key)}
+              aria-pressed={activeScenarios[key]}
+              className={`flex cursor-pointer items-center gap-1.5 rounded-full border-2 px-2.5 py-1 text-xs font-semibold transition-opacity ${
+                activeScenarios[key] ? "border-foreground bg-card" : "border-foreground/30 opacity-50"
+              }`}
+            >
+              <span className={`w-4 border-t-[3px] ${swatch}`} aria-hidden />
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-2">
+        <div ref={boxRef} className="relative w-full" style={{ height }}>
           <svg
             ref={svgRef}
             viewBox={`0 0 ${width} ${height}`}
-            className="w-full h-full overflow-visible"
+            className="h-full w-full overflow-visible"
             role="img"
             aria-label={`Evolución proyectada del patrimonio en ${displayCurrency}, ${
               isRealTerms ? "en términos reales" : "en valores nominales"
             }, en tres escenarios a ${timeline.length - 1} meses.`}
             onMouseLeave={() => setHoverIndex(null)}
           >
-            <defs>
-              {/* Optimistic Gradient */}
-              <linearGradient id={`grad-opt-${chartId}`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="var(--success)" stopOpacity="0.3" />
-                <stop offset="100%" stopColor="var(--success)" stopOpacity="0.0" />
-              </linearGradient>
-
-              {/* Neutral Gradient */}
-              <linearGradient id={`grad-neu-${chartId}`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="var(--chart-1)" stopOpacity="0.3" />
-                <stop offset="100%" stopColor="var(--chart-1)" stopOpacity="0.0" />
-              </linearGradient>
-
-              {/* Pessimistic Gradient */}
-              <linearGradient id={`grad-pes-${chartId}`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="var(--destructive)" stopOpacity="0.25" />
-                <stop offset="100%" stopColor="var(--destructive)" stopOpacity="0.0" />
-              </linearGradient>
-            </defs>
-
-            {/* Horizontal Grid Lines */}
             {yTicks.map((tick, i) => (
               <g key={i}>
                 <line
@@ -227,134 +198,78 @@ export function ProjectionChart({
                   y1={tick.y}
                   x2={width - paddingRight}
                   y2={tick.y}
-                  stroke="currentColor"
-                  className="text-border/30"
-                  strokeDasharray="4 4"
+                  stroke="var(--foreground)"
+                  strokeOpacity={i === 0 ? 1 : 0.12}
+                  strokeWidth={i === 0 ? 2 : 1}
+                  strokeDasharray={i === 0 ? undefined : "4 4"}
                 />
                 <text
                   x={paddingLeft - 8}
                   y={tick.y + 4}
                   textAnchor="end"
-                  className="fill-muted-foreground text-[11px] font-medium tabular-nums"
+                  className="fill-muted-foreground font-mono text-[11px] tabular-nums"
                 >
                   {formatCompact(tick.val, displayCurrency)}
                 </text>
               </g>
             ))}
 
-            {/* X-axis Ticks */}
-            {xTicks.map(({ pt, index }) => {
-              const x = getX(index)
-              return (
-                <text
+            {xTicks.map(({ pt, index }) => (
+              <text
+                key={pt.month}
+                x={getX(index)}
+                y={height - 12}
+                textAnchor="middle"
+                className="fill-muted-foreground font-mono text-[11px]"
+              >
+                {pt.label}
+              </text>
+            ))}
+
+            {activeScenarios.optimistic && activeScenarios.pessimistic && (
+              <path d={bandPath} fill="var(--grape)" fillOpacity={0.45} />
+            )}
+
+            {activeScenarios.optimistic && (
+              <path d={buildPath("optimistic")} fill="none" stroke="var(--success)" strokeWidth="2" strokeDasharray="6 5" strokeLinecap="round" />
+            )}
+            {activeScenarios.pessimistic && (
+              <path d={buildPath("pessimistic")} fill="none" stroke="var(--destructive)" strokeWidth="2" strokeDasharray="6 5" strokeLinecap="round" />
+            )}
+            {activeScenarios.neutral && (
+              <path d={buildPath("neutral")} fill="none" stroke="var(--foreground)" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
+            )}
+
+            {activeScenarios.neutral &&
+              goalPoints.map(({ pt, index }) => (
+                <circle
                   key={pt.month}
-                  x={x}
-                  y={height - 12}
-                  textAnchor="middle"
-                  className="fill-muted-foreground text-[11px] font-medium"
+                  cx={getX(index)}
+                  cy={getY(pt.neutral)}
+                  r="7"
+                  fill="var(--lime)"
+                  stroke="var(--ink)"
+                  strokeWidth="2.5"
                 >
-                  {pt.label}
-                </text>
-              )
-            })}
+                  <title>Meta alcanzada: {pt.achievedGoalNames?.join(", ")}</title>
+                </circle>
+              ))}
 
-            {/* Areas */}
-            {activeScenarios.optimistic && (
-              <path
-                d={buildArea("optimistic")}
-                fill={`url(#grad-opt-${chartId})`}
-                className="transition-all duration-300"
-              />
-            )}
-            {activeScenarios.neutral && (
-              <path
-                d={buildArea("neutral")}
-                fill={`url(#grad-neu-${chartId})`}
-                className="transition-all duration-300"
-              />
-            )}
-            {activeScenarios.pessimistic && (
-              <path
-                d={buildArea("pessimistic")}
-                fill={`url(#grad-pes-${chartId})`}
-                className="transition-all duration-300"
-              />
-            )}
-
-            {/* Lines */}
-            {activeScenarios.optimistic && (
-              <path
-                d={buildPath("optimistic")}
-                fill="none"
-                stroke="var(--success)"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="transition-all duration-300"
-              />
-            )}
-            {activeScenarios.neutral && (
-              <path
-                d={buildPath("neutral")}
-                fill="none"
-                stroke="var(--chart-1)"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="transition-all duration-300"
-              />
-            )}
-            {activeScenarios.pessimistic && (
-              <path
-                d={buildPath("pessimistic")}
-                fill="none"
-                stroke="var(--destructive)"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="transition-all duration-300"
-              />
-            )}
-
-            {/* Hover Line & Marker Circles */}
             {hoverX !== null && hoverPoint && (
               <g>
-                <line
-                  x1={hoverX}
-                  y1={paddingTop}
-                  x2={hoverX}
-                  y2={height - paddingBottom}
-                  stroke="currentColor"
-                  className="text-primary/60"
-                  strokeWidth="1.5"
-                />
-
-                {activeScenarios.optimistic && (
-                  <circle
-                    cx={hoverX}
-                    cy={getY(hoverPoint.optimistic)}
-                    r="5"
-                    fill="var(--success)"
-                    className="stroke-background stroke-2"
-                  />
-                )}
-                {activeScenarios.neutral && (
-                  <circle
-                    cx={hoverX}
-                    cy={getY(hoverPoint.neutral)}
-                    r="5"
-                    fill="var(--chart-1)"
-                    className="stroke-background stroke-2"
-                  />
-                )}
-                {activeScenarios.pessimistic && (
-                  <circle
-                    cx={hoverX}
-                    cy={getY(hoverPoint.pessimistic)}
-                    r="5"
-                    fill="var(--destructive)"
-                    className="stroke-background stroke-2"
-                  />
+                <line x1={hoverX} y1={paddingTop} x2={hoverX} y2={height - paddingBottom} stroke="var(--foreground)" strokeWidth="1.5" />
+                {(["optimistic", "neutral", "pessimistic"] as const).map((key) =>
+                  activeScenarios[key] ? (
+                    <circle
+                      key={key}
+                      cx={hoverX}
+                      cy={getY(hoverPoint[key])}
+                      r="5"
+                      fill={key === "optimistic" ? "var(--success)" : key === "neutral" ? "var(--foreground)" : "var(--destructive)"}
+                      stroke="var(--card)"
+                      strokeWidth="2"
+                    />
+                  ) : null
                 )}
               </g>
             )}
@@ -382,99 +297,76 @@ export function ProjectionChart({
           </svg>
         </div>
 
+        {/* El valor del punto tocado, o del final si no se toca nada */}
+        {hoverPoint && (
+          <div className="mt-2 flex flex-wrap items-center justify-between gap-3 rounded-xl border-2 border-foreground bg-background p-3 text-xs">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="rounded-md bg-foreground px-2 py-0.5 font-bold text-background">
+                {hoverPoint.month === 0 ? "Hoy" : `Mes ${hoverPoint.month} · ${hoverPoint.label}`}
+              </span>
+              <span className="font-mono text-[11px] text-muted-foreground">
+                dólar est. ${Math.round(hoverPoint.exchangeRate)}
+              </span>
+              {hoverPoint.achievedGoalNames && hoverPoint.achievedGoalNames.length > 0 && (
+                <span className="inline-flex items-center gap-1 rounded-full border-[1.5px] border-foreground bg-lime px-2 py-0.5 font-semibold text-ink">
+                  <Sparkles className="size-3" /> {hoverPoint.achievedGoalNames.join(", ")}
+                </span>
+              )}
+            </div>
+            <div className="flex flex-wrap items-center gap-3 font-mono tabular-nums">
+              {activeScenarios.pessimistic && (
+                <span className="text-destructive">pes {formatShort(hoverPoint.pessimistic, displayCurrency)}</span>
+              )}
+              {activeScenarios.neutral && (
+                <span className="font-bold">neu {formatShort(hoverPoint.neutral, displayCurrency)}</span>
+              )}
+              {activeScenarios.optimistic && (
+                <span className="text-success">opt {formatShort(hoverPoint.optimistic, displayCurrency)}</span>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Alternativa en texto: el gráfico es un SVG con series distinguidas
             por color, que no sirve con lector de pantalla ni impreso. */}
-        <details className="mt-3 group">
-          <summary className="text-[11px] text-muted-foreground cursor-pointer select-none hover:text-foreground list-none flex items-center gap-1">
+        <details className="group mt-3">
+          <summary className="flex cursor-pointer list-none items-center gap-1 text-[11px] text-muted-foreground select-none hover:text-foreground">
             <span className="transition-transform group-open:rotate-90" aria-hidden>
               ›
             </span>
             Ver los datos como tabla
           </summary>
-          <div className="mt-2 max-h-64 overflow-auto rounded-xl border border-border/50">
-            <table className="w-full text-[11px] tabular-nums">
+          <div className="mt-2 max-h-64 overflow-auto rounded-xl border-2 border-foreground/20">
+            <table className="w-full font-mono text-[11px] tabular-nums">
               <caption className="sr-only">
                 Patrimonio proyectado por mes en los tres escenarios, en {displayCurrency}
               </caption>
               <thead className="sticky top-0 bg-card">
-                <tr className="text-muted-foreground text-left">
+                <tr className="text-left text-muted-foreground">
                   <th scope="col" className="px-2 py-1.5 font-medium">Mes</th>
-                  <th scope="col" className="px-2 py-1.5 font-medium text-right">Pesimista</th>
-                  <th scope="col" className="px-2 py-1.5 font-medium text-right">Neutro</th>
-                  <th scope="col" className="px-2 py-1.5 font-medium text-right">Optimista</th>
-                  <th scope="col" className="px-2 py-1.5 font-medium text-right">TC</th>
+                  <th scope="col" className="px-2 py-1.5 text-right font-medium">Pesimista</th>
+                  <th scope="col" className="px-2 py-1.5 text-right font-medium">Neutro</th>
+                  <th scope="col" className="px-2 py-1.5 text-right font-medium">Optimista</th>
+                  <th scope="col" className="px-2 py-1.5 text-right font-medium">TC</th>
                 </tr>
               </thead>
               <tbody>
                 {timeline.map((pt) => (
-                  <tr key={pt.month} className="border-t border-border/40">
-                    <th scope="row" className="px-2 py-1 font-normal text-muted-foreground text-left">
+                  <tr key={pt.month} className="border-t border-foreground/10">
+                    <th scope="row" className="px-2 py-1 text-left font-normal text-muted-foreground">
                       {pt.month === 0 ? "Actual" : `M${pt.month}`}
                     </th>
                     <td className="px-2 py-1 text-right">{formatCompact(pt.pessimistic, displayCurrency)}</td>
                     <td className="px-2 py-1 text-right">{formatCompact(pt.neutral, displayCurrency)}</td>
                     <td className="px-2 py-1 text-right">{formatCompact(pt.optimistic, displayCurrency)}</td>
-                    <td className="px-2 py-1 text-right text-muted-foreground">
-                      {Math.round(pt.exchangeRate)}
-                    </td>
+                    <td className="px-2 py-1 text-right text-muted-foreground">{Math.round(pt.exchangeRate)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         </details>
-
-        {/* Hover Tooltip Info Bar */}
-        {hoverPoint && (
-          <div className="mt-2 rounded-2xl border border-border/50 bg-muted/20 p-3 flex flex-wrap items-center justify-between gap-4 text-xs">
-            <div className="flex items-center gap-2">
-              <span className="font-bold text-foreground bg-primary/10 text-primary px-2 py-0.5 rounded-md">
-                {hoverPoint.month === 0 ? "Estado Actual" : `Mes ${hoverPoint.month} (${hoverPoint.label})`}
-              </span>
-              <span className="text-muted-foreground text-[11px]">
-                TC Est: <strong className="text-foreground">${Math.round(hoverPoint.exchangeRate)} ARS/USD</strong>
-              </span>
-            </div>
-
-            <div className="flex items-center gap-4 flex-wrap">
-              {hoverPoint.achievedGoalNames && hoverPoint.achievedGoalNames.length > 0 && (
-                <Badge variant="outline" className="text-[11px] border-chart-5/50 text-chart-5 gap-1 bg-chart-5/10">
-                  <Sparkles className="size-3" /> Meta alcanzada: {hoverPoint.achievedGoalNames.join(", ")}
-                </Badge>
-              )}
-              {activeScenarios.optimistic && (
-                <div className="flex items-center gap-1.5">
-                  <span className="size-2 rounded-full bg-success" />
-                  <span className="text-muted-foreground">Opt:</span>
-                  <span className="font-bold text-success tabular-nums">
-                    {formatShort(hoverPoint.optimistic, displayCurrency)}
-                  </span>
-                </div>
-              )}
-
-              {activeScenarios.neutral && (
-                <div className="flex items-center gap-1.5">
-                  <span className="size-2 rounded-full bg-chart-1" />
-                  <span className="text-muted-foreground font-medium">Neu:</span>
-                  <span className="font-bold text-chart-1 tabular-nums">
-                    {formatShort(hoverPoint.neutral, displayCurrency)}
-                  </span>
-                </div>
-              )}
-
-              {activeScenarios.pessimistic && (
-                <div className="flex items-center gap-1.5">
-                  <span className="size-2 rounded-full bg-destructive" />
-                  <span className="text-muted-foreground">Pes:</span>
-                  <span className="font-bold text-destructive tabular-nums">
-                    {formatShort(hoverPoint.pessimistic, displayCurrency)}
-                  </span>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+      </div>
+    </section>
   )
 }

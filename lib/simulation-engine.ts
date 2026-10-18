@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// Motor de simulación financiera de PLATA. TypeScript puro, sin dependencias:
+// Motor de simulación financiera de Lucas. TypeScript puro, sin dependencias:
 // se puede testear sin montar React ni Supabase.
 //
 // Convenciones del modelo:

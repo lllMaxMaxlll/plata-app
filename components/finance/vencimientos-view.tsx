@@ -4,14 +4,11 @@ import { useState, useMemo } from "react"
 import { useFinance } from "./finance-provider"
 import { PageHeader } from "./page-header"
 import {
-  formatCurrency,
   formatShort,
   type DueItem,
   type Currency,
 } from "@/lib/finance-data"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
 import { VencimientoSheet } from "./vencimiento-sheet"
 import { PayVencimientoModal } from "./pay-vencimiento-modal"
 import { getApiAuthHeaders } from "@/lib/supabase/client"
@@ -21,20 +18,28 @@ import {
   Calendar as CalendarIcon,
   ListFilter,
   Plus,
-  AlertTriangle,
-  Clock,
-  CheckCircle2,
   BellRing,
   ChevronLeft,
   ChevronRight,
   Search,
   Receipt,
   RotateCcw,
-  Zap,
   Check,
 } from "lucide-react"
+import { IconTile, Pill, dueIcon, pageClass } from "./lucas-ui"
+import { Segmented } from "./segmented"
+import { format, parseISO } from "date-fns"
+import { es } from "date-fns/locale"
+import { cn } from "@/lib/utils"
 
-export function VencimientosView({ isDesktop = false }: { isDesktop?: boolean }) {
+const FREQUENCY_LABELS: Record<DueItem["frequency"], string> = {
+  monthly: "mensual",
+  biweekly: "quincenal",
+  yearly: "anual",
+  one_time: "única vez",
+}
+
+export function VencimientosView() {
   const { dueItems, markDueItemAsPending } = useFinance()
 
   const [activeTab, setActiveTab] = useState<"list" | "calendar">("list")
@@ -279,425 +284,269 @@ export function VencimientosView({ isDesktop = false }: { isDesktop?: boolean })
     return itemsWithComputedStatus.filter((i) => i.dueDate === selectedCalendarDateIso)
   }, [selectedCalendarDateIso, itemsWithComputedStatus])
 
+  const statusPill = (item: (typeof itemsWithComputedStatus)[number]) => {
+    if (item.status === "paid") return <Pill tone="plain">pagado</Pill>
+    if (item.computedStatusTag === "overdue") return <Pill tone="coral">vencido hace {Math.abs(item.daysUntilDue)}d</Pill>
+    if (item.computedStatusTag === "due_soon")
+      return <Pill tone="lime">{item.daysUntilDue === 0 ? "vence hoy" : `en ${item.daysUntilDue} días`}</Pill>
+    return <Pill tone="plain">en {item.daysUntilDue} días</Pill>
+  }
+
   return (
-    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 pt-4 pb-20 space-y-6">
-      {/* Header Bar */}
+    <div className={cn(pageClass, "space-y-6")}>
       <PageHeader
         route="dueItems"
-        description="Gestioná tus facturas periódicas y evitá moras con alertas."
+        description="Tus cuentas periódicas, con aviso antes de que venzan."
         actions={
           <Button onClick={handleOpenCreate}>
             <Plus className="size-4" />
-            Nuevo vencimiento
+            Vencimiento
           </Button>
         }
       />
 
-      {/* KPI Cards Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Card 1: Total a pagar este mes */}
-        <div className="relative overflow-hidden rounded-xl border border-border/60 bg-card/40 backdrop-blur-xl p-5 shadow-sm group hover:border-border transition-colors">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              Total Este Mes
-            </span>
-            <span className="flex size-9 items-center justify-center rounded-xl bg-chart-1/10 text-chart-1 border border-chart-1/20">
-              <Receipt className="size-4.5" />
-            </span>
-          </div>
-
-          <div className="mt-3 space-y-0.5">
-            <p className="text-2xl font-extrabold text-foreground tabular-nums tracking-tight">
-              {formatShort(totalDueThisMonth.ARS, "ARS")}
-            </p>
-            {totalDueThisMonth.USD > 0 && (
-              <p className="text-xs font-semibold text-primary tabular-nums">
-                + {formatShort(totalDueThisMonth.USD, "USD")}
-              </p>
-            )}
-          </div>
-          <p className="text-[11px] text-muted-foreground mt-2">
-            Facturas pendientes programadas para este mes
-          </p>
-        </div>
-
-        {/* Card 2: Próximos 3 más urgentes */}
-        <div className="relative overflow-hidden rounded-xl border border-border/60 bg-card/40 backdrop-blur-xl p-5 shadow-sm">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              Próximos Vencimientos
-            </span>
-            <span className="flex size-9 items-center justify-center rounded-xl bg-warning/10 text-warning border border-warning/20">
-              <Clock className="size-4.5" />
-            </span>
-          </div>
-
-          {urgentUpcomingItems.length === 0 ? (
-            <p className="text-xs text-muted-foreground italic py-3">No hay vencimientos pendientes cercanos</p>
-          ) : (
-            <div className="space-y-2">
-              {urgentUpcomingItems.map((item) => (
-                <div key={item.id} className="flex items-center justify-between text-xs">
-                  <div className="min-w-0 pr-2">
-                    <p className="font-semibold text-foreground truncate">{item.title}</p>
-                    <p className="text-[11px] text-muted-foreground">
-                      {item.daysUntilDue === 0
-                        ? "Vence HOY"
-                        : item.daysUntilDue < 0
-                          ? `Venció hace ${Math.abs(item.daysUntilDue)}d`
-                          : `En ${item.daysUntilDue} días`}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <span className="font-bold tabular-nums text-foreground">
-                      {formatShort(item.amount, item.currency)}
-                    </span>
-                    <button
-                      onClick={() => handleOpenPayModal(item)}
-                      className="size-9 sm:size-7 rounded-lg bg-success/10 hover:bg-success/20 text-success flex items-center justify-center transition-colors cursor-pointer"
-                      title="Marcar como pagado"
-                      aria-label={`Marcar ${item.title} como pagado`}
-                    >
-                      <Check className="size-3.5" />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+        <section className="rounded-3xl border-2 border-foreground bg-lime p-4 text-ink shadow-md">
+          <p className="text-sm font-bold">Te queda por pagar este mes</p>
+          <p className="mt-1 text-3xl font-extrabold tracking-tighter">{formatShort(totalDueThisMonth.ARS, "ARS")}</p>
+          {totalDueThisMonth.USD > 0 && (
+            <p className="text-lg font-extrabold">+ {formatShort(totalDueThisMonth.USD, "USD")}</p>
           )}
-        </div>
+        </section>
 
-        {/* Card 3: Alerta de Mora / Vencidas */}
-        <div
-          className={`relative overflow-hidden rounded-xl border p-5 shadow-sm backdrop-blur-xl transition-colors ${overdueItems.length > 0
-              ? "border-destructive/30 bg-destructive/5 shadow-destructive/5"
-              : "border-border/60 bg-card/40"
-            }`}
+        <section
+          className={cn(
+            "rounded-3xl border-2 border-foreground p-4",
+            overdueItems.length > 0 ? "bg-coral text-ink" : "bg-card"
+          )}
         >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              Facturas Vencidas
-            </span>
-            <span
-              className={`flex size-9 items-center justify-center rounded-xl border ${overdueItems.length > 0
-                  ? "bg-destructive/15 text-destructive border-destructive/30 animate-pulse"
-                  : "bg-success/10 text-success border-success/20"
-                }`}
-            >
-              {overdueItems.length > 0 ? (
-                <AlertTriangle className="size-4.5" />
-              ) : (
-                <CheckCircle2 className="size-4.5" />
-              )}
-            </span>
-          </div>
+          <p className="text-sm font-bold">{overdueItems.length > 0 ? "Vencidos" : "Nada vencido"}</p>
+          {overdueItems.length > 0 ? (
+            <>
+              <p className="mt-1 text-3xl font-extrabold tracking-tighter">{formatShort(totalOverdueAmount.ARS, "ARS")}</p>
+              <p className="mt-1 font-mono text-[11px] font-semibold">
+                {overdueItems.length} {overdueItems.length === 1 ? "cuenta" : "cuentas"}
+                {totalOverdueAmount.USD > 0 && ` · + ${formatShort(totalOverdueAmount.USD, "USD")}`}
+              </p>
+            </>
+          ) : (
+            <p className="mt-1 text-3xl font-extrabold tracking-tighter">Al día 🙌</p>
+          )}
+        </section>
 
-          <div className="mt-3">
-            {overdueItems.length > 0 ? (
-              <>
-                <p className="text-2xl font-extrabold text-destructive tabular-nums tracking-tight">
-                  {overdueItems.length} {overdueItems.length === 1 ? "factura" : "facturas"}
-                </p>
-                <p className="text-xs font-semibold text-destructive mt-0.5">
-                  Mora total: {formatShort(totalOverdueAmount.ARS, "ARS")}
-                  {totalOverdueAmount.USD > 0 && ` + ${formatShort(totalOverdueAmount.USD, "USD")}`}
-                </p>
-              </>
-            ) : (
-              <>
-                <p className="text-2xl font-extrabold text-success tracking-tight">Al Día</p>
-                <p className="text-xs text-muted-foreground mt-0.5">No registrás servicios vencidos en mora.</p>
-              </>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Comprobación de vencimientos bajo demanda */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border border-primary/20 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-4">
-        <div className="flex items-center gap-3">
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-md shadow-primary/20">
-            <BellRing className="size-5" />
-          </span>
-          <div>
-            <h3 className="text-sm font-bold text-foreground">Alertas de Vencimiento</h3>
-            <p className="text-xs text-muted-foreground">
-              Revisá qué servicios entran en ventana de aviso según los días de recordatorio de cada uno.
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2 shrink-0">
-          <Button
-            onClick={handleTestNotificationCheck}
-            variant="secondary"
-            disabled={testingNotification}
-            className="text-xs font-semibold bg-primary/10 hover:bg-primary/20 text-primary"
-          >
-            <Zap className="size-3.5 mr-1.5" />
-            {testingNotification ? "Comprobando..." : "Comprobar Ahora"}
-          </Button>
-        </div>
-      </div>
-
-      {/* View Switcher & Controls */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border-b border-border/40 pb-4">
-        {/* Switcher Tab */}
-        <div className="flex items-center rounded-2xl bg-muted/40 p-1 border border-border/50 self-start sm:self-auto">
-          <button
-            onClick={() => setActiveTab("list")}
-            className={`flex items-center gap-2 rounded-xl px-3.5 py-1.5 text-xs font-semibold transition-all cursor-pointer ${activeTab === "list"
-                ? "bg-card text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
-              }`}
-          >
-            <ListFilter className="size-4" />
-            Vista Lista / Tablero
-          </button>
-          <button
-            onClick={() => setActiveTab("calendar")}
-            className={`flex items-center gap-2 rounded-xl px-3.5 py-1.5 text-xs font-semibold transition-all cursor-pointer ${activeTab === "calendar"
-                ? "bg-card text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
-              }`}
-          >
-            <CalendarIcon className="size-4" />
-            Vista Calendario
-          </button>
-        </div>
-
-        {/* Search & Status Filter (only for list view) */}
-        {activeTab === "list" && (
-          <div className="flex flex-1 sm:max-w-md items-center gap-2">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar vencimiento..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 rounded-xl border-border bg-card/40 text-xs h-9"
-              />
-            </div>
-
-            <div className="flex items-center gap-1 overflow-x-auto py-0.5">
-              {[
-                { key: "all", label: "Todos" },
-                { key: "pending", label: "Pendientes" },
-                { key: "due_soon", label: "Por Vencer" },
-                { key: "overdue", label: "Vencidos" },
-                { key: "paid", label: "Pagados" },
-              ].map((f) => (
-                <button
-                  key={f.key}
-                  onClick={() => setStatusFilter(f.key)}
-                  className={`rounded-lg px-2.5 py-1 text-[11px] font-semibold whitespace-nowrap transition-colors cursor-pointer ${statusFilter === f.key
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted/40 text-muted-foreground hover:bg-muted"
-                    }`}
-                >
-                  {f.label}
-                </button>
+        <section className="rounded-3xl border-2 border-foreground bg-card p-4">
+          <p className="text-sm font-bold">Lo próximo</p>
+          {urgentUpcomingItems.length === 0 ? (
+            <p className="mt-2 text-sm text-muted-foreground">No hay nada pendiente.</p>
+          ) : (
+            <ul className="mt-1 divide-y-[1.5px] divide-dashed divide-foreground/15">
+              {urgentUpcomingItems.map((item) => (
+                <li key={item.id} className="flex items-center gap-2 py-1.5 text-sm">
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate font-semibold">{item.title}</span>
+                    <span className="block font-mono text-[10px] text-muted-foreground">
+                      {item.daysUntilDue === 0
+                        ? "vence hoy"
+                        : item.daysUntilDue < 0
+                          ? `venció hace ${Math.abs(item.daysUntilDue)}d`
+                          : `en ${item.daysUntilDue} días`}
+                    </span>
+                  </span>
+                  <span className="font-mono text-xs font-semibold">{formatShort(item.amount, item.currency)}</span>
+                  <button
+                    type="button"
+                    onClick={() => handleOpenPayModal(item)}
+                    className="flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-lg border-2 border-foreground bg-lime text-ink transition-transform active:scale-95"
+                    aria-label={`Pagar ${item.title}`}
+                  >
+                    <Check className="size-4" />
+                  </button>
+                </li>
               ))}
-            </div>
+            </ul>
+          )}
+        </section>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <Segmented
+          ariaLabel="Vista"
+          value={activeTab}
+          onValueChange={setActiveTab}
+          options={[
+            { value: "list", label: <><ListFilter className="size-3.5" />Lista</> },
+            { value: "calendar", label: <><CalendarIcon className="size-3.5" />Calendario</> },
+          ]}
+        />
+        {activeTab === "list" && (
+          <div className="relative min-w-48 flex-1 sm:max-w-xs">
+            <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+            <input
+              placeholder="Buscar vencimiento"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              aria-label="Buscar vencimiento"
+              className="h-9 w-full rounded-xl border-2 border-foreground bg-card pr-3 pl-9 text-sm outline-none placeholder:text-muted-foreground focus-visible:ring-3 focus-visible:ring-lime"
+            />
           </div>
         )}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleTestNotificationCheck}
+          disabled={testingNotification}
+          className="ml-auto"
+          title="Revisa qué vencimientos entran en su ventana de aviso"
+        >
+          <BellRing />
+          {testingNotification ? "Revisando…" : "Probar avisos"}
+        </Button>
       </div>
 
-      {/* --- CONTENT AREA --- */}
+      {activeTab === "list" && (
+        <div className="no-scrollbar -mx-1 -mt-3 flex gap-1.5 overflow-x-auto px-1 pb-1" role="group" aria-label="Estado">
+          {[
+            { key: "all", label: "Todos" },
+            { key: "pending", label: "Pendientes" },
+            { key: "due_soon", label: "Por vencer" },
+            { key: "overdue", label: "Vencidos" },
+            { key: "paid", label: "Pagados" },
+          ].map((f) => (
+            <button
+              key={f.key}
+              type="button"
+              aria-pressed={statusFilter === f.key}
+              onClick={() => setStatusFilter(f.key)}
+              className={cn(
+                "shrink-0 cursor-pointer rounded-full border-2 border-foreground px-3 py-1 text-xs font-semibold transition-colors",
+                statusFilter === f.key ? "bg-lime text-ink" : "bg-card hover:bg-muted"
+              )}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {activeTab === "list" ? (
-        /* VISTA LISTA / TABLERO */
         filteredListItems.length === 0 ? (
-          <div className="text-center py-16 rounded-xl border border-dashed border-border/60 bg-card/20 p-8">
-            <Receipt className="size-12 mx-auto text-muted-foreground/40 mb-3" />
-            <h3 className="text-base font-bold text-foreground">No se encontraron vencimientos</h3>
-            <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
+          <button
+            type="button"
+            onClick={handleOpenCreate}
+            className="flex w-full cursor-pointer flex-col items-center gap-2 rounded-2xl border-2 border-dashed border-foreground/40 px-6 py-10 text-center transition-colors hover:bg-lime/25"
+          >
+            <Receipt className="size-7" />
+            <span className="font-extrabold">
+              {searchQuery || statusFilter !== "all" ? "Nada con ese filtro" : "Cargá tu primer vencimiento"}
+            </span>
+            <span className="text-sm text-muted-foreground">
               {searchQuery || statusFilter !== "all"
-                ? "Probá cambiando los filtros o la búsqueda."
-                : "Agregá tu primer servicio recurrente para tener todo bajo control."}
-            </p>
-            <Button
-              onClick={handleOpenCreate}
-              variant="outline"
-              className="mt-4 text-xs border-primary/30 text-primary"
-            >
-              <Plus className="size-3.5 mr-1.5" />
-              Crear Vencimiento
-            </Button>
-          </div>
+                ? "Probá con otro filtro o búsqueda."
+                : "La luz, la tarjeta, el alquiler: te aviso antes de que venza."}
+            </span>
+          </button>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <ul className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
             {filteredListItems.map((item) => {
-              const isOverdue = item.computedStatusTag === "overdue"
-              const isDueSoon = item.computedStatusTag === "due_soon"
               const isPaid = item.status === "paid"
-
+              const isOverdue = item.computedStatusTag === "overdue"
               return (
-                <div
+                <li
                   key={item.id}
-                  className={`group relative rounded-xl border p-4.5 transition-all duration-200 backdrop-blur-xl flex flex-col justify-between ${isPaid
-                      ? "border-border/40 bg-card/20 opacity-75"
+                  className={cn(
+                    "flex flex-col rounded-2xl border-2 p-4",
+                    isPaid
+                      ? "border-dashed border-foreground/40 bg-transparent"
                       : isOverdue
-                        ? "border-destructive/40 bg-destructive/5 shadow-lg shadow-destructive/5"
-                        : isDueSoon
-                          ? "border-warning/40 bg-warning/5 shadow-lg shadow-warning/5"
-                          : "border-border/60 bg-card/40 hover:border-border hover:bg-card/60"
-                    }`}
+                        ? "border-foreground bg-coral/25"
+                        : "border-foreground bg-card"
+                  )}
                 >
-                  <div>
-                    {/* Top Row: Category & Status Badge */}
-                    <div className="flex items-center justify-between gap-2">
-                      <Badge variant="outline" className="text-[11px] font-semibold rounded-lg bg-muted/30">
-                        {item.category}
-                      </Badge>
-
-                      {isPaid ? (
-                        <span className="flex items-center gap-1 rounded-full bg-success/10 border border-success/20 px-2 py-0.5 text-[11px] font-bold text-success">
-                          <CheckCircle2 className="size-3" />
-                          Pagado
-                        </span>
-                      ) : isOverdue ? (
-                        <span className="flex items-center gap-1 rounded-full bg-destructive/10 border border-destructive/30 px-2 py-0.5 text-[11px] font-bold text-destructive animate-pulse">
-                          <AlertTriangle className="size-3" />
-                          Vencido ({Math.abs(item.daysUntilDue)}d)
-                        </span>
-                      ) : isDueSoon ? (
-                        <span className="flex items-center gap-1 rounded-full bg-warning/10 border border-warning/30 px-2 py-0.5 text-[11px] font-bold text-warning">
-                          <Clock className="size-3" />
-                          {item.daysUntilDue === 0 ? "Vence hoy" : `En ${item.daysUntilDue} días`}
-                        </span>
-                      ) : (
-                        <span className="flex items-center gap-1 rounded-full bg-muted border border-border px-2 py-0.5 text-[11px] font-bold text-muted-foreground">
-                          Al día
-                        </span>
-                      )}
+                  <div className="flex items-start gap-3">
+                    <IconTile
+                      Icon={dueIcon(item.category)}
+                      className={isPaid ? "bg-muted text-foreground" : isOverdue || item.computedStatusTag === "due_soon" ? "bg-coral" : "bg-sky"}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className={cn("truncate font-extrabold", isPaid && "text-muted-foreground")}>{item.title}</p>
+                      <p className="truncate text-xs text-muted-foreground">{item.category}</p>
                     </div>
-
-                    {/* Title & Amount */}
-                    <div className="mt-3">
-                      <h3 className="text-base font-bold text-foreground line-clamp-1 group-hover:text-primary transition-colors">
-                        {item.title}
-                      </h3>
-                      <p className="text-xl font-extrabold text-foreground tabular-nums tracking-tight mt-1">
-                        {formatCurrency(item.amount, item.currency)}
-                      </p>
-                    </div>
-
-                    {/* Frequency & Due Date metadata */}
-                    <div className="mt-3 flex items-center justify-between text-[11px] text-muted-foreground border-t border-border/30 pt-2.5">
-                      <span>Vence: <strong className="text-foreground font-medium">{item.dueDate}</strong></span>
-                      <span className="capitalize">{item.frequency === "one_time" ? "Único" : item.frequency}</span>
-                    </div>
+                    {statusPill(item)}
                   </div>
 
-                  {/* Actions Row */}
-                  <div className="mt-4 pt-2.5 flex items-center justify-between gap-2 border-t border-border/30">
+                  <p className={cn("mt-3 text-2xl font-extrabold tracking-tight", isPaid && "text-muted-foreground")}>
+                    {formatShort(item.amount, item.currency)}
+                  </p>
+                  <p className="font-mono text-[11px] text-muted-foreground">
+                    vence {format(parseISO(item.dueDate), "d/M/yyyy")} · {FREQUENCY_LABELS[item.frequency]}
+                  </p>
+
+                  <div className="mt-3 flex items-center gap-2 border-t-[1.5px] border-dashed border-foreground/15 pt-3">
                     {isPaid ? (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => markDueItemAsPending(item.id)}
-                        className="rounded-xl text-xs text-muted-foreground hover:text-foreground h-8"
-                      >
-                        <RotateCcw className="size-3.5 mr-1" />
+                      <Button size="sm" variant="ghost" onClick={() => markDueItemAsPending(item.id)}>
+                        <RotateCcw />
                         Desmarcar
                       </Button>
                     ) : (
-                      <Button
-                        size="sm"
-                        onClick={() => handleOpenPayModal(item)}
-                        className="rounded-xl bg-success hover:bg-success text-white font-semibold text-xs h-8 shadow-md shadow-success/20 cursor-pointer"
-                      >
-                        <CheckCircle2 className="size-3.5 mr-1" />
-                        Marcar Pagado
+                      <Button size="sm" onClick={() => handleOpenPayModal(item)} className="bg-lime text-ink hover:bg-lime/80">
+                        <Check />
+                        Pagar
                       </Button>
                     )}
-
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleOpenEdit(item)}
-                      className="rounded-xl text-xs h-8 border-border/60 hover:bg-muted/50 cursor-pointer"
-                    >
+                    <Button size="sm" variant="outline" onClick={() => handleOpenEdit(item)} className="ml-auto">
                       Editar
                     </Button>
                   </div>
-                </div>
+                </li>
               )
             })}
-          </div>
+          </ul>
         )
       ) : (
-        /* VISTA CALENDARIO MENSUAL */
         <div className="space-y-4">
-          {/* Calendar Header Controls */}
-          <div className="flex items-center justify-between rounded-2xl border border-border/60 bg-card/40 p-4">
-            <h2 className="text-base font-bold text-foreground capitalize flex items-center gap-2">
-              <CalendarIcon className="size-4.5 text-primary" />
-              {calendarMonthLabel}
-            </h2>
-
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="text-lg font-extrabold tracking-tight">{calendarMonthLabel}</h2>
             <div className="flex items-center gap-1.5">
               <Button
                 variant="outline"
-                size="sm"
+                size="icon-sm"
                 onClick={() => {
                   const prev = new Date(currentCalendarDate)
                   prev.setMonth(prev.getMonth() - 1)
                   setCurrentCalendarDate(prev)
                 }}
-                className="rounded-xl size-10 sm:size-8 p-0"
                 aria-label="Mes anterior"
               >
-                <ChevronLeft className="size-4" />
+                <ChevronLeft />
               </Button>
-
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentCalendarDate(new Date())}
-                className="rounded-xl text-xs px-2.5 h-8 font-semibold"
-              >
+              <Button variant="outline" size="sm" onClick={() => setCurrentCalendarDate(new Date())}>
                 Hoy
               </Button>
-
               <Button
                 variant="outline"
-                size="sm"
+                size="icon-sm"
                 onClick={() => {
                   const next = new Date(currentCalendarDate)
                   next.setMonth(next.getMonth() + 1)
                   setCurrentCalendarDate(next)
                 }}
-                className="rounded-xl size-10 sm:size-8 p-0"
                 aria-label="Mes siguiente"
               >
-                <ChevronRight className="size-4" />
+                <ChevronRight />
               </Button>
             </div>
           </div>
 
-          {/* Monthly Days Grid */}
-          <div className="rounded-xl border border-border/60 bg-card/30 p-3 overflow-hidden backdrop-blur-xl">
-            {/* Weekday Labels */}
-            <div className="grid grid-cols-7 gap-1 text-center text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2">
-              <div>Lun</div>
-              <div>Mar</div>
-              <div>Mié</div>
-              <div>Jue</div>
-              <div>Vie</div>
-              <div>Sáb</div>
-              <div>Dom</div>
+          <div className="rounded-2xl border-2 border-foreground bg-card p-2 sm:p-3">
+            <div className="mb-2 grid grid-cols-7 gap-1 text-center font-mono text-[10px] font-semibold text-muted-foreground uppercase">
+              {["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"].map((d) => (
+                <div key={d}>{d}</div>
+              ))}
             </div>
-
-            {/* Days Cells */}
-            <div className="grid grid-cols-7 gap-1.5">
+            <div className="grid grid-cols-7 gap-1 sm:gap-1.5">
               {calendarDays.map((day, idx) => {
                 const isSelected = selectedCalendarDateIso === day.dateIso && day.isCurrentMonth
-                const isTodayCell =
-                  day.isCurrentMonth &&
-                  day.dateIso === nowToday.toISOString().split("T")[0]
-
+                const isTodayCell = day.isCurrentMonth && day.dateIso === format(nowToday, "yyyy-MM-dd")
                 return (
                   <div
                     key={idx}
@@ -709,52 +558,42 @@ export function VencimientosView({ isDesktop = false }: { isDesktop?: boolean })
                       : { "aria-hidden": true })}
                     aria-pressed={day.isCurrentMonth ? isSelected : undefined}
                     aria-current={isTodayCell ? "date" : undefined}
-                    className={`${focusRing} min-h-[72px] sm:min-h-[90px] rounded-2xl p-1.5 flex flex-col justify-between border transition-all cursor-pointer relative overflow-hidden ${!day.isCurrentMonth
-                        ? "opacity-25 bg-muted/10 border-transparent cursor-default"
+                    className={cn(
+                      focusRing,
+                      "relative flex min-h-[64px] cursor-pointer flex-col overflow-hidden rounded-lg border-2 p-1 sm:min-h-[88px] sm:p-1.5",
+                      !day.isCurrentMonth
+                        ? "cursor-default border-transparent opacity-30"
                         : isSelected
-                          ? "border-primary bg-primary/10 shadow-md shadow-primary/10"
-                          : isTodayCell
-                            ? "border-primary/50 bg-primary/5"
-                            : "border-border/30 bg-card/40 hover:bg-card/70"
-                      }`}
+                          ? "border-foreground bg-lime/40"
+                          : "border-foreground/15 hover:border-foreground"
+                    )}
                   >
-                    <div className="flex items-center justify-between">
-                      <span
-                        className={`text-xs font-bold ${isTodayCell
-                            ? "flex size-5 items-center justify-center rounded-full bg-primary text-primary-foreground text-[11px]"
-                            : "text-foreground"
-                          }`}
-                      >
-                        {day.dayNumber}
-                      </span>
-                      {day.items.length > 0 && (
-                        <span className="text-[11px] font-extrabold px-1.5 py-0.2 rounded-full bg-muted/60 text-muted-foreground">
-                          {day.items.length}
-                        </span>
+                    <span
+                      className={cn(
+                        "text-xs font-bold",
+                        isTodayCell && "flex size-5 items-center justify-center rounded-full bg-foreground text-[11px] text-background"
                       )}
-                    </div>
-
-                    {/* Mini Event Dots / Pills */}
-                    <div className="space-y-1 mt-1 overflow-hidden">
+                    >
+                      {day.dayNumber}
+                    </span>
+                    <div className="mt-1 space-y-0.5 overflow-hidden">
                       {day.items.slice(0, 2).map((item) => (
                         <div
                           key={item.id}
-                          className={`truncate text-[11px] font-semibold px-1.5 py-0.5 rounded-lg border ${item.status === "paid"
-                              ? "bg-success/10 text-success border-success/20"
-                              : item.computedStatusTag === "overdue"
-                                ? "bg-destructive/15 text-destructive border-destructive/30"
-                                : item.computedStatusTag === "due_soon"
-                                  ? "bg-warning/15 text-warning border-warning/30"
-                                  : "bg-primary/10 text-primary border-primary/20"
-                            }`}
+                          className={cn(
+                            "truncate rounded border-[1.5px] border-foreground px-1 text-[10px] font-semibold",
+                            item.status === "paid"
+                              ? "bg-card text-muted-foreground line-through"
+                              : item.computedStatusTag === "overdue" || item.computedStatusTag === "due_soon"
+                                ? "bg-coral text-ink"
+                                : "bg-sky text-ink"
+                          )}
                         >
                           {item.title}
                         </div>
                       ))}
                       {day.items.length > 2 && (
-                        <p className="text-[11px] text-muted-foreground font-semibold pl-1">
-                          +{day.items.length - 2} más
-                        </p>
+                        <p className="pl-0.5 text-[10px] font-semibold text-muted-foreground">+{day.items.length - 2}</p>
                       )}
                     </div>
                   </div>
@@ -763,56 +602,38 @@ export function VencimientosView({ isDesktop = false }: { isDesktop?: boolean })
             </div>
           </div>
 
-          {/* Selected Day Details Box */}
           {selectedCalendarDateIso && (
-            <div className="rounded-xl border border-primary/30 bg-card/60 p-5 backdrop-blur-xl animate-in fade-in duration-200">
-              <div className="flex items-center justify-between border-b border-border/40 pb-3 mb-3">
-                <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
-                  <CalendarIcon className="size-4 text-primary" />
-                  Vencimientos del {selectedCalendarDateIso}
-                </h3>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => setSelectedCalendarDateIso(null)}
-                  className="h-7 text-xs text-muted-foreground"
-                >
+            <section className="rounded-2xl border-2 border-foreground bg-card p-4">
+              <div className="mb-2 flex items-center justify-between">
+                <h3 className="font-extrabold">{format(parseISO(selectedCalendarDateIso), "EEEE d 'de' MMMM", { locale: es })}</h3>
+                <Button size="sm" variant="ghost" onClick={() => setSelectedCalendarDateIso(null)}>
                   Cerrar
                 </Button>
               </div>
-
               {selectedDayItems.length === 0 ? (
-                <p className="text-xs text-muted-foreground italic">No hay facturas registradas para esta fecha.</p>
+                <p className="text-sm text-muted-foreground">Nada vence ese día.</p>
               ) : (
-                <div className="space-y-3">
+                <ul className="divide-y-[1.5px] divide-dashed divide-foreground/15">
                   {selectedDayItems.map((item) => (
-                    <div
-                      key={item.id}
-                      className="flex items-center justify-between rounded-2xl border border-border/50 bg-card/40 p-3"
-                    >
-                      <div>
-                        <p className="text-sm font-bold text-foreground">{item.title}</p>
-                        <p className="text-xs text-muted-foreground">{item.category} · {item.frequency}</p>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span className="text-sm font-extrabold text-foreground tabular-nums">
-                          {formatCurrency(item.amount, item.currency)}
+                    <li key={item.id} className="flex items-center gap-3 py-2.5">
+                      <IconTile Icon={dueIcon(item.category)} className="bg-sky" />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate font-bold">{item.title}</span>
+                        <span className="block text-xs text-muted-foreground">
+                          {item.category} · {FREQUENCY_LABELS[item.frequency]}
                         </span>
-                        {item.status !== "paid" && (
-                          <Button
-                            size="sm"
-                            onClick={() => handleOpenPayModal(item)}
-                            className="rounded-xl text-xs bg-success text-white h-8"
-                          >
-                            Pagar
-                          </Button>
-                        )}
-                      </div>
-                    </div>
+                      </span>
+                      <span className="font-mono text-sm font-semibold">{formatShort(item.amount, item.currency)}</span>
+                      {item.status !== "paid" && (
+                        <Button size="sm" onClick={() => handleOpenPayModal(item)} className="bg-lime text-ink hover:bg-lime/80">
+                          Pagar
+                        </Button>
+                      )}
+                    </li>
                   ))}
-                </div>
+                </ul>
               )}
-            </div>
+            </section>
           )}
         </div>
       )}

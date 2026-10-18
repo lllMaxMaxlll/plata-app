@@ -11,7 +11,7 @@ import { GoalModal, type GoalDraft } from "./goal-modal"
 import { runSimulation } from "@/lib/simulation-engine"
 import { estimateMonthlySavings, sumOverdueLiabilities } from "@/lib/savings-capacity"
 import {
-  Sparkles,
+  Target,
   ArrowUp,
   ArrowDown,
   Pencil,
@@ -19,13 +19,12 @@ import {
   ShieldCheck,
   ShoppingBag,
   Plus,
-  Calendar,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { formatShort, type Goal } from "@/lib/finance-data"
+import { pageClass } from "./lucas-ui"
+import { cn } from "@/lib/utils"
 
 export function ProjectionsView() {
   const {
@@ -224,7 +223,7 @@ export function ProjectionsView() {
   if (loading || !settingsLoaded || !dataLoaded) {
     return (
       <div
-        className="w-full max-w-7xl mx-auto px-4 sm:px-6 pt-4 pb-12 space-y-6"
+        className={cn(pageClass, "space-y-6")}
         aria-busy="true"
         aria-live="polite"
       >
@@ -245,11 +244,11 @@ export function ProjectionsView() {
   }
 
   return (
-    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 pt-4 pb-12 font-sans space-y-6">
+    <div className={cn(pageClass, "space-y-6")}>
       {/* Header Banner */}
       <PageHeader
         route="projections"
-        description="Planificá tus metas y calculá cuándo llegás a cada una según tu capacidad de ahorro."
+        description="Cuándo llegás a cada meta con lo que ahorrás hoy."
         actions={
           <Button onClick={handleOpenAddGoal}>
             <Plus className="size-4" />
@@ -266,159 +265,115 @@ export function ProjectionsView() {
         isRealTerms={isRealTerms}
       />
 
-      {/* Sequential Goals Cascading Timeline Card */}
-      <Card className="border-border/50 bg-card/40 backdrop-blur-xl shadow-lg">
-        <CardHeader className="pb-3">
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/40 pb-3">
-            <div>
-              <CardTitle className="text-base font-semibold flex items-center gap-2">
-                <Sparkles className="size-4.5 text-chart-5" />
-                Línea de Tiempo de Metas Secuenciales (En Cascada)
-              </CardTitle>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Las metas se completan una detrás de otra. Al cumplir una, tus ahorros libres se reorientan automáticamente a la siguiente.
-              </p>
-            </div>
+      {/* Metas en orden: se cumplen una detrás de otra */}
+      <section>
+        <div className="mb-3">
+          <h2 className="text-base font-extrabold tracking-tight">Tus metas, en orden</h2>
+          <p className="text-xs text-muted-foreground">
+            Se cumplen una detrás de otra: cuando llegás a una, el ahorro pasa a la siguiente.
+          </p>
+        </div>
 
-          </div>
-        </CardHeader>
-
-        <CardContent>
-          {goals.length === 0 ? (
-            <div className="text-center py-8 rounded-xl border border-dashed border-border/60 bg-muted/10">
-              <p className="text-xs text-muted-foreground mb-3">
-                Aún no has agregado metas a tu secuencia de ahorro.
-              </p>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleOpenAddGoal}
-                className="h-8 text-xs font-semibold text-primary hover:bg-primary/10"
-              >
-                + Crear mi primera meta
-              </Button>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {simulationResult.sequentialGoalResults.map((res, idx) => {
-                const { goal, estimatedDateLabel, isAchievedInHorizon, coveragePercent, costInDisplayCurrency } = res
-
-                return (
-                  <div
-                    key={goal.id}
-                    className={`relative flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 rounded-xl border transition-all ${
-                      isAchievedInHorizon
-                        ? "border-success/30 bg-success/5 hover:border-success/50"
-                        : "border-border/60 bg-muted/20 hover:border-border"
-                    }`}
-                  >
-                    <div className="flex items-start gap-3 min-w-0">
-                      <span className="flex size-7 items-center justify-center rounded-full bg-muted font-mono text-xs font-bold text-muted-foreground shrink-0 border border-border">
-                        {idx + 1}º
+        {goals.length === 0 ? (
+          <button
+            type="button"
+            onClick={handleOpenAddGoal}
+            className="flex w-full cursor-pointer flex-col items-center gap-2 rounded-2xl border-2 border-dashed border-foreground/40 px-4 py-8 text-center transition-colors hover:bg-grape/25"
+          >
+            <Target className="size-6" />
+            <span className="font-bold">Poné tu primera meta</span>
+            <span className="text-xs text-muted-foreground">Un viaje, un auto, un fondo de emergencia. Te digo cuándo llegás.</span>
+          </button>
+        ) : (
+          <ol className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {simulationResult.sequentialGoalResults.map((res, idx) => {
+              const { goal, estimatedDateLabel, isAchievedInHorizon, coveragePercent, costInDisplayCurrency } = res
+              return (
+                <li
+                  key={goal.id}
+                  className={cn(
+                    "flex flex-col rounded-2xl border-2 p-4",
+                    isAchievedInHorizon ? "border-foreground bg-card" : "border-dashed border-foreground/50 bg-transparent"
+                  )}
+                >
+                  <div className="flex items-start gap-3">
+                    <span className="flex size-8 shrink-0 items-center justify-center rounded-full border-2 border-foreground bg-lime font-mono text-sm font-bold text-ink">
+                      {idx + 1}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-extrabold">{goal.name}</p>
+                      <span className="mt-0.5 inline-flex items-center gap-1 rounded-full border-[1.5px] border-foreground px-1.5 py-0.5 font-mono text-[10px] font-semibold">
+                        {goal.kind === "reserve" ? <ShieldCheck className="size-3" /> : <ShoppingBag className="size-3" />}
+                        {goal.kind === "reserve" ? "reserva" : "compra"}
                       </span>
-
-                      <div className="space-y-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-bold text-sm text-foreground truncate">
-                            {goal.name}
-                          </span>
-                          <Badge
-                            variant={goal.kind === "reserve" ? "secondary" : "outline"}
-                            className="text-[11px] font-mono gap-1"
-                          >
-                            {goal.kind === "reserve" ? (
-                              <>
-                                <ShieldCheck className="size-3 text-success" /> Reserva
-                              </>
-                            ) : (
-                              <>
-                                <ShoppingBag className="size-3 text-chart-5" /> Compra
-                              </>
-                            )}
-                          </Badge>
-                        </div>
-
-                        <div className="flex items-center gap-x-3 gap-y-1 text-xs text-muted-foreground font-mono flex-wrap">
-                          <span>
-                            Monto: <strong className="text-foreground">{formatShort(goal.amount, goal.currency)}</strong>
-                          </span>
-                          <span aria-hidden>•</span>
-                          <span className="flex items-center gap-1 text-primary font-semibold">
-                            <Calendar className="size-3" />
-                            {estimatedDateLabel}
-                          </span>
-                          {isAchievedInHorizon && goal.currency !== displayCurrency && (
-                            <>
-                              <span aria-hidden>•</span>
-                              <span title="Costo estimado al momento de alcanzarla, ya inflacionado y al tipo de cambio proyectado">
-                                ≈ {formatShort(costInDisplayCurrency, displayCurrency)} de ese momento
-                              </span>
-                            </>
-                          )}
-                          {!isAchievedInHorizon && (
-                            <>
-                              <span aria-hidden>•</span>
-                              <span>{coveragePercent}% cubierto</span>
-                            </>
-                          )}
-                        </div>
-                      </div>
                     </div>
-
-                    <div className="flex items-center justify-between md:justify-end gap-3 shrink-0">
-                      {/* Priority Controls & Edit/Delete */}
-                      <div className="flex items-center gap-1">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          disabled={idx === 0}
-                          onClick={() => handleMovePriority(idx, "up")}
-                          className="size-9 sm:size-7 text-muted-foreground hover:text-foreground cursor-pointer disabled:opacity-30"
-                          title="Subir prioridad"
-                        >
-                          <ArrowUp className="size-3.5" />
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          disabled={idx === goals.length - 1}
-                          onClick={() => handleMovePriority(idx, "down")}
-                          className="size-9 sm:size-7 text-muted-foreground hover:text-foreground cursor-pointer disabled:opacity-30"
-                          title="Bajar prioridad"
-                        >
-                          <ArrowDown className="size-3.5" />
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleOpenEditGoal(goal)}
-                          className="size-9 sm:size-7 text-muted-foreground hover:text-primary cursor-pointer"
-                          title="Editar"
-                        >
-                          <Pencil className="size-3.5" />
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleRemoveGoal(goal)}
-                          className="size-9 sm:size-7 text-muted-foreground hover:text-destructive cursor-pointer"
-                          title="Eliminar"
-                        >
-                          <Trash2 className="size-3.5" />
-                        </Button>
-                      </div>
-                    </div>
+                    <span className="shrink-0 font-mono text-sm font-semibold">{formatShort(goal.amount, goal.currency)}</span>
                   </div>
-                )
-              })}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+
+                  <p className="mt-4 text-xs text-muted-foreground">{isAchievedInHorizon ? "Llegás en" : "Dentro del horizonte no llegás"}</p>
+                  <p className="text-lg font-extrabold tracking-tight">{estimatedDateLabel}</p>
+                  {isAchievedInHorizon && goal.currency !== displayCurrency && (
+                    <p
+                      className="font-mono text-[10px] text-muted-foreground"
+                      title="Costo estimado al momento de alcanzarla, ya inflacionado y al tipo de cambio proyectado"
+                    >
+                      ≈ {formatShort(costInDisplayCurrency, displayCurrency)} de ese momento
+                    </p>
+                  )}
+
+                  <div className="mt-3 h-2 overflow-hidden rounded-full border-[1.5px] border-foreground bg-background">
+                    <div className="h-full bg-grape" style={{ width: `${coveragePercent}%` }} />
+                  </div>
+                  <p className="mt-1 font-mono text-[10px] text-muted-foreground">{coveragePercent}% cubierto con lo que tenés hoy</p>
+
+                  <div className="mt-3 flex items-center gap-1 border-t-[1.5px] border-dashed border-foreground/15 pt-2">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-sm"
+                      disabled={idx === 0}
+                      onClick={() => handleMovePriority(idx, "up")}
+                      aria-label={`Subir prioridad de ${goal.name}`}
+                    >
+                      <ArrowUp />
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-sm"
+                      disabled={idx === goals.length - 1}
+                      onClick={() => handleMovePriority(idx, "down")}
+                      aria-label={`Bajar prioridad de ${goal.name}`}
+                    >
+                      <ArrowDown />
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={() => handleOpenEditGoal(goal)}
+                      aria-label={`Editar ${goal.name}`}
+                      className="ml-auto"
+                    >
+                      <Pencil />
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={() => handleRemoveGoal(goal)}
+                      aria-label={`Eliminar ${goal.name}`}
+                      className="hover:bg-destructive/10 hover:text-destructive"
+                    >
+                      <Trash2 />
+                    </Button>
+                  </div>
+                </li>
+              )
+            })}
+          </ol>
+        )}
+      </section>
 
       {/* Main Grid: Chart on Left/Top, Parameter Controls on Right */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">

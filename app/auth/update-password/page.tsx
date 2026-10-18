@@ -97,11 +97,11 @@ export default function UpdatePasswordPage() {
     <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col justify-center px-6 py-12 md:max-w-lg md:px-0">
       <Card className="p-8 md:p-10 shadow-2xl rounded-[32px]">
         <div className="flex flex-col items-center gap-3 pb-6 text-center">
-          <AppIcon className="size-14 border border-primary/20 shadow-sm" priority />
+          <AppIcon className="size-14" />
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-foreground">Elegí tu contraseña</h1>
             <p className="mt-1 text-sm text-muted-foreground text-balance">
-              Es la que vas a usar de ahora en más para entrar a PLATA.
+              Es la que vas a usar de ahora en más para entrar a Lucas.
             </p>
           </div>
         </div>

@@ -1,7 +1,9 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import { Download, Search, X, ArrowDownLeft, ArrowUpRight, ArrowLeftRight } from "lucide-react"
+import { Download, Search, X } from "lucide-react"
+import { differenceInCalendarDays, format } from "date-fns"
+import { es } from "date-fns/locale"
 import type { TransactionType, Transaction } from "@/lib/finance-data"
 import { formatShort, transactionCurrency } from "@/lib/finance-data"
 import { useFinance } from "./finance-provider"
@@ -9,11 +11,10 @@ import { PageHeader } from "./page-header"
 import { TransactionList } from "./transaction-list"
 import { useUI } from "./ui-context"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
-import { Card } from "@/components/ui/card"
 import { OptionSelect } from "./option-select"
 import { Segmented } from "./segmented"
+import { pageClass } from "./lucas-ui"
+import { cn } from "@/lib/utils"
 
 type TypeFilter = "all" | TransactionType
 type DateFilter = "all" | "today" | "week" | "this_month" | "last_month"
@@ -102,23 +103,34 @@ export function ActivityView({
     })
   }, [transactions, search, type, accountId, categoryName, dateRange, getAccount])
 
-  // Calculate Totals for Filtered Transactions
-  const { totalARS, totalUSD } = useMemo(() => {
-    let ars = 0
-    let usd = 0
-
-    filtered.forEach((t) => {
+  // Lo que entró y salió de lo filtrado, por moneda. Las transferencias no son
+  // ni ingreso ni gasto: mueven plata entre cuentas propias.
+  const totals = useMemo(() => {
+    const sum = { ARS: { in: 0, out: 0 }, USD: { in: 0, out: 0 } }
+    for (const t of filtered) {
       const currency = transactionCurrency(t, getAccount(t.accountId)) ?? "ARS"
-      const sign = t.type === "income" ? 1 : t.type === "expense" ? -1 : 0
+      if (t.type === "income") sum[currency].in += t.amount
+      else if (t.type === "expense") sum[currency].out += t.amount
+    }
+    return sum
+  }, [filtered, getAccount])
 
-      if (currency === "ARS") {
-        ars += t.amount * sign
-      } else {
-        usd += t.amount * sign
+  // Agrupado por día calendario local, en el orden en que ya vienen.
+  const days = useMemo(() => {
+    const groups: { key: string; date: Date; items: Transaction[]; net: number }[] = []
+    for (const t of filtered) {
+      const date = new Date(t.date)
+      const key = format(date, "yyyy-MM-dd")
+      let group = groups[groups.length - 1]
+      if (!group || group.key !== key) {
+        group = { key, date, items: [], net: 0 }
+        groups.push(group)
       }
-    })
-
-    return { totalARS: ars, totalUSD: usd }
+      group.items.push(t)
+      const currency = transactionCurrency(t, getAccount(t.accountId)) ?? "ARS"
+      if (currency === "ARS") group.net += t.type === "income" ? t.amount : t.type === "expense" ? -t.amount : 0
+    }
+    return groups
   }, [filtered, getAccount])
 
   const hasActiveFilters =
@@ -137,11 +149,10 @@ export function ActivityView({
   }
 
   return (
-    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 pt-4 pb-12 font-sans space-y-5">
-      {/* Header Banner */}
+    <div className={pageClass}>
       <PageHeader
         route="activity"
-        description="Filtrá, buscá y auditá tus ingresos, gastos y transferencias."
+        description="Buscá, filtrá y revisá todo lo que entró y salió."
         actions={
           onOpenExport && (
             <Button variant="outline" onClick={onOpenExport}>
@@ -152,49 +163,51 @@ export function ActivityView({
         }
       />
 
-      {/* Filter Section Card */}
-      <Card className="rounded-xl border border-border/60 bg-card p-4 shadow-sm space-y-3.5">
-        {/* 1. Search Bar */}
-        <div className="relative flex items-center w-full">
-          <Search className="absolute left-3 size-4 text-muted-foreground pointer-events-none" />
-          <Input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar por nota, categoría o cuenta..."
-            className="pl-9 pr-9 h-9 text-xs font-sans bg-muted/30 border-border/60 focus:bg-background"
-          />
-          {search.trim() !== "" && (
-            <button
-              type="button"
-              onClick={() => setSearch("")}
-              aria-label="Limpiar búsqueda"
-              className="absolute right-1 size-8 flex items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-muted cursor-pointer"
-            >
-              <X className="size-3.5" />
-            </button>
-          )}
-        </div>
-
-        {/* 2. Type Tabs (Todos / Ingresos / Gastos / Transferencias) */}
-        <div className="overflow-x-auto pb-1 no-scrollbar">
-          <Segmented
-            ariaLabel="Tipo de movimiento"
-            value={type}
-            onValueChange={setType}
-            options={[
-              { value: "all", label: `Todos (${transactions.length})` },
-              { value: "income", label: <><ArrowDownLeft className="size-3.5 text-success" />Ingresos</> },
-              { value: "expense", label: <><ArrowUpRight className="size-3.5 text-destructive" />Gastos</> },
-              { value: "transfer", label: <><ArrowLeftRight className="size-3.5 text-chart-1" />Transferencias</> },
-            ]}
-          />
-        </div>
-
-        {/* 3. Secondary Dropdown Filters Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1 border-t border-border/40 font-mono text-xs">
-          {/* Account Filter Select */}
+      <div className="mt-4 grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
+        <aside className="space-y-4 lg:sticky lg:top-0 lg:col-start-2 lg:row-start-1">
           <div className="relative">
+            <Search className="pointer-events-none absolute top-1/2 left-3.5 size-4.5 -translate-y-1/2" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Buscar por nota, categoría o cuenta"
+              aria-label="Buscar movimientos"
+              className="h-12 w-full rounded-2xl border-2 border-foreground bg-card pr-10 pl-10 text-sm font-semibold shadow-sm outline-none placeholder:font-normal placeholder:text-muted-foreground focus-visible:ring-3 focus-visible:ring-lime"
+            />
+            {search.trim() !== "" && (
+              <button
+                type="button"
+                onClick={() => setSearch("")}
+                aria-label="Limpiar búsqueda"
+                className="absolute top-1/2 right-1.5 flex size-9 -translate-y-1/2 cursor-pointer items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"
+              >
+                <X className="size-4" />
+              </button>
+            )}
+          </div>
+
+          <div className="no-scrollbar -mx-1 overflow-x-auto px-1 pb-1">
+            <Segmented
+              ariaLabel="Tipo de movimiento"
+              value={type}
+              onValueChange={setType}
+              options={[
+                { value: "all", label: "Todos" },
+                { value: "income", label: "Ingresos" },
+                { value: "expense", label: "Gastos" },
+                { value: "transfer", label: "Transf." },
+              ]}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-2 lg:grid-cols-1">
+            <OptionSelect
+              ariaLabel="Filtrar por fecha"
+              value={dateRange}
+              onValueChange={setDateRange}
+              options={(Object.keys(DATE_LABELS) as DateFilter[]).map((dKey) => ({ value: dKey, label: DATE_LABELS[dKey] }))}
+            />
             <OptionSelect
               ariaLabel="Filtrar por cuenta"
               value={accountId}
@@ -204,90 +217,91 @@ export function ActivityView({
                 ...accounts.map((a) => ({ value: a.id, label: `${a.name} (${a.currency})` })),
               ]}
             />
-          </div>
-
-          {/* Category Filter Select */}
-          <div className="relative">
-            <OptionSelect
-              ariaLabel="Filtrar por categoría"
-              value={categoryName}
-              onValueChange={setCategoryName}
-              options={[
-                { value: "all", label: "Todas las categorías" },
-                ...categories.map((c) => ({
-                  value: c.name,
-                  label: `${c.name} · ${c.type === "income" ? "ingreso" : "gasto"}`,
-                })),
-              ]}
-            />
-          </div>
-
-          {/* Date Range Select */}
-          <div className="relative flex gap-2">
-            <div className="relative flex-1">
+            <div className="col-span-2 lg:col-span-1">
               <OptionSelect
-                ariaLabel="Filtrar por fecha"
-                value={dateRange}
-                onValueChange={setDateRange}
-                options={(Object.keys(DATE_LABELS) as DateFilter[]).map((dKey) => ({
-                  value: dKey,
-                  label: DATE_LABELS[dKey],
-                }))}
+                ariaLabel="Filtrar por categoría"
+                value={categoryName}
+                onValueChange={setCategoryName}
+                options={[
+                  { value: "all", label: "Todas las categorías" },
+                  ...categories.map((c) => ({ value: c.name, label: `${c.name} · ${c.type === "income" ? "ingreso" : "gasto"}` })),
+                ]}
               />
             </div>
-
-            {hasActiveFilters && (
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={handleResetFilters}
-                className="h-9 px-2.5 text-xs font-semibold shrink-0"
-                title="Limpiar todos los filtros"
-              >
-                Limpiar
-              </Button>
-            )}
           </div>
-        </div>
-      </Card>
 
-      {/* 4. Results KPI Bar Summary */}
-      <div className="flex items-center justify-between flex-wrap gap-2 px-1 font-mono text-xs text-muted-foreground">
-        <div className="flex items-center gap-2">
-          <span className="font-bold text-foreground">
-            {filtered.length} {filtered.length === 1 ? "movimiento encontrado" : "movimientos encontrados"}
-          </span>
-          {hasActiveFilters && (
-            <Badge variant="secondary" className="text-[11px] bg-primary/10 text-primary border-primary/20">
-              Filtrado
-            </Badge>
+          <section className="rounded-2xl border-2 border-foreground bg-lime p-4 text-ink shadow-sm">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-sm font-bold">
+                {filtered.length} {filtered.length === 1 ? "movimiento" : "movimientos"}
+              </p>
+              {hasActiveFilters && (
+                <button
+                  type="button"
+                  onClick={handleResetFilters}
+                  className="cursor-pointer font-mono text-[11px] font-semibold underline underline-offset-2"
+                >
+                  limpiar filtros
+                </button>
+              )}
+            </div>
+            {(["ARS", "USD"] as const)
+              .filter((c) => totals[c].in > 0 || totals[c].out > 0 || c === "ARS")
+              .map((c) => (
+                <div key={c} className="mt-3 grid grid-cols-3 gap-2 border-t-2 border-ink/15 pt-3">
+                  <div>
+                    <p className="font-mono text-[10px] font-semibold uppercase">Entró</p>
+                    <p className="truncate text-sm font-extrabold">{mask(formatShort(totals[c].in, c))}</p>
+                  </div>
+                  <div>
+                    <p className="font-mono text-[10px] font-semibold uppercase">Salió</p>
+                    <p className="truncate text-sm font-extrabold">{mask(formatShort(totals[c].out, c))}</p>
+                  </div>
+                  <div>
+                    <p className="font-mono text-[10px] font-semibold uppercase">Neto</p>
+                    <p className="truncate text-sm font-extrabold">{mask(formatShort(totals[c].in - totals[c].out, c))}</p>
+                  </div>
+                </div>
+              ))}
+          </section>
+        </aside>
+
+        <div className="space-y-4 lg:col-start-1 lg:row-start-1">
+          {days.length === 0 ? (
+            <TransactionList
+              transactions={[]}
+              empty={hasActiveFilters ? "No hay movimientos para este filtro." : "Todavía no registraste movimientos."}
+            />
+          ) : (
+            days.map((group) => (
+              <section key={group.key}>
+                <div className="mb-1.5 flex items-baseline justify-between gap-3 px-1">
+                  <h2 className="font-mono text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    {dayLabel(group.date)}
+                  </h2>
+                  {group.net !== 0 && (
+                    <span className={cn("font-mono text-[11px] font-semibold", group.net > 0 ? "text-success" : "text-muted-foreground")}>
+                      {mask(`${group.net > 0 ? "+" : "−"}${formatShort(Math.abs(group.net), "ARS")}`)}
+                    </span>
+                  )}
+                </div>
+                <div className="rounded-2xl border-2 border-foreground bg-card px-3.5">
+                  <TransactionList transactions={group.items} onEditTransaction={onEditTransaction} showDate={false} />
+                </div>
+              </section>
+            ))
           )}
         </div>
-
-        {filtered.length > 0 && (
-          <div className="flex items-center gap-3">
-            {totalARS !== 0 && (
-              <span className={`font-bold tabular-nums ${totalARS > 0 ? "text-success" : "text-foreground"}`}>
-                ARS: {mask(`${totalARS > 0 ? "+" : ""}${formatShort(totalARS, "ARS")}`)}
-              </span>
-            )}
-            {totalUSD !== 0 && (
-              <span className={`font-bold tabular-nums ${totalUSD > 0 ? "text-success" : "text-primary"}`}>
-                USD: {mask(`${totalUSD > 0 ? "+" : ""}${formatShort(totalUSD, "USD")}`)}
-              </span>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* 5. Transaction List Output */}
-      <div>
-        <TransactionList
-          transactions={filtered}
-          onEditTransaction={onEditTransaction}
-          empty={hasActiveFilters ? "No hay movimientos para este filtro." : "Todavía no registraste movimientos."}
-        />
       </div>
     </div>
   )
+}
+
+/** "Hoy", "Ayer" y después "lunes 12 de octubre" (con año si no es el actual). */
+function dayLabel(date: Date): string {
+  const today = new Date()
+  const diff = differenceInCalendarDays(today, date)
+  if (diff === 0) return "Hoy"
+  if (diff === 1) return "Ayer"
+  return format(date, date.getFullYear() === today.getFullYear() ? "EEEE d 'de' MMMM" : "EEEE d 'de' MMMM yyyy", { locale: es })
 }

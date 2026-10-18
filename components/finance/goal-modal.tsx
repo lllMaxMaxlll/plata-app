@@ -97,10 +97,10 @@ export function GoalModal({
 
   return (
     <ResponsiveDialog open={open} onOpenChange={(isOpen) => !isOpen && !submitting && onOpenChange(false)}>
-      <ResponsiveDialogContent className="sm:max-w-[440px] border-border/50 bg-card/95 backdrop-blur-2xl">
+      <ResponsiveDialogContent className="sm:max-w-[440px]">
         <ResponsiveDialogHeader>
           <ResponsiveDialogTitle className="flex items-center gap-2 text-base font-semibold">
-            <Sparkles className="size-4.5 text-chart-5" />
+            <Sparkles className="size-4.5" />
             {currentGoal ? "Editar meta" : "Nueva meta"}
           </ResponsiveDialogTitle>
           <ResponsiveDialogDescription className="text-xs">
@@ -137,7 +137,7 @@ export function GoalModal({
                   onValueChange={(val) => setCurrency(val as Currency)}
                   className="h-7"
                 >
-                  <TabsList className="h-7 bg-muted/60 p-0.5">
+                  <TabsList className="h-8">
                     <TabsTrigger value="USD" className="h-6 px-2.5 text-[11px] font-semibold">
                       USD
                     </TabsTrigger>
@@ -166,14 +166,14 @@ export function GoalModal({
                 <button
                   type="button"
                   onClick={() => setKind("reserve")}
-                  className={`flex flex-col items-start gap-1 p-3 rounded-lg border text-left transition-all cursor-pointer ${
+                  className={`flex flex-col items-start gap-1 rounded-xl border-2 p-3 text-left transition-colors cursor-pointer ${
                     kind === "reserve"
-                      ? "border-primary bg-primary/10 text-foreground"
-                      : "border-border/60 bg-muted/30 text-muted-foreground hover:bg-muted/60"
+                      ? "border-foreground bg-grape text-ink"
+                      : "border-foreground/30 bg-card text-muted-foreground hover:border-foreground"
                   }`}
                 >
                   <div className="flex items-center gap-1.5 font-bold text-xs">
-                    <ShieldCheck className="size-3.5 text-success" />
+                    <ShieldCheck className="size-3.5" />
                     Reserva de Capital
                   </div>
                   <p className="text-[11px] text-muted-foreground leading-tight">
@@ -184,14 +184,14 @@ export function GoalModal({
                 <button
                   type="button"
                   onClick={() => setKind("purchase")}
-                  className={`flex flex-col items-start gap-1 p-3 rounded-lg border text-left transition-all cursor-pointer ${
+                  className={`flex flex-col items-start gap-1 rounded-xl border-2 p-3 text-left transition-colors cursor-pointer ${
                     kind === "purchase"
-                      ? "border-primary bg-primary/10 text-foreground"
-                      : "border-border/60 bg-muted/30 text-muted-foreground hover:bg-muted/60"
+                      ? "border-foreground bg-grape text-ink"
+                      : "border-foreground/30 bg-card text-muted-foreground hover:border-foreground"
                   }`}
                 >
                   <div className="flex items-center gap-1.5 font-bold text-xs">
-                    <ShoppingBag className="size-3.5 text-chart-5" />
+                    <ShoppingBag className="size-3.5" />
                     Compra / Gasto
                   </div>
                   <p className="text-[11px] text-muted-foreground leading-tight">

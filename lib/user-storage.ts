@@ -4,7 +4,7 @@
  * localStorage helpers for data that belongs to one signed-in user.
  *
  * Keys are namespaced with the uid so a second account on the same device never
- * reads the previous one's data, and everything under the PLATA prefix is wiped
+ * reads the previous one's data, and everything under the app prefix ("plata:", kept from the old name so saved preferences survive) is wiped
  * on logout — el estado del índice de búsqueda revela qué movimientos existen,
  * y no tiene por qué sobrevivir a un cambio de cuenta.
  */
@@ -40,7 +40,7 @@ export function writeUserScoped(key: string, uid: string | undefined, value: str
   }
 }
 
-/** Drops every PLATA-owned key, including the pre-namespacing ones. */
+/** Drops every app-owned key, including the pre-namespacing ones. */
 export function clearUserScopedStorage() {
   if (typeof window === "undefined") return
   try {

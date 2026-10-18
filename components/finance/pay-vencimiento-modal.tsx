@@ -138,7 +138,7 @@ export function PayVencimientoModal({ open, onClose, item }: PayVencimientoModal
                 <Wallet className="size-4.5" />
               </span>
               <div>
-                <p className="text-xs font-semibold text-foreground">Registrar movimiento en PLATA</p>
+                <p className="text-xs font-semibold text-foreground">Registrar el gasto en Lucas</p>
                 <p className="text-[11px] text-muted-foreground">
                   Descuenta automáticamente el saldo de tu cuenta.
                 </p>

@@ -12,35 +12,42 @@ import {
   Milestone,
   Plus,
   Edit2,
-  Gauge,
   Fuel,
   Wrench,
-  TrendingUp,
   Search,
-  Filter,
-  DollarSign,
   AlertTriangle,
   Settings,
   ShoppingBag,
   ShieldAlert,
   Sparkles,
+  type LucideIcon,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Progress } from "@/components/ui/progress"
 import { cn, clickableRowProps, focusRing } from "@/lib/utils"
 import { PageHeader } from "./page-header"
-import { OptionSelect } from "./option-select"
+import { IconTile, pageClass } from "./lucas-ui"
 
-const LOG_METADATA: Record<VehicleLogType, { label: string; Icon: any; color: string }> = {
-  fuel: { label: "Combustible", Icon: Fuel, color: "text-chart-2 bg-chart-2/10 border-chart-2/20" },
-  service: { label: "Service", Icon: Wrench, color: "text-chart-1 bg-chart-1/10 border-chart-1/20" },
-  part: { label: "Repuesto", Icon: Settings, color: "text-chart-5 bg-chart-5/10 border-chart-5/20" },
-  gear: { label: "Indumentaria", Icon: ShoppingBag, color: "text-chart-5 bg-chart-5/10 border-chart-5/20" },
-  insurance: { label: "Seguro/Patente", Icon: ShieldAlert, color: "text-destructive bg-destructive/10 border-destructive/20" },
-  other: { label: "Otro", Icon: Sparkles, color: "text-muted-foreground bg-muted border-border" },
+/** Nombre, ícono y color de cada tipo de registro. Los acentos llevan ícono en tinta. */
+const LOG_METADATA: Record<VehicleLogType, { label: string; Icon: LucideIcon; tone: string }> = {
+  fuel: { label: "Nafta", Icon: Fuel, tone: "bg-lime" },
+  service: { label: "Service", Icon: Wrench, tone: "bg-sky" },
+  part: { label: "Repuesto", Icon: Settings, tone: "bg-grape" },
+  gear: { label: "Indumentaria", Icon: ShoppingBag, tone: "bg-paper" },
+  insurance: { label: "Seguro y patente", Icon: ShieldAlert, tone: "bg-coral" },
+  other: { label: "Otro", Icon: Sparkles, tone: "bg-muted text-foreground" },
+}
+
+function Stat({ label, value, unit, hint }: { label: string; value: string; unit?: string; hint: string }) {
+  return (
+    <section className="min-w-0 rounded-2xl border-2 border-foreground bg-card p-3">
+      <p className="font-mono text-[10px] font-semibold uppercase text-muted-foreground">{label}</p>
+      <p className="mt-0.5 truncate text-lg font-extrabold tracking-tight sm:text-xl">
+        {value}
+        {unit && <span className="ml-1 text-xs font-bold">{unit}</span>}
+      </p>
+      <p className="truncate font-mono text-[10px] text-muted-foreground">{hint}</p>
+    </section>
+  )
 }
 
 export function VehiclesView() {
@@ -234,364 +241,256 @@ export function VehiclesView() {
     setLogSheetOpen(true)
   }
 
-  const getVehicleIcon = (type: string) => {
-    switch (type) {
-      case "motorcycle":
-        return <Bike className="size-5" />
-      case "car":
-        return <Car className="size-5" />
-      case "truck":
-        return <Truck className="size-5" />
-      default:
-        return <Milestone className="size-5" />
-    }
-  }
-
   const formatLogDate = (iso: string) => {
     const d = new Date(iso)
     return d.toLocaleDateString("es-AR", { day: "2-digit", month: "short" })
   }
 
+  const VehicleIcon = (type: string) =>
+    type === "motorcycle" ? Bike : type === "car" ? Car : type === "truck" ? Truck : Milestone
+
   return (
-    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 pt-4 pb-12 font-sans space-y-6">
-      <PageHeader route="vehicles" description="Combustible, services, seguro y gastos de cada vehículo." />
+    <div className={cn(pageClass, "space-y-6")}>
+      <PageHeader
+        route="vehicles"
+        description="Nafta, services, seguro y cuánto te cuesta cada kilómetro."
+        actions={
+          vehicles.length > 0 && (
+            <Button onClick={handleAddLog}>
+              <Plus className="size-4" />
+              Registro
+            </Button>
+          )
+        }
+      />
 
       {vehicles.length === 0 ? (
-        <div className="max-w-md mx-auto mt-12 text-center border border-border rounded-xl bg-card p-8 flex flex-col items-center shadow-sm">
-          <div className="mb-4 flex size-14 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
-            <Bike className="size-7" />
-          </div>
-          <h3 className="text-lg font-bold">No tenés vehículos agregados</h3>
-          <p className="mt-2 text-sm text-muted-foreground text-pretty">
-            Registrá tu primer vehículo para poder llevar un control detallado de su combustible, services, seguro y gastos.
-          </p>
-          <Button
-            onClick={handleAddVehicle}
-            size="lg"
-            className="mt-6 font-semibold"
-          >
-            Agregar mi primer vehículo
-          </Button>
-        </div>
+        <button
+          type="button"
+          onClick={handleAddVehicle}
+          className="mx-auto mt-10 flex w-full max-w-md cursor-pointer flex-col items-center gap-2 rounded-2xl border-2 border-dashed border-foreground/40 px-6 py-10 text-center transition-colors hover:bg-sky/30"
+        >
+          <IconTile Icon={Car} className="bg-sky" />
+          <span className="text-lg font-extrabold">Agregá tu primer vehículo</span>
+          <span className="text-sm text-muted-foreground">
+            Cargás la nafta y los services y te digo cuántos km/L hacés, cuánto te cuesta cada kilómetro y cuándo toca el próximo service.
+          </span>
+        </button>
       ) : (
         <>
-          {/* Selector de Vehículo Activo */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 -mx-4 px-4 no-scrollbar">
+          <div className="no-scrollbar -mx-1 flex items-center gap-2 overflow-x-auto px-1 pb-1">
             {vehicles.map((v) => {
               const active = v.id === activeVehicle?.id
+              const Icon = VehicleIcon(v.type)
               return (
-                <Button
+                <button
                   key={v.id}
-                  variant={active ? "default" : "outline"}
+                  type="button"
                   onClick={() => setActiveVehId(v.id)}
                   aria-pressed={active}
-                  className="flex items-center gap-2 shrink-0 rounded-2xl h-10 px-4 text-sm font-medium"
+                  className={cn(
+                    "flex shrink-0 cursor-pointer items-center gap-2 rounded-full border-2 border-foreground px-3.5 py-1.5 text-sm font-bold transition-colors",
+                    active ? "bg-lime text-ink" : "bg-card hover:bg-muted"
+                  )}
                 >
-                  {getVehicleIcon(v.type)}
-                  <span>{v.name}</span>
-                  <Badge variant="secondary" className="text-[11px] px-1.5 py-0.5">
-                    {v.odometer} Km
-                  </Badge>
-                </Button>
-              );
+                  <Icon className="size-4" />
+                  {v.name}
+                  <span className="font-mono text-[10px] font-semibold opacity-70">{v.odometer.toLocaleString("es-AR")} km</span>
+                </button>
+              )
             })}
-            <Button
+            <button
+              type="button"
               onClick={handleAddVehicle}
-              size="sm"
-              className="flex items-center gap-1 text-xs font-semibold"
+              className="flex shrink-0 cursor-pointer items-center gap-1 rounded-full border-2 border-dashed border-foreground/40 px-3.5 py-1.5 text-sm font-semibold text-muted-foreground transition-colors hover:border-foreground hover:text-foreground"
             >
               <Plus className="size-4" />
-              Añadir vehículo
-            </Button>
+              Vehículo
+            </button>
           </div>
 
           {activeVehicle && (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-              {/* Left & Middle: Stats & Actions */}
-              <div className="lg:col-span-2 flex flex-col gap-6">
-                {/* Stats Dashboard Grid */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {/* Kilometraje */}
-                  <Card className="p-4 shadow-sm flex flex-col justify-between min-h-24">
-                    <div className="flex items-center justify-between text-muted-foreground">
-                      <p className="text-[11px] font-bold uppercase tracking-wider">Kilometraje</p>
-                      <Gauge className="size-4 text-chart-1" />
-                    </div>
-                    <div>
-                      <p className="text-xl font-bold tracking-tight mt-2 tabular-nums">
-                        {activeVehicle.odometer.toLocaleString("es-AR")}
-                      </p>
-                      <p className="text-[11px] text-muted-foreground mt-0.5">Kilómetros totales</p>
-                    </div>
-                  </Card>
-
-                  {/* Consumo Medio */}
-                  <Card className="p-4 shadow-sm flex flex-col justify-between min-h-24">
-                    <div className="flex items-center justify-between text-muted-foreground">
-                      <p className="text-[11px] font-bold uppercase tracking-wider">Consumo Medio</p>
-                      <Fuel className="size-4 text-chart-2" />
-                    </div>
-                    <div>
-                      <p className="text-xl font-bold tracking-tight mt-2 tabular-nums">
-                        {stats.averageKmPerLiter > 0 ? `${stats.averageKmPerLiter.toFixed(2)} Km/L` : "—"}
-                      </p>
-                      <p className="text-[11px] text-muted-foreground mt-0.5">
-                        {stats.lastKmPerLiter > 0 ? `Última: ${stats.lastKmPerLiter.toFixed(1)} Km/L` : "Requiere 2 tanques llenos"}
+            <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
+              <aside className="space-y-3 lg:sticky lg:top-0 lg:col-start-2 lg:row-start-1">
+                <section className="rounded-3xl border-2 border-foreground bg-sky p-4 text-ink shadow-md">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-xl font-extrabold tracking-tight">{activeVehicle.name}</p>
+                      <p className="truncate text-xs">
+                        {[activeVehicle.brand, activeVehicle.model, activeVehicle.year].filter(Boolean).join(" · ") || "Sin ficha"}
                       </p>
                     </div>
-                  </Card>
-
-                  {/* Costo por Kilómetro */}
-                  <Card className="p-4 shadow-sm flex flex-col justify-between min-h-24">
-                    <div className="flex items-center justify-between text-muted-foreground">
-                      <p className="text-[11px] font-bold uppercase tracking-wider">Costo por Km</p>
-                      <TrendingUp className="size-4 text-success" />
-                    </div>
-                    <div>
-                      <p className="text-xl font-bold tracking-tight mt-2 tabular-nums">
-                        {stats.costPerKm > 0 ? `$${stats.costPerKm.toFixed(1)}` : "—"}
-                      </p>
-                      <p className="text-[11px] text-muted-foreground mt-0.5">Gastos / kms recorridos</p>
-                    </div>
-                  </Card>
-
-                  {/* Gasto Total */}
-                  <Card className="p-4 shadow-sm flex flex-col justify-between min-h-24">
-                    <div className="flex items-center justify-between text-muted-foreground">
-                      <p className="text-[11px] font-bold uppercase tracking-wider">Total Gastado</p>
-                      <DollarSign className="size-4 text-chart-5" />
-                    </div>
-                    <div>
-                      <p className="text-xl font-bold tracking-tight mt-2 tabular-nums">
-                        {formatShort(stats.totalSpent, "ARS")}
-                      </p>
-                      <p className="text-[11px] text-muted-foreground mt-0.5">Suma de bitácora</p>
-                    </div>
-                  </Card>
-                </div>
-
-                {/* Alerts and Reminders section */}
-                {alerts.length > 0 && (
-                  <section className="rounded-2xl border border-warning/20 bg-warning/5 p-4 flex flex-col gap-3">
-                    <div className="flex items-center gap-2 text-warning font-bold text-xs uppercase tracking-wide">
-                      <AlertTriangle className="size-4.5" />
-                      Alertas de Mantenimiento y Services
-                    </div>
-                    <ul className="flex flex-col gap-2">
-                      {alerts.map((al) => (
-                        <li
-                          key={al.id}
-                          className={`flex items-start gap-2.5 p-3 rounded-xl border text-xs ${al.type === "critical"
-                            ? "bg-destructive/10 text-destructive border-destructive/20 font-medium"
-                            : "bg-warning/10 text-warning border-warning/20"
-                            }`}
-                        >
-                          <span className="font-semibold">{al.title}</span>
-                          <span className="opacity-80">— {al.description}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </section>
-                )}
-
-                {/* Expense Chart Bar Graphic */}
-                <Card className="p-5 shadow-sm">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-4">
-                    Distribución de Gastos
-                  </h3>
-
-                  {stats.totalSpent === 0 ? (
-                    <p className="text-xs text-muted-foreground text-center py-4">No hay gastos cargados en la bitácora.</p>
-                  ) : (
-                    <ul className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3">
-                      {(Object.keys(stats.costByLogType) as VehicleLogType[]).map((t) => {
-                        const amount = stats.costByLogType[t] || 0
-                        if (amount === 0) return null
-                        const percent = (amount / stats.totalSpent) * 100
-                        const meta = LOG_METADATA[t]
-                        return (
-                          <li key={t} className="flex flex-col gap-1">
-                            <div className="flex items-center justify-between text-xs font-medium">
-                              <span className="flex items-center gap-2 font-semibold">
-                                <span className={`size-2.5 rounded-full ${meta.color.split(" ")[0]}`} />
-                                {meta.label}
-                              </span>
-                              <span className="tabular-nums text-muted-foreground">
-                                {formatShort(amount, "ARS")} ({percent.toFixed(0)}%)
-                              </span>
-                            </div>
-                            <Progress value={percent} className="h-1.5" />
-                          </li>
-                        )
-                      })}
-                    </ul>
+                    {activeVehicle.plate && (
+                      <span className="shrink-0 rounded-md border-2 border-ink bg-white px-1.5 py-0.5 font-mono text-xs font-bold">
+                        {activeVehicle.plate}
+                      </span>
+                    )}
+                  </div>
+                  <p className="mt-4 text-[2.25rem] leading-none font-extrabold tracking-tighter">
+                    {activeVehicle.odometer.toLocaleString("es-AR")} <span className="text-lg">km</span>
+                  </p>
+                  {activeVehicle.fuelCapacity && (
+                    <p className="mt-1 font-mono text-[11px]">tanque de {activeVehicle.fuelCapacity} L</p>
                   )}
-                </Card>
-
-                {/* Register Event Button & Ledger Header */}
-                <div className="flex items-center justify-between border-b border-border pb-3 mt-2">
-                  <h3 className="text-sm font-bold">Historial de Bitácora</h3>
                   <Button
-                    onClick={handleAddLog}
-                    variant="secondary"
+                    variant="outline"
                     size="sm"
-                    className="flex items-center gap-1.5 text-xs font-bold"
+                    onClick={() => handleEditVehicle(activeVehicle)}
+                    className="mt-3 border-ink bg-white text-ink"
                   >
-                    <Plus className="size-4" />
-                    Registrar gasto / evento
+                    <Edit2 />
+                    Editar ficha
                   </Button>
+                </section>
+
+                {alerts.map((al) => (
+                  <div
+                    key={al.id}
+                    className={cn(
+                      "flex items-start gap-2.5 rounded-2xl border-2 border-foreground p-3 text-sm",
+                      al.type === "critical" ? "bg-coral text-ink" : "bg-card"
+                    )}
+                  >
+                    <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+                    <span>
+                      <span className="block font-bold">{al.title}</span>
+                      <span className="block text-xs">{al.description}</span>
+                    </span>
+                  </div>
+                ))}
+              </aside>
+
+              <div className="min-w-0 space-y-6 lg:col-start-1 lg:row-start-1">
+                <div className="grid grid-cols-3 gap-2.5">
+                  <Stat
+                    label="Consumo"
+                    value={stats.averageKmPerLiter > 0 ? `${stats.averageKmPerLiter.toFixed(1)}` : "—"}
+                    unit={stats.averageKmPerLiter > 0 ? "km/L" : undefined}
+                    hint={stats.lastKmPerLiter > 0 ? `último ${stats.lastKmPerLiter.toFixed(1)}` : "faltan 2 tanques llenos"}
+                  />
+                  <Stat
+                    label="Por km"
+                    value={stats.costPerKm > 0 ? formatShort(stats.costPerKm, "ARS") : "—"}
+                    hint="gastos / km"
+                  />
+                  <Stat label="Total" value={formatShort(stats.totalSpent, "ARS")} hint="en la bitácora" />
                 </div>
 
-                {/* Search & Filter bar */}
-                <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
-                  <div className="flex-1 flex items-center gap-2 bg-card border border-border rounded-xl px-3 py-1 shadow-sm">
-                    <Search className="size-4 text-muted-foreground shrink-0" />
-                    <Input
+                <section className="rounded-2xl border-2 border-foreground bg-card p-4">
+                  <h2 className="mb-3 text-base font-extrabold tracking-tight">En qué se va</h2>
+                  {stats.totalSpent === 0 ? (
+                    <p className="text-sm text-muted-foreground">Todavía no hay gastos en la bitácora.</p>
+                  ) : (
+                    <>
+                      <div className="flex h-6 overflow-hidden rounded-lg border-2 border-foreground">
+                        {(Object.keys(stats.costByLogType) as VehicleLogType[])
+                          .filter((t) => stats.costByLogType[t] > 0)
+                          .map((t) => (
+                            <span
+                              key={t}
+                              className={cn("h-full border-r-2 border-foreground last:border-r-0", LOG_METADATA[t].tone)}
+                              style={{ width: `${(stats.costByLogType[t] / stats.totalSpent) * 100}%` }}
+                            />
+                          ))}
+                      </div>
+                      <ul className="mt-3 grid grid-cols-1 gap-x-6 gap-y-1.5 text-sm sm:grid-cols-2">
+                        {(Object.keys(stats.costByLogType) as VehicleLogType[])
+                          .filter((t) => stats.costByLogType[t] > 0)
+                          .map((t) => (
+                            <li key={t} className="flex items-center justify-between gap-2">
+                              <span className="flex items-center gap-2">
+                                <span className={cn("size-2.5 rounded-[3px] border-[1.5px] border-foreground", LOG_METADATA[t].tone)} />
+                                {LOG_METADATA[t].label}
+                              </span>
+                              <span className="font-mono text-xs font-semibold">
+                                {formatShort(stats.costByLogType[t], "ARS")} ·{" "}
+                                {Math.round((stats.costByLogType[t] / stats.totalSpent) * 100)}%
+                              </span>
+                            </li>
+                          ))}
+                      </ul>
+                    </>
+                  )}
+                </section>
+
+                <section>
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <h2 className="text-base font-extrabold tracking-tight">Bitácora</h2>
+                    <Button variant="outline" size="sm" onClick={handleAddLog}>
+                      <Plus />
+                      Registro
+                    </Button>
+                  </div>
+
+                  <div className="relative mb-2">
+                    <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+                    <input
                       type="text"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder="Buscar en historial (YPF, aceite, casco...)"
-                      className="border-none shadow-none focus-visible:ring-0 text-xs h-8"
+                      placeholder="Buscar: YPF, aceite, casco…"
+                      aria-label="Buscar en la bitácora"
+                      className="h-10 w-full rounded-xl border-2 border-foreground bg-card pr-3 pl-9 text-sm outline-none placeholder:text-muted-foreground focus-visible:ring-3 focus-visible:ring-lime"
                     />
                   </div>
-
-                  <div className="flex items-center gap-2">
-                    <Filter className="size-3.5 text-muted-foreground shrink-0" />
-                    <OptionSelect
-                      ariaLabel="Filtrar registros por tipo"
-                      value={typeFilter}
-                      onValueChange={setTypeFilter}
-                      className="w-auto"
-                      options={[
-                        { value: "all", label: "Todos los registros" },
-                        { value: "fuel", label: "Sólo combustible" },
-                        { value: "service", label: "Sólo services" },
-                        { value: "part", label: "Sólo repuestos" },
-                        { value: "gear", label: "Sólo indumentaria" },
-                        { value: "insurance", label: "Sólo seguro/patente" },
-                        { value: "other", label: "Otros registros" },
-                      ]}
-                    />
+                  <div className="no-scrollbar -mx-1 mb-3 flex gap-1.5 overflow-x-auto px-1 pb-1" role="group" aria-label="Tipo de registro">
+                    {(["all", ...(Object.keys(LOG_METADATA) as VehicleLogType[])] as const).map((t) => (
+                      <button
+                        key={t}
+                        type="button"
+                        aria-pressed={typeFilter === t}
+                        onClick={() => setTypeFilter(t)}
+                        className={cn(
+                          "shrink-0 cursor-pointer rounded-full border-2 border-foreground px-3 py-1 text-xs font-semibold transition-colors",
+                          typeFilter === t ? "bg-lime text-ink" : "bg-card hover:bg-muted"
+                        )}
+                      >
+                        {t === "all" ? "Todo" : LOG_METADATA[t].label}
+                      </button>
+                    ))}
                   </div>
-                </div>
 
-                {/* Ledger Log List */}
-                <Card className="p-4 shadow-sm min-h-[300px]">
                   {filteredLogs.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center text-center py-16">
-                      <p className="text-xs font-semibold text-muted-foreground">
-                        No se encontraron registros.
-                      </p>
-                      <p className="text-[11px] text-muted-foreground mt-1 max-w-xs">
-                        Comenzá agregando un gasto con el botón superior o cambiá los términos de búsqueda.
-                      </p>
-                    </div>
+                    <p className="rounded-2xl border-2 border-dashed border-foreground/30 py-8 text-center text-sm text-muted-foreground">
+                      {activeLogs.length === 0 ? "Cargá la primera nafta o el último service." : "Nada con ese filtro."}
+                    </p>
                   ) : (
-                    <ul className="flex flex-col divide-y divide-border">
+                    <ul className="rounded-2xl border-2 border-foreground bg-card px-3.5 divide-y-[1.5px] divide-dashed divide-foreground/15">
                       {filteredLogs.map((l) => {
                         const meta = LOG_METADATA[l.type]
                         const details =
                           l.type === "fuel"
-                            ? `${l.liters || 0} L · ${l.gasStation || "Carga nafta"}${l.isFullTank ? " · Tanque lleno" : ""}`
+                            ? `${l.liters || 0} L · ${l.gasStation || "Nafta"}${l.isFullTank ? " · tanque lleno" : ""}`
                             : l.type === "service"
-                              ? `${l.serviceType || "Service"} · ${l.provider || "Taller"}`
-                              : l.type === "part" || l.type === "gear" || l.type === "insurance" || l.type === "other"
-                                ? `${l.itemName || "Compra"}`
-                                : l.note || "Registro general"
-
+                              ? `${l.serviceType || "Service"}${l.provider ? ` · ${l.provider}` : ""}`
+                              : l.itemName || l.note || meta.label
                         return (
                           <li
                             key={l.id}
                             {...clickableRowProps(() => handleEditLog(l), `Editar registro ${details}`)}
                             className={cn(
-                              "flex cursor-pointer items-center justify-between gap-4 py-3.5 px-1 hover:bg-accent/40 rounded-xl transition-all group",
+                              "-mx-1.5 flex cursor-pointer items-center gap-3 rounded-lg px-1.5 py-2.5 transition-colors hover:bg-lime/20",
                               focusRing
                             )}
                           >
-                            <div className="flex items-center gap-3 min-w-0">
-                              <span className={`flex size-9 shrink-0 items-center justify-center rounded-xl border ${meta.color}`}>
-                                <meta.Icon className="size-4.5" />
-                              </span>
-                              <div className="min-w-0">
-                                <p className="truncate text-xs font-bold text-foreground">
-                                  {details}
-                                </p>
-                                <p className="text-[11px] text-muted-foreground mt-0.5">
-                                  {l.odometer} Km {l.note && l.note !== l.itemName ? `· ${l.note}` : ""}
-                                </p>
-                              </div>
+                            <IconTile Icon={meta.Icon} className={meta.tone} />
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-sm font-semibold">{details}</p>
+                              <p className="truncate text-xs text-muted-foreground">
+                                {meta.label} · {l.odometer.toLocaleString("es-AR")} km
+                                {l.note && l.note !== l.itemName ? ` · ${l.note}` : ""}
+                              </p>
                             </div>
-
-                            <div className="text-right shrink-0">
-                              <p className="text-xs font-bold tabular-nums text-foreground">
-                                -{formatShort(l.amount, "ARS")}
-                              </p>
-                              <p className="text-[11px] text-muted-foreground mt-0.5">
-                                {formatLogDate(l.date)}
-                              </p>
+                            <div className="shrink-0 text-right">
+                              <p className="font-mono text-sm font-semibold">−{formatShort(l.amount, "ARS")}</p>
+                              <p className="font-mono text-[11px] text-muted-foreground">{formatLogDate(l.date)}</p>
                             </div>
                           </li>
                         )
                       })}
                     </ul>
                   )}
-                </Card>
-              </div>
-
-              {/* Right Column (Desktop): Mini Profile Info / Details */}
-              <div className="hidden lg:flex flex-col gap-6">
-                <Card className="p-5 flex flex-col gap-4 shadow-sm">
-                  <div className="flex items-center gap-3">
-                    <span className="flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                      {getVehicleIcon(activeVehicle.type)}
-                    </span>
-                    <div>
-                      <h4 className="text-sm font-bold text-foreground">{activeVehicle.name}</h4>
-                      <p className="text-xs text-muted-foreground uppercase tracking-wider">{activeVehicle.brand} {activeVehicle.model}</p>
-                    </div>
-                  </div>
-
-                  <div className="border-t border-border pt-4 flex flex-col gap-2.5 text-xs">
-                    {activeVehicle.plate && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">Patente</span>
-                        <span className="font-bold font-mono bg-muted px-2 py-0.5 rounded border border-border">{activeVehicle.plate}</span>
-                      </div>
-                    )}
-                    {activeVehicle.year && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">Año</span>
-                        <span className="font-semibold">{activeVehicle.year}</span>
-                      </div>
-                    )}
-                    {activeVehicle.fuelCapacity && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">Capacidad Tanque</span>
-                        <span className="font-semibold">{activeVehicle.fuelCapacity} Litros</span>
-                      </div>
-                    )}
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Agregado el</span>
-                      <span className="font-semibold">{new Date(activeVehicle.createdAt).toLocaleDateString("es-AR")}</span>
-                    </div>
-                  </div>
-
-                  <Button
-                    variant="outline"
-                    onClick={() => handleEditVehicle(activeVehicle)}
-                    className="w-full mt-2 text-xs font-bold h-10"
-                  >
-                    <Edit2 className="size-3.5" />
-                    Editar Ficha del Vehículo
-                  </Button>
-                </Card>
-
-                <Card className="border-primary/20 bg-primary/5 p-4 flex flex-col gap-2 shadow-sm">
-                  <h4 className="text-xs font-bold text-primary uppercase tracking-wide">💡 Plata Tips: Ahorro en Nafta</h4>
-                  <p className="text-xs text-foreground/80 leading-relaxed">
-                    Mantener la presión correcta en los neumáticos de tu moto reduce la fricción en el asfalto y puede mejorar el rendimiento de combustible hasta en un 3%. ¡Revisala cada 15 días!
-                  </p>
-                </Card>
+                </section>
               </div>
             </div>
           )}

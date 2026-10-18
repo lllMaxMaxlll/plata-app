@@ -1,12 +1,11 @@
 "use client"
 
-import { useEffect, type ReactNode } from "react"
+import type { ReactNode } from "react"
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ROUTES, type AppRoute, type RouteKey } from "@/lib/routes"
 import { useIsDesktop } from "@/lib/use-is-desktop"
-import { markRouteSeen } from "@/lib/seen-routes"
 import { cn } from "@/lib/utils"
 
 /**
@@ -26,14 +25,11 @@ export function PageHeader({
 }) {
   const isDesktop = useIsDesktop()
   const { label, parent }: AppRoute = ROUTES[route]
-  const { href } = ROUTES[route]
-
-  useEffect(() => markRouteSeen(href), [href])
 
   return (
     <header
       className={cn(
-        "flex flex-col gap-3 border-b border-border/40 pb-4 sm:flex-row sm:items-center sm:justify-between",
+        "flex flex-col gap-3 pb-2 sm:flex-row sm:items-center sm:justify-between",
         className
       )}
     >
@@ -51,8 +47,8 @@ export function PageHeader({
           </Button>
         )}
         <div className="min-w-0">
-          <h1 className="truncate text-xl font-bold tracking-tight text-foreground">{label}</h1>
-          {description && <p className="text-xs text-muted-foreground">{description}</p>}
+          <h1 className="truncate text-2xl font-extrabold tracking-tight text-foreground">{label}</h1>
+          {description && <p className="text-sm text-muted-foreground">{description}</p>}
         </div>
       </div>
       {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}

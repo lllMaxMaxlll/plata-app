@@ -75,12 +75,12 @@ export function AuthView() {
 
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col justify-center px-6 py-12 md:max-w-lg md:px-0">
-      <Card className="p-8 md:p-10 shadow-2xl rounded-[32px]">
+      <Card className="p-8 md:p-10 shadow-xl">
         <div className="mb-8 flex flex-col items-center text-center">
-          <AppIcon className="mb-4 size-16 border border-primary/20 shadow-md" priority />
-          <h1 className="text-2xl font-bold tracking-tight">PLATA</h1>
+          <AppIcon className="mb-4 size-16" />
+          <h1 className="text-4xl font-extrabold tracking-tighter">lucas</h1>
           <p className="mt-1 text-xs text-muted-foreground text-balance">
-            Tus finanzas en pesos y dólares, en un solo lugar.
+            Tu plata, anotada en criollo.
           </p>
         </div>
 
