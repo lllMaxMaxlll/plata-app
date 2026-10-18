@@ -15,6 +15,7 @@ PLATA es una aplicación web progresiva (PWA) de finanzas personales diseñada e
   - Alertas automáticas y dinámicas de servicios vencidos o próximos a vencer en base al kilometraje (odómetro) y fechas cargadas.
 - **Categorización Automática de Movimientos:** Al escribir la nota de un gasto o ingreso, la app propone la categoría sola. Resuelve primero con reglas locales (comercios argentinos frecuentes: YPF, Carrefour, Edenor…), que son instantáneas y funcionan sin conexión, y sólo consulta a **Cloudflare Workers AI** cuando no reconoce la descripción. La sugerencia se aplica sola pero cualquier elección manual la desactiva, y si el modelo no responde el formulario sigue funcionando igual.
 - **Búsqueda Inteligente del Historial:** Una barra donde preguntás en tus palabras — *“cuánto gasté en el auto el verano pasado”* — y devuelve la lista real de movimientos con su suma real. El **qué** se resuelve por similitud semántica (embeddings en Cloudflare Vectorize) y el **cuándo** con un parser determinístico de fechas en castellano, con las estaciones del hemisferio sur. El modelo ordena por relevancia; no escribe la respuesta ni calcula los totales.
+- **Registro por Telegram:** Un bot al que le escribís el gasto en una línea — *"30 lucas super carrefour galicia"* — y lo registra en el momento, contestándote qué guardó y cómo quedó el saldo de esa cuenta. Entiende `lucas`, `palos` y `k`, y si no queda claro con qué cuenta fue, pregunta con botones en vez de adivinar. Sólo registra gastos: no borra, no edita y no consulta.
 - **Portafolio de Inversiones (Stocks):** Simulación de trading en tiempo real utilizando cotizaciones reales y seguimiento del rendimiento del portafolio (ganancias y pérdidas acumuladas).
 - **Seguridad e Identidad:** Autenticación con Supabase Auth: registro e inicio de sesión con correo y contraseña, verificación de email, recuperación y cambio seguro de contraseña.
 - **Sincronización en Tiempo Real:** Base de datos Postgres gestionada por Supabase, con Row Level Security y Realtime.
@@ -90,7 +91,56 @@ Las 1024 dimensiones son las que devuelve `@cf/baai/bge-m3`; si cambiás de mode
 
 En local, los bindings de Cloudflare necesitan credenciales (`npx wrangler login` o `CLOUDFLARE_API_TOKEN`). Sin eso `next dev` arranca normalmente y sólo se apagan las features que dependen de ellos.
 
-### 6. Compilar para Producción
+### 6. Bot de Telegram (opcional)
+
+El bot corre dentro del mismo Worker que la app, en `/api/telegram`. No necesita
+servidor propio ni puertos abiertos.
+
+**1.** Creá el bot con [@BotFather](https://t.me/BotFather) y guardá el token.
+
+**2.** Pedile tu chat id a [@userinfobot](https://t.me/userinfobot).
+
+**3.** Inventá un secreto para el webhook (`openssl rand -hex 32` sirve).
+
+**4.** Cargá los cinco secrets en el Worker:
+
+```bash
+npx wrangler secret put TELEGRAM_BOT_TOKEN
+npx wrangler secret put TELEGRAM_WEBHOOK_SECRET
+npx wrangler secret put TELEGRAM_ALLOWED_CHAT_ID
+npx wrangler secret put TELEGRAM_BOT_SUPABASE_EMAIL
+npx wrangler secret put TELEGRAM_BOT_SUPABASE_PASSWORD
+```
+
+**5.** Registrá el webhook, una sola vez:
+
+```bash
+curl -X POST "https://api.telegram.org/bot<TOKEN>/setWebhook" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "https://<tu-dominio>/api/telegram",
+    "secret_token": "<TELEGRAM_WEBHOOK_SECRET>",
+    "allowed_updates": ["message", "callback_query"]
+  }'
+```
+
+Tres cosas del diseño que conviene tener presentes:
+
+- **El bot escribe como vos, no como root.** Se autentica con Supabase Auth y
+  llama al mismo `create_transaction` que la web, así que las RLS y el control
+  de descubierto siguen aplicando. Con la service role key pasaría al revés:
+  saltearía las RLS y `auth.uid()` quedaría en null, que es justo el `user_id`
+  que el RPC necesita.
+- **Sólo contesta a un chat.** Cualquiera puede encontrar el bot y escribirle;
+  el `secret_token` filtra a quien no sea Telegram y `TELEGRAM_ALLOWED_CHAT_ID`
+  filtra a todos los demás. Al resto no se le contesta nada.
+- **Sin `TELEGRAM_WEBHOOK_SECRET` la ruta responde 403 a todo.** Es lo que
+  mantiene el bot apagado mientras no lo configures.
+
+Un gasto cargado por Telegram aparece en la búsqueda semántica recién la próxima
+vez que abrís la app, que es cuando el cliente indexa lo que falta.
+
+### 7. Compilar para Producción
 Para validar y generar una compilación optimizada:
 ```bash
 bun run build
