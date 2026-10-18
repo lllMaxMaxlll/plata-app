@@ -365,6 +365,8 @@ export type Database = {
           annual_return: number
           annual_return_ars: number
           annual_return_usd: number
+          default_account_ars: string | null
+          default_account_usd: string | null
           exchange_rate: number
           manual_initial_ars: number | null
           manual_initial_usd: number | null
@@ -385,6 +387,8 @@ export type Database = {
           annual_return?: number
           annual_return_ars?: number
           annual_return_usd?: number
+          default_account_ars?: string | null
+          default_account_usd?: string | null
           exchange_rate?: number
           manual_initial_ars?: number | null
           manual_initial_usd?: number | null
@@ -405,6 +409,8 @@ export type Database = {
           annual_return?: number
           annual_return_ars?: number
           annual_return_usd?: number
+          default_account_ars?: string | null
+          default_account_usd?: string | null
           exchange_rate?: number
           manual_initial_ars?: number | null
           manual_initial_usd?: number | null

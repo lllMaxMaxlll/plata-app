@@ -2,11 +2,11 @@
 
 import { useEffect, useMemo, useRef, useState } from "react"
 import { Upload, Check, AlertCircle, Sparkles } from "lucide-react"
+import { formatDecimalInput, parseDecimalInput } from "@/lib/decimal-input"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   AlertDialog,
@@ -36,6 +36,7 @@ import { useFinance } from "./finance-provider"
 import { toast } from "sonner"
 import { DatePicker } from "@/components/ui/date-picker"
 import { useCategorySuggestion } from "./use-category-suggestion"
+import { OptionSelect } from "./option-select"
 
 const TABS: { value: TransactionType; label: string }[] = [
   { value: "income", label: "Ingreso" },
@@ -52,7 +53,7 @@ export function TransactionSheet({
   onClose: () => void
   transaction?: Transaction | null
 }) {
-  const { accounts, addTransaction, updateTransaction, deleteTransaction, categories } = useFinance()
+  const { accounts, addTransaction, updateTransaction, deleteTransaction, categories, defaultAccounts } = useFinance()
   const fileRef = useRef<HTMLInputElement>(null)
 
   const [type, setType] = useState<TransactionType>("expense")
@@ -88,8 +89,8 @@ export function TransactionSheet({
     enabled: open && !categoryTouched,
   })
 
-  // Se aplica sola para que el caso habitual sea cero taps; cualquier click en
-  // un chip la desactiva para el resto de la carga.
+  // Se aplica sola para que el caso habitual sea cero taps; elegirla
+  // a mano la desactiva para el resto de la carga.
   // Depende de `category` a propósito: el efecto que resetea el formulario
   // corre de nuevo cuando cambian las cuentas (realtime) y pisaría la
   // sugerencia. Mientras el usuario no elija a mano, la sugerencia se reimpone.
@@ -162,8 +163,10 @@ export function TransactionSheet({
         const defaultCat = categories.find((c) => c.type === "expense")?.name ?? ""
         setCategory(defaultCat)
 
-        // Select first account with positive balance for expense default
-        const validFrom = accounts.find((a) => getAvailableBalance(a) > 0)?.id ?? accounts[0]?.id ?? ""
+        // La cuenta por defecto de pesos, si el usuario eligió una; si no, la
+        // primera con saldo.
+        const validFrom =
+          defaultAccounts.ARS ?? accounts.find((a) => getAvailableBalance(a) > 0)?.id ?? accounts[0]?.id ?? ""
         setAccountId(validFrom)
 
         const defaultTo = accounts.find((a) => a.id !== validFrom)?.id ?? ""
@@ -171,7 +174,7 @@ export function TransactionSheet({
         setDate(new Date())
       }
     }
-  }, [open, transaction, categories, accounts, getAvailableBalance])
+  }, [open, transaction, categories, accounts, getAvailableBalance, defaultAccounts])
 
   function handleTab(val: TransactionType) {
     setType(val)
@@ -310,7 +313,8 @@ export function TransactionSheet({
             <ResponsiveDialogTitle className="text-lg font-semibold tracking-tight text-foreground">
               {transaction ? "Editar movimiento" : "Nuevo movimiento"}
             </ResponsiveDialogTitle>
-            <ResponsiveDialogDescription className="text-xs text-muted-foreground">
+            {/* Al cargar uno nuevo el título alcanza; la descripción queda para lectores de pantalla. */}
+            <ResponsiveDialogDescription className={cn("text-xs text-muted-foreground", !transaction && "sr-only")}>
               {transaction ? "Modificá o eliminá este movimiento." : "Registrá un ingreso, gasto o transferencia."}
             </ResponsiveDialogDescription>
           </ResponsiveDialogHeader>
@@ -340,8 +344,8 @@ export function TransactionSheet({
                   autoFocus
                   inputMode="decimal"
                   disabled={submitting}
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, ""))}
+                  value={formatDecimalInput(amount)}
+                  onChange={(e) => setAmount(parseDecimalInput(e.target.value))}
                   placeholder="0"
                   className={cn(
                     "h-16 w-auto min-w-[2ch] max-w-full border-none bg-transparent text-center font-bold tracking-tight tabular-nums field-sizing-content shadow-none focus-visible:ring-0 placeholder:text-muted-foreground/40",
@@ -394,8 +398,8 @@ export function TransactionSheet({
                 <Input
                   inputMode="decimal"
                   disabled={submitting}
-                  value={rate}
-                  onChange={(e) => setRate(e.target.value.replace(/[^0-9.]/g, ""))}
+                  value={formatDecimalInput(rate)}
+                  onChange={(e) => setRate(parseDecimalInput(e.target.value))}
                   placeholder="Ej. 1050"
                   className="h-10 text-sm"
                 />
@@ -431,25 +435,17 @@ export function TransactionSheet({
                   </span>
                 }
               >
-                <div className="flex flex-wrap gap-2">
-                  {categoriesList.map((c) => (
-                    <Badge
-                      key={c.id}
-                      variant={category === c.name ? "default" : "outline"}
-                      className={cn(
-                        "cursor-pointer px-3 py-1 text-xs font-medium transition-all",
-                        isSuggested && category === c.name && "ring-2 ring-primary/30"
-                      )}
-                      onClick={() => {
-                        if (submitting) return
-                        setCategoryTouched(true)
-                        setCategory(c.name)
-                      }}
-                    >
-                      {c.name}
-                    </Badge>
-                  ))}
-                </div>
+                <OptionSelect
+                  ariaLabel="Categoría"
+                  value={category}
+                  onValueChange={(name) => {
+                    if (submitting) return
+                    setCategoryTouched(true)
+                    setCategory(name)
+                  }}
+                  options={categoriesList.map((c) => ({ value: c.name, label: c.name }))}
+                  className={cn("h-10 rounded-xl", isSuggested && "ring-2 ring-primary/30")}
+                />
               </Field>
             )}
 

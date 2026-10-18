@@ -19,7 +19,7 @@ import type {
   VehicleLog,
   WatchlistStock,
 } from "@/lib/finance-data"
-import type { MacroSettings, ProjectionSettings } from "@/components/finance/finance-provider"
+import type { DefaultAccounts, MacroSettings, ProjectionSettings } from "@/components/finance/finance-provider"
 import type { Database } from "@/lib/database.types"
 
 type Updates<T extends keyof Database["public"]["Tables"]> = Database["public"]["Tables"][T]["Update"]
@@ -166,6 +166,10 @@ export function toProjectionSettings(row: Row): ProjectionSettings {
   }
 }
 
+export function toDefaultAccounts(row: Row): DefaultAccounts {
+  return { ARS: row.default_account_ars ?? null, USD: row.default_account_usd ?? null }
+}
+
 export function toGoal(row: Row): Goal {
   return {
     id: row.id,
@@ -227,6 +231,12 @@ export function fromProjectionSettings(
     annual_return_ars: input.annualReturnARS,
     annual_return_usd: input.annualReturnUSD,
   }
+}
+
+export function fromDefaultAccounts(
+  input: DefaultAccounts
+): Pick<Updates<"user_settings">, "default_account_ars" | "default_account_usd"> {
+  return { default_account_ars: input.ARS, default_account_usd: input.USD }
 }
 
 export function fromGoal(input: Partial<Goal>): Updates<"goals"> {

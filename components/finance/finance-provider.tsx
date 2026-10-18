@@ -28,6 +28,8 @@ import {
   toMacroSettings,
   toProjectionSettings,
   fromProjectionSettings,
+  toDefaultAccounts,
+  fromDefaultAccounts,
   toStockTransaction,
   toTransaction,
   toVehicle,
@@ -70,6 +72,12 @@ export interface MacroSettings {
     ccl: number
   }
 }
+
+/**
+ * La cuenta con la que arranca cada carga, una por moneda. `null` es "sin
+ * preferencia": el formulario vuelve a elegir la primera con saldo.
+ */
+export type DefaultAccounts = Record<Currency, string | null>
 
 /** Parámetros del simulador de Proyecciones. Uno por usuario, en user_settings. */
 export interface ProjectionSettings {
@@ -170,6 +178,10 @@ interface FinanceContextValue {
   projectionSettings: ProjectionSettings
   updateProjectionSettings: (settings: Partial<ProjectionSettings>) => void
 
+  /** Ids de cuentas que todavía existen; una borrada ya vuelve como `null`. */
+  defaultAccounts: DefaultAccounts
+  setDefaultAccount: (currency: Currency, accountId: string | null) => void
+
   goals: Goal[]
   addGoal: (goal: Omit<Goal, "id" | "priority">) => Promise<void>
   updateGoal: (id: string, changes: Partial<Goal>) => Promise<void>
@@ -194,6 +206,8 @@ const DEFAULT_PROJECTION_SETTINGS: ProjectionSettings = {
   annualReturnARS: 45,
   annualReturnUSD: 8,
 }
+
+const NO_DEFAULT_ACCOUNTS: DefaultAccounts = { ARS: null, USD: null }
 
 const DEFAULT_MACRO_SETTINGS: MacroSettings = {
   exchangeRate: 1250,
@@ -272,6 +286,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const [projectionSettings, setProjectionSettings] = useState<ProjectionSettings>(
     DEFAULT_PROJECTION_SETTINGS
   )
+  const [storedDefaultAccounts, setStoredDefaultAccounts] = useState<DefaultAccounts>(NO_DEFAULT_ACCOUNTS)
   const [goals, setGoals] = useState<Goal[]>([])
 
   // Espejo síncrono de las preferencias. La fila que sube a Supabase se arma a
@@ -279,6 +294,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   // slider, por ejemplo) subían el segundo pisando al primero.
   const macroSettingsRef = useRef<MacroSettings>(DEFAULT_MACRO_SETTINGS)
   const projectionSettingsRef = useRef<ProjectionSettings>(DEFAULT_PROJECTION_SETTINGS)
+  const defaultAccountsRef = useRef<DefaultAccounts>(NO_DEFAULT_ACCOUNTS)
 
   const applyMacroSettings = useCallback((next: MacroSettings) => {
     macroSettingsRef.current = next
@@ -288,6 +304,11 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const applyProjectionSettings = useCallback((next: ProjectionSettings) => {
     projectionSettingsRef.current = next
     setProjectionSettings(next)
+  }, [])
+
+  const applyDefaultAccounts = useCallback((next: DefaultAccounts) => {
+    defaultAccountsRef.current = next
+    setStoredDefaultAccounts(next)
   }, [])
 
   const uid = user?.uid
@@ -437,9 +458,10 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     if (data) {
       applyMacroSettings({ ...macroSettingsRef.current, ...toMacroSettings(data) })
       applyProjectionSettings(toProjectionSettings(data))
+      applyDefaultAccounts(toDefaultAccounts(data))
     }
     setSettingsLoaded(true)
-  }, [supabase, applyMacroSettings, applyProjectionSettings])
+  }, [supabase, applyMacroSettings, applyProjectionSettings, applyDefaultAccounts])
 
   const loadGoals = useCallback(async () => {
     const { data, error } = await withAuthRetry(supabase, () =>
@@ -476,6 +498,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       setDueItems([])
       applyMacroSettings(DEFAULT_MACRO_SETTINGS)
       applyProjectionSettings(DEFAULT_PROJECTION_SETTINGS)
+      applyDefaultAccounts(NO_DEFAULT_ACCOUNTS)
       setGoals([])
       setSettingsLoaded(false)
       setDataLoaded(false)
@@ -520,6 +543,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     seedCategories,
     applyMacroSettings,
     applyProjectionSettings,
+    applyDefaultAccounts,
   ])
 
   // ---------------------------------------------------------------------------
@@ -1105,7 +1129,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   // Preferencias y notificaciones
   // ---------------------------------------------------------------------------
 
-  // La fila de user_settings se arma siempre entera a partir de los dos refs.
+  // La fila de user_settings se arma siempre entera a partir de los refs.
   // Si todavía no existe, el upsert la inserta completa en vez de dejar que las
   // columnas que no mandamos caigan en el default y pisen lo que hay en memoria.
   const persistSettings = useCallback(async () => {
@@ -1120,6 +1144,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       rates: macro.rates ?? null,
       updated_at: macro.lastUpdated || new Date().toISOString(),
       ...fromProjectionSettings(projectionSettingsRef.current),
+      ...fromDefaultAccounts(defaultAccountsRef.current),
     })
     if (error) console.error("No se pudieron guardar las preferencias:", error.message)
   }, [supabase])
@@ -1175,6 +1200,17 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       schedulePersistSettings()
     },
     [applyProjectionSettings, schedulePersistSettings]
+  )
+
+  // Una elección puntual, no un slider: se guarda sin esperar al debounce.
+  const setDefaultAccount = useCallback(
+    (currency: Currency, accountId: string | null) => {
+      applyDefaultAccounts({ ...defaultAccountsRef.current, [currency]: accountId })
+      if (persistTimerRef.current !== null) clearTimeout(persistTimerRef.current)
+      persistTimerRef.current = null
+      void persistSettings()
+    },
+    [applyDefaultAccounts, persistSettings]
   )
 
   // Trae del mercado sólo lo que es un dato observado: la cotización del dólar.
@@ -1288,6 +1324,16 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     [accounts]
   )
 
+  // La FK limpia la fila cuando se borra la cuenta, pero hasta que llega el
+  // realtime de user_settings el id viejo seguiría circulando.
+  const defaultAccounts = useMemo<DefaultAccounts>(() => {
+    const valid = (currency: Currency) => {
+      const id = storedDefaultAccounts[currency]
+      return accounts.some((a) => a.id === id && a.currency === currency) ? id : null
+    }
+    return { ARS: valid("ARS"), USD: valid("USD") }
+  }, [storedDefaultAccounts, accounts])
+
   const value: FinanceContextValue = useMemo(
     () => ({
       user,
@@ -1343,6 +1389,8 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       syncMacroFromApi,
       projectionSettings,
       updateProjectionSettings,
+      defaultAccounts,
+      setDefaultAccount,
       goals,
       addGoal,
       updateGoal,
@@ -1403,6 +1451,8 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       syncMacroFromApi,
       projectionSettings,
       updateProjectionSettings,
+      defaultAccounts,
+      setDefaultAccount,
       goals,
       addGoal,
       updateGoal,

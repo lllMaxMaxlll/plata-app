@@ -13,7 +13,7 @@ import {
   ResponsiveDialogTitle,
 } from "@/components/ui/responsive-dialog"
 import { parseExpenseMessage } from "@/lib/expense-message"
-import { dateForDaysAgo, extractRelativeDay, isQuestion } from "@/lib/anotar"
+import { dateForDaysAgo, extractCurrency, extractRelativeDay, isQuestion } from "@/lib/anotar"
 import { formatShort, type Account, type Currency } from "@/lib/finance-data"
 import { cn } from "@/lib/utils"
 import { useFinance } from "./finance-provider"
@@ -142,22 +142,28 @@ function shortAccountName(account?: Account): string {
 }
 
 function ExpensePanel({ text, onSaved }: { text: string; onSaved: () => void }) {
-  const { accounts, categories, addTransaction } = useFinance()
+  const { accounts, categories, addTransaction, defaultAccounts } = useFinance()
   const [kind, setKind] = useState<Kind>("expense")
   const [pickedAccountId, setPickedAccountId] = useState<string | null>(null)
   const [pickedCategory, setPickedCategory] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
 
   const day = extractRelativeDay(text)
-  const parsed = parseExpenseMessage(day.text, accounts)
+  const mentioned = extractCurrency(day.text)
+  const parsed = parseExpenseMessage(mentioned.text, accounts)
 
   const amount = "amount" in parsed ? parsed.amount : null
   const note = "note" in parsed ? parsed.note : ""
-  // La cuenta del texto manda; lo elegido a mano sólo cubre lo que el texto no resolvió.
-  const account =
-    parsed.status === "ok" ? parsed.account : accounts.find((a) => a.id === pickedAccountId)
   const candidates =
     parsed.status === "ambiguous-account" ? parsed.candidates : parsed.status === "no-account" ? accounts : []
+  // La cuenta del texto manda; lo elegido a mano sólo cubre lo que el texto no
+  // resolvió, y la cuenta por defecto, lo que nadie eligió. Con "usd" en el
+  // texto se ofrece la de dólares.
+  const defaultId = defaultAccounts[mentioned.currency ?? "ARS"]
+  const account =
+    parsed.status === "ok"
+      ? parsed.account
+      : candidates.find((a) => a.id === pickedAccountId) ?? candidates.find((a) => a.id === defaultId)
 
   const categoryNames = useMemo(
     () => categories.filter((c) => c.type === kind).map((c) => c.name),
@@ -269,10 +275,10 @@ function ExpensePanel({ text, onSaved }: { text: string; onSaved: () => void }) 
         </div>
       )}
 
-      {!account && candidates.length > 0 && amount !== null && (
+      {parsed.status !== "ok" && candidates.length > 0 && amount !== null && (
         <OptionRow label="Cuenta">
           {candidates.map((a) => (
-            <Option key={a.id} active={pickedAccountId === a.id} onClick={() => setPickedAccountId(a.id)}>
+            <Option key={a.id} active={account?.id === a.id} onClick={() => setPickedAccountId(a.id)}>
               {a.name}
             </Option>
           ))}

@@ -64,6 +64,28 @@ export function extractRelativeDay(text: string): DayExtraction {
   return { text: words.join(" "), daysAgo: 0, explicit: false }
 }
 
+/** Palabras que dicen "esto fue en dólares". El peso es lo que se asume. */
+const USD_WORDS = new Set(["usd", "u$s", "us$", "u$d", "dolar", "dolares", "verdes"])
+
+export interface CurrencyExtraction {
+  /** El texto sin la palabra de moneda. */
+  text: string
+  /** La moneda mencionada; `null` si el texto no dijo ninguna. */
+  currency: "USD" | null
+}
+
+/**
+ * Saca "usd" o "dólares" del texto. No decide la moneda del movimiento, que la
+ * pone la cuenta: sólo dice qué cuenta por defecto ofrecer cuando el texto no
+ * nombró ninguna. Por eso se saca siempre, así no termina en la nota.
+ */
+export function extractCurrency(text: string): CurrencyExtraction {
+  const words = text.trim().split(/\s+/).filter(Boolean)
+  const index = words.findIndex((w) => USD_WORDS.has(normalizeText(w)))
+  if (index === -1) return { text: words.join(" "), currency: null }
+  return { text: [...words.slice(0, index), ...words.slice(index + 1)].join(" "), currency: "USD" }
+}
+
 /**
  * La fecha a guardar. Para hoy es el momento exacto, como el formulario; para
  * días anteriores es el mediodía de ese día, así ningún huso horario lo corre

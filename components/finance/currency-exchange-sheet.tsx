@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { ArrowLeftRight, AlertCircle, RefreshCw } from "lucide-react"
+import { formatDecimalInput, parseDecimalInput } from "@/lib/decimal-input"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -28,7 +29,7 @@ interface CurrencyExchangeSheetProps {
 }
 
 export function CurrencyExchangeSheet({ open, onClose }: CurrencyExchangeSheetProps) {
-  const { accounts, addTransaction } = useFinance()
+  const { accounts, addTransaction, defaultAccounts } = useFinance()
 
   const [direction, setDirection] = useState<ExchangeDirection>("ARS_TO_USD")
   const [fromAccountId, setFromAccountId] = useState("")
@@ -44,6 +45,9 @@ export function CurrencyExchangeSheet({ open, onClose }: CurrencyExchangeSheetPr
   // Filter accounts by currency
   const arsAccounts = useMemo(() => accounts.filter((a) => a.currency === "ARS"), [accounts])
   const usdAccounts = useMemo(() => accounts.filter((a) => a.currency === "USD"), [accounts])
+  // Las cuentas por defecto de Config; sin elección, la primera de cada moneda.
+  const arsDefault = defaultAccounts.ARS ?? arsAccounts[0]?.id ?? ""
+  const usdDefault = defaultAccounts.USD ?? usdAccounts[0]?.id ?? ""
 
   const sourceAccounts = direction === "ARS_TO_USD" ? arsAccounts : usdAccounts
   const targetAccounts = direction === "ARS_TO_USD" ? usdAccounts : arsAccounts
@@ -68,36 +72,27 @@ export function CurrencyExchangeSheet({ open, onClose }: CurrencyExchangeSheetPr
       setNote("")
       setDate(new Date())
 
-      if (arsAccounts.length > 0) {
-        setFromAccountId(arsAccounts[0].id)
-      } else {
-        setFromAccountId("")
-      }
-
-      if (usdAccounts.length > 0) {
-        setToAccountId(usdAccounts[0].id)
-      } else {
-        setToAccountId("")
-      }
+      setFromAccountId(arsDefault)
+      setToAccountId(usdDefault)
     }
-  }, [open, arsAccounts, usdAccounts])
+  }, [open, arsDefault, usdDefault])
 
   const handleDirectionChange = (nextDir: ExchangeDirection) => {
     setDirection(nextDir)
 
     if (nextDir === "ARS_TO_USD") {
-      setFromAccountId(arsAccounts[0]?.id ?? "")
-      setToAccountId(usdAccounts[0]?.id ?? "")
+      setFromAccountId(arsDefault)
+      setToAccountId(usdDefault)
     } else {
-      setFromAccountId(usdAccounts[0]?.id ?? "")
-      setToAccountId(arsAccounts[0]?.id ?? "")
+      setFromAccountId(usdDefault)
+      setToAccountId(arsDefault)
     }
   }
 
   const parsedRate = parseFloat(rate) || 0
 
   const handleArsChange = (val: string) => {
-    const cleanVal = val.replace(/[^0-9.]/g, "")
+    const cleanVal = parseDecimalInput(val)
     setArsAmount(cleanVal)
     setLastEdited("ars")
 
@@ -111,7 +106,7 @@ export function CurrencyExchangeSheet({ open, onClose }: CurrencyExchangeSheetPr
   }
 
   const handleUsdChange = (val: string) => {
-    const cleanVal = val.replace(/[^0-9.]/g, "")
+    const cleanVal = parseDecimalInput(val)
     setUsdAmount(cleanVal)
     setLastEdited("usd")
 
@@ -125,7 +120,7 @@ export function CurrencyExchangeSheet({ open, onClose }: CurrencyExchangeSheetPr
   }
 
   const handleRateChange = (val: string) => {
-    const cleanVal = val.replace(/[^0-9.]/g, "")
+    const cleanVal = parseDecimalInput(val)
     setRate(cleanVal)
 
     const newRate = parseFloat(cleanVal) || 0
@@ -313,7 +308,7 @@ export function CurrencyExchangeSheet({ open, onClose }: CurrencyExchangeSheetPr
                     type="text"
                     inputMode="decimal"
                     disabled={submitting}
-                    value={rate}
+                    value={formatDecimalInput(rate)}
                     onChange={(e) => handleRateChange(e.target.value)}
                     placeholder="Ej. 1350 o 1050"
                     className="h-10 pl-7 text-sm font-semibold tabular-nums rounded-xl border-border bg-card/60"
@@ -337,7 +332,7 @@ export function CurrencyExchangeSheet({ open, onClose }: CurrencyExchangeSheetPr
                             type="text"
                             inputMode="decimal"
                             disabled={submitting}
-                            value={arsAmount}
+                            value={formatDecimalInput(arsAmount)}
                             onChange={(e) => handleArsChange(e.target.value)}
                             placeholder="0"
                             className="h-10 pl-6 text-sm font-semibold tabular-nums rounded-xl border-border bg-card/60"
@@ -359,7 +354,7 @@ export function CurrencyExchangeSheet({ open, onClose }: CurrencyExchangeSheetPr
                             type="text"
                             inputMode="decimal"
                             disabled={submitting}
-                            value={usdAmount}
+                            value={formatDecimalInput(usdAmount)}
                             onChange={(e) => handleUsdChange(e.target.value)}
                             placeholder="0.00"
                             className="h-10 pl-9 text-sm font-semibold tabular-nums rounded-xl border-border bg-card/60"
@@ -379,7 +374,7 @@ export function CurrencyExchangeSheet({ open, onClose }: CurrencyExchangeSheetPr
                             type="text"
                             inputMode="decimal"
                             disabled={submitting}
-                            value={usdAmount}
+                            value={formatDecimalInput(usdAmount)}
                             onChange={(e) => handleUsdChange(e.target.value)}
                             placeholder="0.00"
                             className="h-10 pl-9 text-sm font-semibold tabular-nums rounded-xl border-border bg-card/60"
@@ -401,7 +396,7 @@ export function CurrencyExchangeSheet({ open, onClose }: CurrencyExchangeSheetPr
                             type="text"
                             inputMode="decimal"
                             disabled={submitting}
-                            value={arsAmount}
+                            value={formatDecimalInput(arsAmount)}
                             onChange={(e) => handleArsChange(e.target.value)}
                             placeholder="0"
                             className="h-10 pl-6 text-sm font-semibold tabular-nums rounded-xl border-border bg-card/60"

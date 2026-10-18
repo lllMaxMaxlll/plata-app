@@ -1,6 +1,6 @@
 import { test, describe } from "node:test"
 import assert from "node:assert/strict"
-import { isQuestion, extractRelativeDay, dateForDaysAgo } from "./anotar.ts"
+import { isQuestion, extractRelativeDay, extractCurrency, dateForDaysAgo } from "./anotar.ts"
 
 describe("isQuestion", () => {
   test("las palabras interrogativas abren una búsqueda", () => {
@@ -70,5 +70,19 @@ describe("dateForDaysAgo", () => {
     const date = dateForDaysAgo(2, new Date(2026, 10, 1, 9, 0))
     assert.equal(date.getMonth(), 9)
     assert.equal(date.getDate(), 30)
+  })
+})
+
+describe("extractCurrency", () => {
+  test("saca la palabra de dólares y avisa la moneda", () => {
+    assert.deepEqual(extractCurrency("50 usd netflix"), { text: "50 netflix", currency: "USD" })
+    assert.deepEqual(extractCurrency("hotel 200 Dólares"), { text: "hotel 200", currency: "USD" })
+    assert.equal(extractCurrency("u$s 30 spotify").currency, "USD")
+  })
+
+  test("sin palabra de moneda no dice nada", () => {
+    assert.deepEqual(extractCurrency("30 lucas super"), { text: "30 lucas super", currency: null })
+    // "dolarizar" no es la palabra.
+    assert.equal(extractCurrency("dolarizar 100").currency, null)
   })
 })

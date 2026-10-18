@@ -18,6 +18,7 @@ import { useConfirm } from "./confirm-dialog"
 import { AccountIcon } from "./account-icon"
 import { toast } from "sonner"
 import { Wallet, Trash2 } from "lucide-react"
+import { formatDecimalInput, parseDecimalInput } from "@/lib/decimal-input"
 import { cn } from "@/lib/utils"
 
 const KINDS: { value: Account["kind"]; label: string }[] = [
@@ -261,10 +262,10 @@ export function AddAccountSheet({
               </span>
               <Input
                 inputMode="decimal"
-                value={balance}
+                value={formatDecimalInput(balance)}
                 disabled={submitting}
-                onChange={(e) => setBalance(e.target.value.replace(/[^0-9.-]/g, ""))}
-                placeholder="0.00"
+                onChange={(e) => setBalance(parseDecimalInput(e.target.value, { allowNegative: true }))}
+                placeholder="0,00"
                 className="pl-10 h-11 text-sm font-extrabold tabular-nums rounded-xl border-border bg-card/60"
               />
             </div>

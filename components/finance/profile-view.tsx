@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { ChevronRight, Download, LogOut, Search, ShieldCheck, Tag, Wallet, type LucideIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { formatShort } from "@/lib/finance-data"
+import { formatShort, type Currency } from "@/lib/finance-data"
 import { ROUTES } from "@/lib/routes"
 import { useFinance } from "./finance-provider"
 import { PageHeader } from "./page-header"
@@ -11,6 +11,7 @@ import { useUI } from "./ui-context"
 import { IconTile, pageClass } from "./lucas-ui"
 import { Wordmark } from "./app-icon"
 import { ThemeToggle } from "./theme-toggle"
+import { OptionSelect } from "./option-select"
 
 type Item =
   | { Icon: LucideIcon; label: string; hint: string; tone: string; onClick: () => void }
@@ -63,6 +64,8 @@ export function ProfileView({
             </div>
             <ThemeToggle className="w-full" />
           </section>
+
+          <DefaultAccountsSection />
         </div>
 
         <div className="space-y-5">
@@ -107,6 +110,39 @@ export function ProfileView({
         </div>
       </div>
     </div>
+  )
+}
+
+const NO_DEFAULT = "none"
+
+/** La cuenta con la que arrancan el formulario, Anotar y el cambio de moneda. */
+function DefaultAccountsSection() {
+  const { accounts, defaultAccounts, setDefaultAccount } = useFinance()
+
+  return (
+    <section className="space-y-3 rounded-2xl border-2 border-foreground bg-card p-4">
+      <div>
+        <p className="font-bold">Cuentas por defecto</p>
+        <p className="text-xs text-muted-foreground">Con estas arranca cada movimiento; las podés cambiar al cargarlo.</p>
+      </div>
+      {(["ARS", "USD"] as const satisfies readonly Currency[]).map((currency) => {
+        const options = accounts.filter((a) => a.currency === currency)
+        return (
+          <div key={currency} className="flex items-center gap-3">
+            <span className="w-10 shrink-0 font-mono text-xs font-semibold">{currency}</span>
+            <OptionSelect
+              ariaLabel={`Cuenta por defecto en ${currency}`}
+              value={defaultAccounts[currency] ?? NO_DEFAULT}
+              onValueChange={(value) => setDefaultAccount(currency, value === NO_DEFAULT ? null : value)}
+              options={[
+                { value: NO_DEFAULT, label: options.length ? "Sin preferencia" : `No tenés cuentas en ${currency}` },
+                ...options.map((a) => ({ value: a.id, label: a.name })),
+              ]}
+            />
+          </div>
+        )
+      })}
+    </section>
   )
 }
 
