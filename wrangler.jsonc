@@ -10,7 +10,11 @@
   // Workers AI: la categorización automática de movimientos corre acá, sin API
   // key propia y facturada por neurons contra la cuenta del Worker.
   "ai": {
-    "binding": "AI"
+    "binding": "AI",
+    // Workers AI no tiene emulación local: en `next dev` siempre llama a
+    // Cloudflare. Declararlo explícito apaga el aviso de wrangler en cada
+    // arranque; en el deploy no cambia nada.
+    "remote": true
   },
   // Índice de embeddings para la búsqueda semántica del historial. Hay que
   // crearlo una sola vez con la CLI (ver README): el binding solo no lo crea.
