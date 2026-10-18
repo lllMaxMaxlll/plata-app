@@ -1,0 +1,517 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pulso — Propuesta de identidad</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0A0B0D;
+    --panel: #111317;
+    --panel-2: #171A1F;
+    --line: #23272E;
+    --text: #E6E8EB;
+    --muted: #7C838F;
+    --amber: #F5B83D;
+    --up: #3DDC97;
+    --down: #FF5C5C;
+    --info: #6CA8FF;
+    --violet: #A78BFA;
+    --sans: "IBM Plex Sans", system-ui, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--sans); line-height: 1.5; font-size: 14px; }
+  .wrap { max-width: 1240px; margin: 0 auto; padding: 0 16px; }
+  .mono { font-family: var(--mono); }
+  .lbl { font: 500 10.5px var(--mono); text-transform: uppercase; letter-spacing: .12em; color: var(--muted); }
+  .up { color: var(--up); } .down { color: var(--down); } .amber { color: var(--amber); }
+  kbd { font: 500 10px var(--mono); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 1px 5px; color: var(--muted); background: var(--panel-2); }
+  svg.i { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+
+  /* Portada */
+  .hero { padding: 56px 0 44px; border-bottom: 1px solid var(--line); background: radial-gradient(800px 300px at 15% 0%, #f5b83d14, transparent 70%); }
+  .hero-grid { display: grid; gap: 36px; grid-template-columns: 1fr; }
+  @media (min-width: 900px) { .hero-grid { grid-template-columns: 1.3fr 1fr; align-items: end; } }
+  .logo { display: flex; align-items: center; gap: 16px; margin-top: 16px; }
+  .logo svg { width: clamp(60px, 10vw, 92px); height: auto; }
+  .logo h1 { font-weight: 700; font-size: clamp(64px, 13vw, 128px); letter-spacing: -.045em; line-height: .9; }
+  .hero h2 { font-weight: 500; font-size: clamp(20px, 3vw, 28px); margin-top: 18px; max-width: 30ch; letter-spacing: -.01em; }
+  .hero p { color: var(--muted); margin-top: 12px; max-width: 58ch; font-size: 15px; }
+  .why { border: 1px solid var(--line); background: var(--panel); border-radius: 12px; padding: 18px; }
+  .why ul { padding-left: 16px; display: grid; gap: 6px; color: var(--muted); margin-top: 10px; }
+  .why li b { color: var(--text); font-weight: 500; }
+
+  section { padding: 52px 0; border-bottom: 1px solid var(--line); }
+  .sec-h h2 { font-size: clamp(26px, 3.6vw, 36px); font-weight: 600; letter-spacing: -.025em; margin-top: 6px; }
+  .sec-h p { color: var(--muted); max-width: 64ch; margin-top: 8px; font-size: 15px; }
+
+  /* Sistema */
+  .sys { display: grid; gap: 16px; margin-top: 28px; grid-template-columns: 1fr; }
+  @media (min-width: 900px) { .sys { grid-template-columns: 1.2fr 1fr 1fr; } }
+  .box { border: 1px solid var(--line); background: var(--panel); border-radius: 12px; padding: 16px; }
+  .sw { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 12px; }
+  .sw div { font: 10.5px var(--mono); color: var(--muted); }
+  .sw i { display: block; height: 44px; border-radius: 6px; border: 1px solid var(--line); margin-bottom: 6px; }
+  .sw b { display: block; color: var(--text); font: 500 12px var(--sans); }
+  .spec { font: 600 40px var(--mono); letter-spacing: -.03em; margin-top: 10px; font-variant-numeric: tabular-nums; }
+  .rules { display: grid; gap: 10px; margin-top: 10px; }
+  .rules div { display: flex; gap: 10px; align-items: flex-start; }
+  .rules span { color: var(--muted); }
+  .rules b { font-weight: 500; }
+
+  /* App de escritorio */
+  .app { margin-top: 32px; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; background: var(--bg); box-shadow: 0 40px 100px -40px #000; }
+  .ticker { display: flex; gap: 28px; align-items: center; padding: 8px 16px; border-bottom: 1px solid var(--line); background: var(--panel); overflow-x: auto; scrollbar-width: none; font: 12px var(--mono); white-space: nowrap; }
+  .ticker::-webkit-scrollbar { display: none; }
+  .tk { display: flex; gap: 8px; align-items: center; }
+  .tk span:first-child { color: var(--muted); }
+  .tk svg { width: 44px; height: 16px; }
+  .live { display: inline-flex; align-items: center; gap: 6px; color: var(--up); }
+  .live::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--up); box-shadow: 0 0 0 3px #3ddc9726; }
+  .layout { display: grid; grid-template-columns: 1fr; }
+  @media (min-width: 980px) { .layout { grid-template-columns: 210px 1fr; } }
+  .side { display: none; border-right: 1px solid var(--line); padding: 14px 10px; background: var(--panel); }
+  @media (min-width: 980px) { .side { display: block; } }
+  .brand { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 18px; padding: 4px 8px 14px; letter-spacing: -.02em; }
+  .brand svg { width: 22px; height: 22px; }
+  .cmdk { display: flex; align-items: center; gap: 8px; width: 100%; border: 1px solid var(--line); background: var(--bg); border-radius: 8px; padding: 7px 9px; color: var(--muted); font: 13px var(--sans); cursor: pointer; }
+  .cmdk kbd { margin-left: auto; }
+  .side nav { display: grid; gap: 1px; margin-top: 14px; }
+  .side nav a { display: flex; align-items: center; gap: 10px; padding: 7px 9px; border-radius: 7px; color: var(--muted); text-decoration: none; font-size: 13px; }
+  .side nav a.on { background: var(--panel-2); color: var(--text); box-shadow: inset 2px 0 0 var(--amber); }
+  .side nav a .k { margin-left: auto; font: 10px var(--mono); color: #4d535c; }
+  .side nav a .n { margin-left: auto; font: 600 10px var(--mono); background: #f5b83d22; color: var(--amber); border-radius: 4px; padding: 0 5px; }
+  .side .grp { margin: 16px 9px 4px; }
+
+  .main { padding: 18px; display: grid; gap: 14px; min-width: 0; }
+  .topbar { display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; align-items: center; }
+  .topbar h3 { font-size: 18px; font-weight: 600; letter-spacing: -.01em; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 7px; overflow: hidden; }
+  .seg button { background: none; border: 0; color: var(--muted); font: 500 11.5px var(--mono); padding: 5px 10px; cursor: pointer; }
+  .seg button.on { background: var(--panel-2); color: var(--text); }
+  .kpis { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
+  .kpi { border: 1px solid var(--line); border-radius: 10px; background: var(--panel); padding: 12px; min-width: 0; }
+  .kpi .v { font: 600 22px var(--mono); letter-spacing: -.02em; margin-top: 6px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .kpi .d { font: 11.5px var(--mono); margin-top: 2px; }
+  .kpi svg { width: 100%; height: 28px; margin-top: 8px; display: block; }
+  .grid2 { display: grid; gap: 14px; grid-template-columns: 1fr; }
+  @media (min-width: 1100px) { .grid2 { grid-template-columns: 1.6fr 1fr; } }
+  .pnl { border: 1px solid var(--line); border-radius: 10px; background: var(--panel); min-width: 0; }
+  .pnl-h { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; border-bottom: 1px solid var(--line); gap: 8px; }
+  .pnl-h .r { display: flex; gap: 6px; align-items: center; color: var(--muted); font-size: 11px; }
+  .tbl-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  th { text-align: left; font: 500 10px var(--mono); text-transform: uppercase; letter-spacing: .1em; color: var(--muted); padding: 8px 12px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  td { padding: 8px 12px; border-bottom: 1px solid #1a1d22; white-space: nowrap; }
+  tr:last-child td { border-bottom: 0; }
+  tr.sel td { background: #f5b83d0d; }
+  tr.sel td:first-child { box-shadow: inset 2px 0 0 var(--amber); }
+  td.n { font-family: var(--mono); text-align: right; font-variant-numeric: tabular-nums; }
+  td.dt { font-family: var(--mono); color: var(--muted); }
+  .cat { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; border: 1px solid var(--line); border-radius: 5px; padding: 1px 6px; color: var(--muted); }
+  .cat::before { content: ""; width: 6px; height: 6px; border-radius: 2px; background: var(--c); }
+  .ai { font: 9.5px var(--mono); color: var(--violet); margin-left: 4px; }
+  .agenda .it { display: grid; grid-template-columns: 46px 1fr auto; gap: 10px; padding: 9px 12px; border-bottom: 1px solid #1a1d22; align-items: center; }
+  .agenda .it:last-child { border-bottom: 0; }
+  .agenda .dd { font: 500 11px var(--mono); color: var(--muted); text-align: center; border: 1px solid var(--line); border-radius: 6px; padding: 2px 0; }
+  .agenda .dd.hot { color: var(--down); border-color: #ff5c5c55; background: #ff5c5c10; }
+  .agenda .t b { font-weight: 500; display: block; }
+  .agenda .t span { font-size: 11.5px; color: var(--muted); }
+  .bar { height: 4px; background: var(--line); border-radius: 4px; overflow: hidden; margin-top: 5px; }
+  .bar i { display: block; height: 100%; background: var(--amber); }
+  .hint-row { display: flex; flex-wrap: wrap; gap: 14px; padding: 8px 12px; border-top: 1px solid var(--line); font-size: 11px; color: var(--muted); }
+
+  /* Paleta de comandos */
+  .overlay { position: fixed; inset: 0; background: #000a; backdrop-filter: blur(3px); display: none; place-items: start center; padding: 12vh 16px 16px; z-index: 50; }
+  .overlay.open { display: grid; }
+  .palette { width: 100%; max-width: 620px; background: var(--panel); border: 1px solid #2f343c; border-radius: 14px; overflow: hidden; box-shadow: 0 30px 80px #000; }
+  .palette-in { display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-bottom: 1px solid var(--line); }
+  .palette-in input { flex: 1; background: none; border: 0; outline: 0; color: var(--text); font: 15px var(--sans); min-width: 0; }
+  .palette-body { max-height: 52vh; overflow-y: auto; }
+  .pg { padding: 8px 8px 4px; }
+  .pg .lbl { padding: 4px 8px; display: block; }
+  .opt { display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 8px; color: var(--text); font-size: 13.5px; }
+  .opt.on { background: var(--panel-2); }
+  .opt span.sub { color: var(--muted); font-size: 12px; }
+  .opt kbd { margin-left: auto; }
+  .answer { margin: 8px; border: 1px solid var(--line); border-radius: 10px; padding: 12px; background: var(--bg); }
+  .answer .sum { font: 600 26px var(--mono); letter-spacing: -.02em; margin-top: 4px; }
+  .answer .why2 { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .answer .why2 span { font: 11px var(--mono); border: 1px solid var(--line); border-radius: 5px; padding: 1px 6px; color: var(--muted); }
+  .answer .why2 span b { color: var(--info); font-weight: 500; }
+  .mini-rows { margin-top: 10px; display: grid; gap: 4px; font-size: 12.5px; }
+  .mini-rows div { display: flex; justify-content: space-between; gap: 8px; }
+  .mini-rows div span:first-child { color: var(--muted); font-family: var(--mono); font-size: 11.5px; }
+  .open-btn { margin-top: 18px; display: inline-flex; align-items: center; gap: 10px; background: var(--amber); color: #111; border: 0; border-radius: 9px; padding: 10px 14px; font: 600 14px var(--sans); cursor: pointer; }
+  .open-btn kbd { background: #0002; border-color: #0003; color: #111; }
+
+  /* Mobile */
+  .phones { display: grid; gap: 28px; margin-top: 32px; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); justify-items: center; }
+  .pcol { width: 100%; max-width: 320px; }
+  .pcol h4 { font-size: 15px; font-weight: 600; }
+  .pcol p { color: var(--muted); font-size: 13px; margin: 2px 0 12px; min-height: 3.2em; }
+  .phone { position: relative; height: 640px; border-radius: 40px; border: 1px solid #2a2e35; background: var(--bg); overflow: hidden; box-shadow: 0 0 0 7px #16181c, 0 30px 70px -30px #000; }
+  .screen { position: absolute; inset: 0; overflow-y: auto; padding: 18px 14px 90px; scrollbar-width: none; }
+  .screen::-webkit-scrollbar { display: none; }
+  .status { display: flex; justify-content: space-between; font: 11px var(--mono); color: var(--muted); margin-bottom: 12px; }
+  .m-ticker { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .m-ticker div { border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; background: var(--panel); }
+  .m-ticker b { display: block; font: 600 13px var(--mono); }
+  .m-ticker span { font: 10px var(--mono); }
+  .nw { margin-top: 14px; border: 1px solid var(--line); border-radius: 12px; padding: 14px; background: linear-gradient(180deg, #f5b83d10, transparent 60%), var(--panel); }
+  .nw .v { font: 600 32px var(--mono); letter-spacing: -.03em; margin-top: 4px; }
+  .nw .split { display: flex; gap: 14px; font: 11.5px var(--mono); color: var(--muted); margin-top: 4px; }
+  .nw svg { width: 100%; height: 54px; margin-top: 10px; display: block; }
+  .m-list { margin-top: 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); }
+  .m-list .h { display: flex; justify-content: space-between; padding: 9px 12px; border-bottom: 1px solid var(--line); }
+  .m-row { display: flex; gap: 10px; align-items: center; padding: 9px 12px; border-bottom: 1px solid #1a1d22; font-size: 13px; }
+  .m-row:last-child { border-bottom: 0; }
+  .m-row .t { flex: 1; min-width: 0; }
+  .m-row .t span { display: block; font-size: 11px; color: var(--muted); }
+  .m-row .n { font: 500 12.5px var(--mono); white-space: nowrap; }
+  .dot { width: 8px; height: 8px; border-radius: 2px; background: var(--c); flex: none; }
+  .tabbar { position: absolute; left: 0; right: 0; bottom: 0; height: 72px; border-top: 1px solid var(--line); background: #0d0f12f2; display: grid; grid-template-columns: repeat(5, 1fr); padding: 8px 4px 18px; }
+  .tabbar a { display: grid; justify-items: center; align-content: center; gap: 2px; font-size: 10px; color: var(--muted); text-decoration: none; }
+  .tabbar a.on { color: var(--amber); }
+  .tabbar .q { width: 42px; height: 42px; border-radius: 12px; background: var(--amber); color: #111; display: grid; place-items: center; justify-self: center; align-self: center; }
+  .pos { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; padding: 10px 12px; border-bottom: 1px solid #1a1d22; }
+  .pos:last-child { border-bottom: 0; }
+  .pos b { font: 600 13px var(--mono); }
+  .pos span { font-size: 11px; color: var(--muted); }
+  .pos .r { text-align: right; font: 12.5px var(--mono); }
+  .gap-card { margin-top: 14px; border: 1px solid #f5b83d44; background: #f5b83d0d; border-radius: 12px; padding: 12px; }
+  .gap-card .row { display: flex; justify-content: space-between; align-items: baseline; }
+  .gap-card .big { font: 600 26px var(--mono); color: var(--amber); }
+  .gap-card p { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .act { display: flex; gap: 6px; margin-top: 10px; }
+  .act button { flex: 1; background: var(--panel-2); border: 1px solid var(--line); color: var(--text); border-radius: 8px; padding: 8px; font: 500 12px var(--sans); cursor: pointer; }
+  .act button.pri { background: var(--amber); color: #111; border-color: var(--amber); }
+
+  /* Mapa y componentes */
+  .map { margin-top: 28px; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+  .map-row { display: grid; grid-template-columns: 1fr; border-bottom: 1px solid var(--line); }
+  .map-row:last-child { border-bottom: 0; }
+  @media (min-width: 760px) { .map-row { grid-template-columns: 200px 1fr 1.2fr; } }
+  .map-row > div { padding: 12px 14px; }
+  .map-row .k { display: flex; align-items: center; gap: 10px; font-weight: 600; background: var(--panel); }
+  .map-row .k kbd { margin-left: auto; }
+  .map-row .old { font: 12px var(--mono); color: var(--muted); }
+  .map-row .new { color: #C3C8CF; font-size: 13.5px; }
+  .map-row.head > div { font: 500 10px var(--mono); text-transform: uppercase; letter-spacing: .12em; color: var(--muted); background: var(--panel-2); padding-top: 8px; padding-bottom: 8px; }
+  .comp { display: grid; gap: 14px; margin-top: 28px; grid-template-columns: 1fr; }
+  @media (min-width: 800px) { .comp { grid-template-columns: repeat(3, 1fr); } }
+  .comp .box h3 { font-size: 15px; font-weight: 600; margin-top: 6px; }
+  .comp .box p { color: var(--muted); font-size: 13.5px; margin-top: 6px; }
+  footer { padding: 32px 0 56px; color: var(--muted); font-size: 13px; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="pulse" viewBox="0 0 48 48"><rect x="1.5" y="1.5" width="45" height="45" rx="12" fill="none" stroke="var(--amber)" stroke-width="3"/><path d="M8 26h8l4-10 6 18 4-8h10" fill="none" stroke="var(--amber)" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></symbol>
+  <symbol id="list" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></symbol>
+  <symbol id="wallet" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h13v4"/><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M16 13.5h2"/></symbol>
+  <symbol id="trend" viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8M15 7h6v6"/></symbol>
+  <symbol id="cal" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></symbol>
+  <symbol id="target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></symbol>
+  <symbol id="car" viewBox="0 0 24 24"><path d="M5 17h14v-5l-2-5H7l-2 5zM3 12h18"/><circle cx="7.5" cy="17" r="1.8"/><circle cx="16.5" cy="17" r="1.8"/></symbol>
+  <symbol id="search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></symbol>
+  <symbol id="plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="swap" viewBox="0 0 24 24"><path d="M7 4L3 8l4 4M3 8h14M17 20l4-4-4-4M21 16H7"/></symbol>
+  <symbol id="gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></symbol>
+  <symbol id="spark" viewBox="0 0 24 24"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5L18 18M6 18l2.5-2.5M15.5 8.5L18 6"/></symbol>
+  <symbol id="enter" viewBox="0 0 24 24"><path d="M20 4v7a4 4 0 0 1-4 4H4M8 11l-4 4 4 4"/></symbol>
+</svg>
+
+<header class="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <span class="lbl">Propuesta 3 de 3 · Identidad cockpit</span>
+      <div class="logo"><svg><use href="#pulse"/></svg><h1>Pulso</h1></div>
+      <h2>Tu plata en tiempo real, en dos monedas y a la velocidad del teclado.</h2>
+      <p>En Argentina la plata se mueve aunque no hagas nada: el dólar, la brecha y la inflación cambian lo que tenés todos los días. Pulso lo muestra como un panel de control. Es denso, oscuro y numérico, se maneja con atajos y la búsqueda semántica queda a un ⌘K de distancia.</p>
+    </div>
+    <div class="why">
+      <span class="lbl">Por qué este nombre</span>
+      <ul>
+        <li><b>Tomarle el pulso</b> a tus finanzas: es seguimiento continuo, no un registro de lo que ya pasó.</li>
+        <li>Refleja lo que la app ya tiene de “vivo”: Realtime de Supabase, cotizaciones de Finnhub y sync del dólar.</li>
+        <li>El logo es una onda de ECG dentro de un cuadrado redondeado, y se lee bien a 16px.</li>
+      </ul>
+    </div>
+  </div>
+</header>
+
+<section>
+  <div class="wrap">
+    <div class="sec-h"><span class="lbl">Sistema</span><h2>Oscuro de verdad, con señales que significan algo</h2><p>El ámbar es la única marca de identidad. Verde y rojo se usan solo para variaciones, nunca para decorar, y el violeta marca lo que decidió la IA. Todos los números van en mono tabular, así las columnas se alinean y se comparan de un vistazo.</p></div>
+    <div class="sys">
+      <div class="box">
+        <span class="lbl">Paleta</span>
+        <div class="sw">
+          <div><i style="background:var(--bg)"></i><b>Fondo</b>#0A0B0D</div>
+          <div><i style="background:var(--panel)"></i><b>Panel</b>#111317</div>
+          <div><i style="background:var(--amber)"></i><b>Ámbar</b>#F5B83D · marca, foco</div>
+          <div><i style="background:var(--text)"></i><b>Texto</b>#E6E8EB</div>
+          <div><i style="background:var(--up)"></i><b>Sube</b>#3DDC97</div>
+          <div><i style="background:var(--down)"></i><b>Baja</b>#FF5C5C</div>
+          <div><i style="background:var(--info)"></i><b>Dato</b>#6CA8FF</div>
+          <div><i style="background:var(--violet)"></i><b>IA</b>#A78BFA</div>
+        </div>
+      </div>
+      <div class="box">
+        <span class="lbl">Tipografía</span>
+        <p class="spec">US$ 3.318,40</p>
+        <p style="color:var(--muted);font-size:13px;margin-top:6px">IBM Plex Mono 500/600 para cifras, tasas y fechas · IBM Plex Sans para la interfaz. Viene de la estética de terminal financiera, pero se lee como producto.</p>
+      </div>
+      <div class="box">
+        <span class="lbl">Reglas</span>
+        <div class="rules">
+          <div><kbd>1</kbd><span><b>Dos monedas siempre.</b> El valor principal en una moneda y el equivalente en la otra, más chico.</span></div>
+          <div><kbd>2</kbd><span><b>Toda cifra tiene hora.</b> El dato macro muestra de cuándo es y de qué fuente sale.</span></div>
+          <div><kbd>3</kbd><span><b>Todo tiene atajo.</b> Si se hace seguido, tiene tecla.</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-h"><span class="lbl">Escritorio</span><h2>El panel</h2><p>Arriba hay una cinta con las cotizaciones y la inflación, y a la izquierda la navegación con atajos numéricos. En la tabla de movimientos te movés con <kbd>j</kbd> <kbd>k</kbd> y editás con <kbd>e</kbd>. Probá abrir la paleta de comandos.</p>
+      <button class="open-btn" id="open-k"><svg class="i"><use href="#search"/></svg>Abrir paleta de comandos <kbd>⌘K</kbd></button>
+    </div>
+
+    <div class="app">
+      <div class="ticker">
+        <span class="live">en vivo</span>
+        <span class="tk"><span>OFICIAL</span><b>1.395,00</b><span class="up">+0,2%</span></span>
+        <span class="tk"><span>MEP</span><b>1.450,30</b><span class="down">−0,4%</span><svg viewBox="0 0 44 16"><polyline fill="none" stroke="#FF5C5C" stroke-width="1.4" points="0,4 8,6 15,3 22,8 30,7 37,11 44,12"/></svg></span>
+        <span class="tk"><span>BLUE</span><b>1.475,00</b><span class="up">+0,7%</span><svg viewBox="0 0 44 16"><polyline fill="none" stroke="#3DDC97" stroke-width="1.4" points="0,12 8,11 15,12 22,8 30,7 37,5 44,3"/></svg></span>
+        <span class="tk"><span>CCL</span><b>1.462,80</b><span class="up">+0,1%</span></span>
+        <span class="tk"><span>BRECHA</span><b class="amber">5,7%</b></span>
+        <span class="tk"><span>IPC SEP</span><b>2,1%</b></span>
+        <span class="tk"><span>MERVAL</span><b>2.184.300</b><span class="up">+1,3%</span></span>
+      </div>
+      <div class="layout">
+        <aside class="side">
+          <div class="brand"><svg><use href="#pulse"/></svg>Pulso</div>
+          <button class="cmdk" data-open-k><svg class="i"><use href="#search"/></svg>Buscar o hacer…<kbd>⌘K</kbd></button>
+          <nav>
+            <a class="on"><svg class="i"><use href="#grid"/></svg>Panel<span class="k">1</span></a>
+            <a><svg class="i"><use href="#list"/></svg>Movimientos<span class="k">2</span></a>
+            <a><svg class="i"><use href="#wallet"/></svg>Cuentas<span class="k">3</span></a>
+            <a><svg class="i"><use href="#trend"/></svg>Mercado<span class="k">4</span></a>
+            <a><svg class="i"><use href="#cal"/></svg>Agenda<span class="n">3</span></a>
+            <a><svg class="i"><use href="#target"/></svg>Rumbo<span class="k">6</span></a>
+          </nav>
+          <div class="lbl grp">Activos</div>
+          <nav style="margin-top:0">
+            <a><svg class="i"><use href="#car"/></svg>Corolla 2019<span class="n">!</span></a>
+            <a><svg class="i"><use href="#car"/></svg>Honda CB 190</a>
+          </nav>
+          <div class="lbl grp">Sistema</div>
+          <nav style="margin-top:0"><a><svg class="i"><use href="#gear"/></svg>Ajustes<span class="k">,</span></a></nav>
+        </aside>
+
+        <div class="main">
+          <div class="topbar">
+            <h3>Panel · domingo 18 oct</h3>
+            <div style="display:flex;gap:8px;align-items:center">
+              <div class="seg" id="p-cur"><button class="on" data-c="usd">USD</button><button data-c="ars">ARS</button></div>
+              <div class="seg"><button>7d</button><button class="on">30d</button><button>1a</button></div>
+            </div>
+          </div>
+
+          <div class="kpis">
+            <div class="kpi"><span class="lbl">Patrimonio</span><div class="v" data-u="US$ 3.318" data-a="$ 4.812.300">US$ 3.318</div><div class="d up" data-u="+US$ 214 · 30d" data-a="+$ 310.300 · 30d">+US$ 214 · 30d</div><svg viewBox="0 0 160 28" preserveAspectRatio="none"><polyline fill="none" stroke="#F5B83D" stroke-width="1.5" points="0,22 20,20 40,21 60,17 80,15 100,16 120,11 140,9 160,6"/></svg></div>
+            <div class="kpi"><span class="lbl">Gasto del mes</span><div class="v" data-u="US$ 762" data-a="$ 1.104.500">US$ 762</div><div class="d" style="color:var(--muted)">58% del promedio · día 18/31</div><div class="bar" style="margin-top:14px"><i style="width:58%"></i></div></div>
+            <div class="kpi"><span class="lbl">Tasa de ahorro</span><div class="v">46,2%</div><div class="d up">+3,1 pp vs prom. 6m</div><svg viewBox="0 0 160 28" preserveAspectRatio="none"><g fill="#3DDC97"><rect x="0" y="12" width="20" height="16"/><rect x="27" y="9" width="20" height="19"/><rect x="54" y="14" width="20" height="14"/><rect x="81" y="10" width="20" height="18"/><rect x="108" y="8" width="20" height="20"/><rect x="135" y="5" width="20" height="23" fill="#F5B83D"/></g></svg></div>
+            <div class="kpi"><span class="lbl">Portafolio</span><div class="v">US$ 1.240</div><div class="d up">+4,2% · +US$ 50</div><svg viewBox="0 0 160 28" preserveAspectRatio="none"><polyline fill="none" stroke="#3DDC97" stroke-width="1.5" points="0,18 20,20 40,15 60,16 80,12 100,14 120,9 140,10 160,7"/></svg></div>
+          </div>
+
+          <div class="grid2">
+            <div class="pnl">
+              <div class="pnl-h"><span class="lbl">Movimientos</span><span class="r"><kbd>j</kbd><kbd>k</kbd> mover <kbd>e</kbd> editar <kbd>n</kbd> nuevo</span></div>
+              <div class="tbl-wrap">
+                <table>
+                  <thead><tr><th>Fecha</th><th>Concepto</th><th>Categoría</th><th>Cuenta</th><th style="text-align:right">Monto</th><th style="text-align:right">≈ USD</th></tr></thead>
+                  <tbody>
+                    <tr class="sel"><td class="dt">18/10</td><td>Carrefour</td><td><span class="cat" style="--c:#F5B83D">Súper</span><span class="ai">✦ auto</span></td><td>Galicia</td><td class="n down">−30.000</td><td class="n" style="color:var(--muted)">20,69</td></tr>
+                    <tr><td class="dt">17/10</td><td>YPF Av. Libertador</td><td><span class="cat" style="--c:#6CA8FF">Auto</span><span class="ai">✦ regla</span></td><td>Mercado Pago</td><td class="n down">−52.000</td><td class="n" style="color:var(--muted)">35,85</td></tr>
+                    <tr><td class="dt">15/10</td><td>Compra AAPL ×2</td><td><span class="cat" style="--c:#A78BFA">Inversión</span></td><td>Broker</td><td class="n">−US$ 462</td><td class="n" style="color:var(--muted)">462,00</td></tr>
+                    <tr><td class="dt">14/10</td><td>Cambio MEP</td><td><span class="cat" style="--c:#7C838F">Cambio</span></td><td>Galicia → USD</td><td class="n">−725.150</td><td class="n up">+500,00</td></tr>
+                    <tr><td class="dt">12/10</td><td>Telecentro</td><td><span class="cat" style="--c:#FF5C5C">Servicios</span><span class="ai">✦ telegram</span></td><td>Galicia</td><td class="n down">−28.900</td><td class="n" style="color:var(--muted)">19,93</td></tr>
+                    <tr><td class="dt">01/10</td><td>Sueldo</td><td><span class="cat" style="--c:#3DDC97">Salario</span></td><td>Galicia</td><td class="n up">+2.100.000</td><td class="n up">1.447,96</td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="hint-row"><span><span style="color:var(--violet)">✦</span> origen de la categoría: regla local, IA o bot de Telegram</span><span>≈ USD al MEP del día del movimiento</span></div>
+            </div>
+
+            <div class="pnl agenda">
+              <div class="pnl-h"><span class="lbl">Agenda · 7 días</span><span class="r"><kbd>p</kbd> pagar</span></div>
+              <div class="it"><span class="dd hot">LUN<br>19</span><span class="t"><b>Edenor</b><span>débito Galicia</span></span><span class="mono">38.200</span></div>
+              <div class="it"><span class="dd hot">MAR<br>20</span><span class="t"><b>Visa Galicia</b><span>resumen · mín. 41.300</span></span><span class="mono">412.900</span></div>
+              <div class="it"><span class="dd">VIE<br>23</span><span class="t"><b>Seguro moto</b><span>Mercado Pago</span></span><span class="mono">27.500</span></div>
+              <div class="it"><span class="dd">~NOV</span><span class="t"><b>Service Corolla</b><span>84.580 / 85.000 km</span><div class="bar"><i style="width:92%;background:var(--down)"></i></div></span><span class="mono">420 km</span></div>
+              <div class="it"><span class="dd">28/11</span><span class="t"><b>VTV Corolla</b><span>en 41 días</span></span><span class="mono" style="color:var(--muted)">—</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-h"><span class="lbl">Mobile</span><h2>El mismo panel, en el bolsillo</h2><p>En mobile la búsqueda ocupa el centro de la barra porque ahí es donde más se usa. Cargar un gasto es un comando más: “nuevo gasto” o directamente “30k super galicia”.</p></div>
+    <div class="phones">
+      <div class="pcol">
+        <h4>Panel</h4>
+        <p>Primero las cotizaciones, después el patrimonio en dos monedas con su curva de 30 días, y por último los movimientos.</p>
+        <div class="phone"><div class="screen">
+          <div class="status"><span>10:41</span><span>5G ▮▮▮</span></div>
+          <div class="m-ticker">
+            <div><span style="color:var(--muted)">MEP</span><b>1.450</b><span class="down">−0,4%</span></div>
+            <div><span style="color:var(--muted)">BLUE</span><b>1.475</b><span class="up">+0,7%</span></div>
+            <div><span style="color:var(--muted)">BRECHA</span><b class="amber">5,7%</b><span style="color:var(--muted)">vs oficial</span></div>
+          </div>
+          <div class="nw">
+            <span class="lbl">Patrimonio · 30d</span>
+            <div class="v">US$ 3.318</div>
+            <div class="split"><span>≈ $ 4.812.300</span><span class="up">+6,9%</span></div>
+            <svg viewBox="0 0 280 54" preserveAspectRatio="none"><defs><linearGradient id="g1" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#F5B83D" stop-opacity=".3"/><stop offset="1" stop-color="#F5B83D" stop-opacity="0"/></linearGradient></defs><path d="M0,44 L30,40 L60,42 L90,34 L120,30 L150,32 L180,22 L210,20 L240,14 L280,8 L280,54 L0,54Z" fill="url(#g1)"/><polyline fill="none" stroke="#F5B83D" stroke-width="1.6" points="0,44 30,40 60,42 90,34 120,30 150,32 180,22 210,20 240,14 280,8"/></svg>
+          </div>
+          <div class="m-list">
+            <div class="h"><span class="lbl">Hoy y ayer</span><span class="lbl" style="color:var(--amber)">ver todo</span></div>
+            <div class="m-row"><span class="dot" style="--c:#F5B83D"></span><span class="t">Carrefour<span>Súper · Galicia</span></span><span class="n down">−30.000</span></div>
+            <div class="m-row"><span class="dot" style="--c:#6CA8FF"></span><span class="t">YPF Av. Libertador<span>Auto · Mercado Pago</span></span><span class="n down">−52.000</span></div>
+          </div>
+          <div class="m-list">
+            <div class="h"><span class="lbl">Vence pronto</span><span class="lbl" style="color:var(--down)">2 esta semana</span></div>
+            <div class="m-row"><span class="dot" style="--c:#FF5C5C"></span><span class="t">Edenor<span>lunes 19</span></span><span class="n">38.200</span></div>
+            <div class="m-row"><span class="dot" style="--c:#FF5C5C"></span><span class="t">Visa Galicia<span>martes 20</span></span><span class="n">412.900</span></div>
+          </div>
+        </div>
+        <nav class="tabbar"><a class="on"><svg class="i"><use href="#grid"/></svg>Panel</a><a><svg class="i"><use href="#list"/></svg>Movs</a><span class="q" data-open-k><svg class="i"><use href="#search"/></svg></span><a><svg class="i"><use href="#trend"/></svg>Mercado</a><a><svg class="i"><use href="#cal"/></svg>Agenda</a></nav>
+        </div>
+      </div>
+
+      <div class="pcol">
+        <h4>Mercado</h4>
+        <p>Portafolio, dólares y cambio de moneda juntos. Si la brecha se mueve fuerte, aparece una tarjeta que te avisa.</p>
+        <div class="phone"><div class="screen">
+          <div class="status"><span>10:42</span><span>5G ▮▮▮</span></div>
+          <span class="lbl">Mercado</span>
+          <div class="gap-card">
+            <div class="row"><span class="lbl" style="color:var(--amber)">Brecha MEP / oficial</span><span class="big">5,7%</span></div>
+            <p>Es la más baja en 90 días. Tenés $ 1,2 M ociosos en Galicia; al MEP de hoy son US$ 827.</p>
+            <div class="act"><button>Ignorar</button><button class="pri">Registrar cambio</button></div>
+          </div>
+          <div class="m-list">
+            <div class="h"><span class="lbl">Posiciones</span><span class="lbl up">+4,2%</span></div>
+            <div class="pos"><b>AAPL</b><span class="r">US$ 694,20</span><span>3 acc · prom 221,40</span><span class="r up">+4,5%</span></div>
+            <div class="pos"><b>MELI</b><span class="r">US$ 312,00</span><span>1 CEDEAR · prom 298</span><span class="r up">+4,7%</span></div>
+            <div class="pos"><b>SPY</b><span class="r">US$ 189,60</span><span>CEDEAR ×10</span><span class="r up">+2,1%</span></div>
+            <div class="pos"><b>GGAL</b><span class="r">US$ 44,10</span><span>ADR ×1</span><span class="r down">−1,8%</span></div>
+          </div>
+          <div class="m-list">
+            <div class="h"><span class="lbl">Tus dólares</span><span class="lbl">US$ 2.078</span></div>
+            <div class="m-row"><span class="dot" style="--c:#3DDC97"></span><span class="t">Galicia USD<span>caja de ahorro</span></span><span class="n">US$ 590</span></div>
+            <div class="m-row"><span class="dot" style="--c:#3DDC97"></span><span class="t">Efectivo<span>billetes</span></span><span class="n">US$ 500</span></div>
+            <div class="m-row"><span class="dot" style="--c:#A78BFA"></span><span class="t">Broker<span>en posiciones</span></span><span class="n">US$ 1.240</span></div>
+          </div>
+        </div>
+        <nav class="tabbar"><a><svg class="i"><use href="#grid"/></svg>Panel</a><a><svg class="i"><use href="#list"/></svg>Movs</a><span class="q" data-open-k><svg class="i"><use href="#search"/></svg></span><a class="on"><svg class="i"><use href="#trend"/></svg>Mercado</a><a><svg class="i"><use href="#cal"/></svg>Agenda</a></nav>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-h"><span class="lbl">Arquitectura</span><h2>Reorganización de los módulos</h2><p>Sale “Más”. Todo pasa a ser una sección de primer nivel con su atajo, o un comando de la paleta.</p></div>
+    <div class="map">
+      <div class="map-row head"><div>Sección</div><div>Antes</div><div>Ahora</div></div>
+      <div class="map-row"><div class="k"><svg class="i"><use href="#grid"/></svg>Panel<kbd>1</kbd></div><div class="old">Inicio</div><div class="new">KPIs en dos monedas, movimientos y agenda de 7 días en una sola vista</div></div>
+      <div class="map-row"><div class="k"><svg class="i"><use href="#list"/></svg>Movimientos<kbd>2</kbd></div><div class="old">Actividad + Análisis</div><div class="new">Tabla con filtros guardados; el análisis es una vista agrupada de la misma tabla</div></div>
+      <div class="map-row"><div class="k"><svg class="i"><use href="#wallet"/></svg>Cuentas<kbd>3</kbd></div><div class="old">Cuentas</div><div class="new">Saldos con su equivalente y una mini curva por cuenta</div></div>
+      <div class="map-row"><div class="k"><svg class="i"><use href="#trend"/></svg>Mercado<kbd>4</kbd></div><div class="old">Portafolio + hoja de cambio</div><div class="new">Posiciones, dólares, brecha y registro de cambio de moneda</div></div>
+      <div class="map-row"><div class="k"><svg class="i"><use href="#cal"/></svg>Agenda<kbd>5</kbd></div><div class="old">Vencimientos + alertas de Vehículos</div><div class="new">Todo lo que tiene fecha o kilometraje; los vehículos quedan como “Activos” en el sidebar</div></div>
+      <div class="map-row"><div class="k"><svg class="i"><use href="#target"/></svg>Rumbo<kbd>6</kbd></div><div class="old">Proyecciones</div><div class="new">Metas y simulador, con escenarios de dólar e inflación</div></div>
+      <div class="map-row"><div class="k"><svg class="i"><use href="#search"/></svg>Paleta<kbd>⌘K</kbd></div><div class="old">Búsqueda, FAB, Exportar, Perfil</div><div class="new">Búsqueda semántica, alta rápida, exportar, ir a cualquier pantalla y cambiar ajustes</div></div>
+    </div>
+
+    <div class="comp">
+      <div class="box"><span class="lbl">Componente</span><h3>Cinta de cotizaciones</h3><p>Reemplaza el badge de tasa del encabezado. Muestra oficial, MEP, blue, CCL, brecha e IPC, cada uno con su variación y la hora. Si una fuente falla, ese ítem se ve gris con la hora del último dato.</p></div>
+      <div class="box"><span class="lbl">Componente</span><h3>Celda “≈ USD”</h3><p>Cada movimiento en pesos muestra cuánto valía en dólares al MEP de ese día. Así, comparar gastos entre meses tiene sentido aunque el peso pierda valor.</p></div>
+      <div class="box"><span class="lbl">Componente</span><h3>Origen de la categoría</h3><p>Un ✦ violeta indica si la categoría la puso una regla, la IA o el bot. Sirve para ver de un vistazo qué revisar y para confiar más en la categorización automática.</p></div>
+      <div class="box"><span class="lbl">Componente</span><h3>Tarjeta de oportunidad</h3><p>Solo aparece con un disparador real, como brecha mínima o saldo ocioso. No es una recomendación de inversión: muestra el dato y te ofrece registrar la operación.</p></div>
+      <div class="box"><span class="lbl">Componente</span><h3>Respuesta con desglose</h3><p>La búsqueda devuelve la suma real y el detalle, y muestra cómo interpretó el “qué” y el “cuándo”, para que se pueda corregir.</p></div>
+      <div class="box"><span class="lbl">Componente</span><h3>Atajos en todos lados</h3><p>Hay atajos para navegar (1-6), para la tabla (j/k/e/n) y para pagar en la agenda (p). Las teclas se muestran en la interfaz, así se aprenden con el uso.</p></div>
+    </div>
+  </div>
+</section>
+
+<footer><div class="wrap">Pulso · propuesta de identidad · los datos y cotizaciones son de ejemplo.</div></footer>
+
+<!-- Paleta de comandos -->
+<div class="overlay" id="k" role="dialog" aria-modal="true" aria-label="Paleta de comandos">
+  <div class="palette">
+    <div class="palette-in"><svg class="i" style="color:var(--amber)"><use href="#search"/></svg><input id="k-in" value="cuánto gasté en el auto el verano pasado" aria-label="Buscar o hacer"><kbd>esc</kbd></div>
+    <div class="palette-body" id="k-body"></div>
+  </div>
+</div>
+
+<script>
+  // Moneda del panel
+  document.querySelectorAll("#p-cur button").forEach(b => b.addEventListener("click", () => {
+    document.querySelectorAll("#p-cur button").forEach(x => x.classList.toggle("on", x === b));
+    const key = b.dataset.c === "usd" ? "u" : "a";
+    document.querySelectorAll("[data-u]").forEach(el => el.textContent = el.dataset[key]);
+  }));
+
+  // Paleta de comandos
+  const ov = document.getElementById("k"), inp = document.getElementById("k-in"), body = document.getElementById("k-body");
+  const ACTIONS = [
+    ["plus", "Nuevo gasto", "n"], ["plus", "Nuevo ingreso", "i"], ["swap", "Registrar cambio de moneda", "c"],
+    ["cal", "Ir a Agenda", "5"], ["target", "Ir a Rumbo", "6"], ["car", "Cargar km del Corolla", ""], ["gear", "Exportar movimientos (CSV)", ""],
+  ];
+  const opt = (ic, t, k, on, sub = "") => `<div class="opt${on ? " on" : ""}"><svg class="i"><use href="#${ic}"/></svg>${t}${sub ? ` <span class="sub">${sub}</span>` : ""}${k ? `<kbd>${k}</kbd>` : ""}</div>`;
+  function render() {
+    const q = inp.value.trim().toLowerCase();
+    let html = "";
+    if (/^(cu[aá]nto|cu[aá]ndo|qu[eé]|en qu[eé])/.test(q)) {
+      const auto = /auto|nafta|corolla/.test(q), verano = /verano/.test(q);
+      html += `<div class="answer"><span class="lbl" style="color:var(--violet)">✦ búsqueda semántica</span>
+        <div class="sum">$ ${auto ? "486.300" : "1.284.000"} <span style="font-size:13px;color:var(--muted)">≈ US$ ${auto ? "372" : "980"}</span></div>
+        <div class="why2"><span>qué: <b>${auto ? "Auto (nafta, service, seguro)" : "todo"}</b></span><span>cuándo: <b>${verano ? "21 dic 2025 – 20 mar 2026" : "todo el historial"}</b></span><span>14 movimientos</span></div>
+        <div class="mini-rows"><div><span>03/03</span><span>Service 80.000 km</span><span class="mono">−148.000</span></div><div><span>18/02</span><span>YPF · tanque lleno</span><span class="mono">−41.200</span></div><div><span>05/01</span><span>Seguro Corolla</span><span class="mono">−62.900</span></div></div></div>`;
+      html += `<div class="pg">${opt("enter", "Ver los 14 movimientos", "↵", true)}${opt("list", "Guardar como filtro", "⌘S", false)}</div>`;
+    } else if (/\d/.test(q)) {
+      html += `<div class="pg"><span class="lbl">Alta rápida</span>${opt("plus", `Gasto: ${q}`, "↵", true, "→ revisar antes de guardar")}</div>`;
+    }
+    const filtered = ACTIONS.filter(a => !q || a[1].toLowerCase().includes(q) || /^(cu[aá]nto|\d)/.test(q));
+    if (filtered.length) html += `<div class="pg"><span class="lbl">Acciones</span>${filtered.slice(0, 5).map((a, i) => opt(a[0], a[1], a[2], !html && i === 0)).join("")}</div>`;
+    body.innerHTML = html || `<div class="pg"><span class="lbl">Sin resultados</span></div>`;
+  }
+  function open() { ov.classList.add("open"); render(); inp.focus(); inp.select(); }
+  function close() { ov.classList.remove("open"); }
+  inp.addEventListener("input", render);
+  document.getElementById("open-k").addEventListener("click", open);
+  document.querySelectorAll("[data-open-k]").forEach(el => el.addEventListener("click", open));
+  ov.addEventListener("click", e => { if (e.target === ov) close(); });
+  document.addEventListener("keydown", e => {
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") { e.preventDefault(); ov.classList.contains("open") ? close() : open(); }
+    if (e.key === "Escape") close();
+  });
+</script>
+</body>
+</html>

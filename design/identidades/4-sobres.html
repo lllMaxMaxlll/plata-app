@@ -1,0 +1,393 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sobres — Propuesta de identidad</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&family=Figtree:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --fondo: #F6F2FB;
+    --ciruela: #2B1B3D;
+    --ciruela-2: #6B5A80;
+    --menta: #BDEBD3;
+    --durazno: #FFD3BF;
+    --manteca: #FFEFA8;
+    --lila: #D9CCFF;
+    --cielo: #C4E3FF;
+    --rosa: #FFC7DA;
+    --rojo: #E5484D;
+    --verde: #1E8A5A;
+    --blanco: #FFFFFF;
+    --clay: 0 1px 0 #fff inset, 0 -3px 0 #2b1b3d10 inset, 0 10px 24px -12px #2b1b3d40;
+    --round: "Nunito", system-ui, sans-serif;
+    --sans: "Figtree", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body { background: var(--fondo); color: var(--ciruela); font-family: var(--sans); line-height: 1.5; font-size: 15px; }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 0 16px; }
+  .r { font-family: var(--round); }
+  .eyebrow { display: inline-block; font: 800 12px var(--round); background: var(--blanco); border-radius: 99px; padding: 5px 12px; box-shadow: var(--clay); }
+  svg.i { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+
+  .hero { padding: 56px 0 48px; }
+  .hero-grid { display: grid; gap: 36px; grid-template-columns: 1fr; align-items: center; }
+  @media (min-width: 880px) { .hero-grid { grid-template-columns: 1.25fr 1fr; } }
+  .logo { display: flex; align-items: center; gap: 18px; margin-top: 18px; }
+  .logo svg { width: clamp(72px, 12vw, 116px); height: auto; flex: none; }
+  .logo h1 { font: 900 clamp(64px, 13vw, 132px) var(--round); letter-spacing: -.04em; line-height: .9; }
+  .hero h2 { font: 800 clamp(24px, 3.4vw, 34px) var(--round); letter-spacing: -.02em; margin-top: 16px; }
+  .hero p { color: var(--ciruela-2); margin-top: 12px; max-width: 54ch; }
+  .why { background: var(--blanco); border-radius: 28px; padding: 22px; box-shadow: var(--clay); }
+  .why h3 { font: 800 16px var(--round); }
+  .why ul { padding-left: 18px; display: grid; gap: 6px; margin-top: 8px; color: var(--ciruela-2); font-size: 14px; }
+
+  section { padding: 52px 0; }
+  .sec-h h2 { font: 900 clamp(30px, 4.4vw, 44px) var(--round); letter-spacing: -.03em; margin-top: 10px; }
+  .sec-h p { color: var(--ciruela-2); max-width: 62ch; margin-top: 8px; }
+
+  .sys { display: grid; gap: 16px; margin-top: 28px; grid-template-columns: 1fr; }
+  @media (min-width: 880px) { .sys { grid-template-columns: 1.3fr 1fr 1fr; } }
+  .panel { background: var(--blanco); border-radius: 28px; padding: 20px; box-shadow: var(--clay); }
+  .panel h3 { font: 800 15px var(--round); }
+  .blobs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 12px; }
+  .blob { font-size: 11px; color: var(--ciruela-2); text-align: center; }
+  .blob i { display: block; aspect-ratio: 1; border-radius: 22px; box-shadow: var(--clay); margin-bottom: 6px; }
+  .blob b { display: block; color: var(--ciruela); font: 800 12px var(--round); }
+  .num-spec { font: 900 50px var(--round); letter-spacing: -.04em; line-height: 1; margin-top: 12px; }
+  .motion { display: grid; gap: 10px; margin-top: 10px; font-size: 14px; color: var(--ciruela-2); }
+  .motion b { color: var(--ciruela); font-weight: 600; }
+
+  /* Teléfonos */
+  .phones { display: grid; gap: 28px; margin-top: 32px; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); justify-items: center; }
+  .pcol { width: 100%; max-width: 320px; }
+  .pcol h4 { font: 800 18px var(--round); }
+  .pcol p { font-size: 13px; color: var(--ciruela-2); margin: 2px 0 12px; min-height: 4.6em; }
+  .phone { position: relative; height: 640px; border-radius: 44px; background: var(--fondo); overflow: hidden; box-shadow: 0 0 0 8px var(--blanco), 0 0 0 9px #2b1b3d14, 0 40px 60px -30px #2b1b3d55; }
+  .screen { position: absolute; inset: 0; overflow-y: auto; padding: 20px 14px 96px; scrollbar-width: none; }
+  .screen::-webkit-scrollbar { display: none; }
+  .status { display: flex; justify-content: space-between; font: 700 11px var(--round); color: var(--ciruela-2); margin-bottom: 12px; }
+  .tabbar { position: absolute; left: 12px; right: 12px; bottom: 12px; height: 64px; background: var(--blanco); border-radius: 24px; box-shadow: var(--clay); display: grid; grid-template-columns: repeat(5, 1fr); align-items: center; }
+  .tabbar a { display: grid; justify-items: center; gap: 1px; font: 700 10px var(--round); color: var(--ciruela-2); text-decoration: none; }
+  .tabbar a.on { color: var(--ciruela); }
+  .tabbar a.on svg { background: var(--lila); border-radius: 10px; padding: 3px; width: 26px; height: 26px; }
+  .tabbar .add { justify-self: center; width: 48px; height: 48px; border-radius: 18px; background: var(--ciruela); color: #fff; display: grid; place-items: center; }
+
+  .top { display: flex; justify-content: space-between; align-items: center; }
+  .top h3 { font: 900 26px var(--round); letter-spacing: -.03em; }
+  .chip { display: inline-flex; align-items: center; gap: 5px; font: 800 11px var(--round); border-radius: 99px; padding: 4px 10px; background: var(--blanco); box-shadow: var(--clay); }
+  .chip.ok { background: var(--menta); }
+  .chip.warn { background: var(--rosa); }
+  .month { font: 700 12px var(--round); color: var(--ciruela-2); margin-top: 2px; }
+
+  .env-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
+  .env { position: relative; border-radius: 24px; padding: 12px; overflow: hidden; min-height: 128px; box-shadow: var(--clay); background: var(--blanco); isolation: isolate; }
+  .env .fill { position: absolute; left: 0; right: 0; bottom: 0; z-index: -1; border-radius: 0 0 24px 24px; }
+  .env .fill::before { content: ""; position: absolute; left: -10%; right: -10%; top: -6px; height: 12px; background: inherit; border-radius: 50%; }
+  .env .em { font-size: 20px; }
+  .env b { display: block; font: 800 14px var(--round); margin-top: 4px; }
+  .env .left { font: 900 18px var(--round); letter-spacing: -.03em; margin-top: 6px; white-space: nowrap; }
+  .env small { display: block; font-size: 11px; color: var(--ciruela-2); }
+  .env.over .left { color: var(--rojo); }
+  .env.wide { grid-column: 1 / -1; min-height: 0; display: flex; align-items: center; gap: 12px; }
+  .env.wide .info { flex: 1; }
+  .env .tag { position: absolute; top: 10px; right: 10px; font: 800 9.5px var(--round); background: #ffffffb0; border-radius: 99px; padding: 2px 7px; }
+
+  .card { background: var(--blanco); border-radius: 24px; padding: 14px; box-shadow: var(--clay); margin-top: 12px; }
+  .card h5 { font: 800 14px var(--round); }
+  .bigleft { font: 900 32px var(--round); letter-spacing: -.04em; line-height: 1.05; white-space: nowrap; }
+
+  /* Repartir */
+  .income { background: var(--ciruela); color: #fff; border-radius: 26px; padding: 16px; margin-top: 12px; }
+  .income small { font: 700 12px var(--round); color: #CDBDE6; }
+  .income .bigleft { color: #fff; }
+  .left-to { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; background: #ffffff18; border-radius: 16px; padding: 8px 12px; font: 800 13px var(--round); }
+  .left-to b { font-size: 17px; }
+  .left-to.done { background: var(--menta); color: var(--ciruela); }
+  .slider { background: var(--blanco); border-radius: 20px; padding: 10px 12px; margin-top: 8px; box-shadow: var(--clay); }
+  .slider .sl-top { display: flex; justify-content: space-between; font: 800 13px var(--round); }
+  .slider input { width: 100%; accent-color: var(--ciruela); margin-top: 4px; }
+  .slider small { font-size: 11px; color: var(--ciruela-2); }
+  .ghost { width: 100%; margin-top: 10px; border: 2px dashed #2b1b3d30; background: none; border-radius: 18px; padding: 10px; font: 800 13px var(--round); color: var(--ciruela); cursor: pointer; }
+
+  /* Detalle */
+  .hero-env { border-radius: 28px; padding: 16px; background: var(--manteca); box-shadow: var(--clay); margin-top: 10px; }
+  .hero-env .row { display: flex; justify-content: space-between; align-items: flex-end; }
+  .daily { font: 800 12px var(--round); color: var(--ciruela-2); }
+  .track { height: 12px; border-radius: 99px; background: #ffffff90; margin-top: 10px; overflow: hidden; }
+  .track i { display: block; height: 100%; border-radius: 99px; background: var(--ciruela); }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; }
+  .stat { background: var(--blanco); border-radius: 18px; padding: 10px 6px; text-align: center; box-shadow: var(--clay); }
+  .stat b { display: block; font: 900 17px var(--round); }
+  .stat span { font-size: 10.5px; color: var(--ciruela-2); }
+  .mv { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1.5px solid #2b1b3d0d; font-size: 13px; }
+  .mv:last-child { border-bottom: 0; }
+  .mv .e { width: 34px; height: 34px; border-radius: 12px; display: grid; place-items: center; font-size: 16px; flex: none; }
+  .mv .t { flex: 1; min-width: 0; }
+  .mv .t span { display: block; font-size: 11px; color: var(--ciruela-2); }
+  .mv .m { font: 800 13px var(--round); white-space: nowrap; }
+
+  /* Cubrir */
+  .scrim { position: absolute; inset: 0; background: #2b1b3d55; }
+  .sheet { position: absolute; left: 0; right: 0; bottom: 0; background: var(--fondo); border-radius: 30px 30px 0 0; padding: 10px 16px 26px; }
+  .grab { width: 40px; height: 5px; border-radius: 9px; background: #2b1b3d25; margin: 0 auto 12px; }
+  .sheet h5 { font: 900 22px var(--round); letter-spacing: -.02em; line-height: 1.15; }
+  .sheet p { font-size: 13px; color: var(--ciruela-2); margin-top: 4px; }
+  .pick { display: flex; align-items: center; gap: 10px; background: var(--blanco); border-radius: 18px; padding: 10px 12px; margin-top: 8px; box-shadow: var(--clay); font-size: 13px; border: 2px solid transparent; }
+  .pick.sel { border-color: var(--ciruela); }
+  .pick .t { flex: 1; }
+  .pick .t span { display: block; font-size: 11px; color: var(--ciruela-2); }
+  .pick b { font: 800 13px var(--round); }
+  .cta { width: 100%; margin-top: 14px; border: 0; border-radius: 18px; padding: 13px; font: 900 15px var(--round); background: var(--ciruela); color: #fff; }
+
+  /* Mapa */
+  .map { display: grid; gap: 14px; margin-top: 28px; grid-template-columns: 1fr; }
+  @media (min-width: 880px) { .map { grid-template-columns: repeat(4, 1fr); } }
+  .mcol { border-radius: 28px; padding: 18px; box-shadow: var(--clay); }
+  .mcol h3 { font: 900 22px var(--round); }
+  .mcol .from { font-size: 12px; color: var(--ciruela-2); margin: 2px 0 10px; }
+  .mcol ul { padding-left: 16px; font-size: 14px; display: grid; gap: 4px; }
+  .comp { display: grid; gap: 16px; margin-top: 28px; grid-template-columns: 1fr; }
+  @media (min-width: 800px) { .comp { grid-template-columns: repeat(3, 1fr); } }
+  .comp .panel p { color: var(--ciruela-2); font-size: 14px; margin-top: 6px; }
+  .comp .panel .em { font-size: 26px; }
+  footer { padding: 24px 0 56px; color: var(--ciruela-2); font-size: 13px; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="env" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="13" rx="3"/><path d="M3.5 7.5l8.5 6 8.5-6"/></symbol>
+  <symbol id="list" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></symbol>
+  <symbol id="plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="piggy" viewBox="0 0 24 24"><path d="M19 10c1 0 2 .5 2 2M5 11a7 6 0 0 1 13-1v4l-2 2v3h-3v-2h-3v2H7v-3a6 6 0 0 1-2-5zM15 9h.01"/></symbol>
+  <symbol id="user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></symbol>
+  <symbol id="back" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></symbol>
+</svg>
+
+<header class="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <span class="eyebrow">Propuesta 4 de 6 · Presupuesto táctil</span>
+      <div class="logo">
+        <svg viewBox="0 0 120 100" aria-hidden="true"><rect x="6" y="22" width="108" height="72" rx="22" fill="#D9CCFF"/><circle cx="60" cy="24" r="20" fill="#FFEFA8" stroke="#2B1B3D" stroke-width="5"/><text x="60" y="32" text-anchor="middle" font-family="Nunito" font-weight="900" font-size="22" fill="#2B1B3D">$</text><path d="M6 44 L60 72 L114 44 L114 72 Q114 94 92 94 L28 94 Q6 94 6 72Z" fill="#C4E3FF" stroke="#2B1B3D" stroke-width="5" stroke-linejoin="round"/><rect x="6" y="22" width="108" height="72" rx="22" fill="none" stroke="#2B1B3D" stroke-width="5"/></svg>
+        <h1>sobres</h1>
+      </div>
+      <h2>Cada peso con un destino.</h2>
+      <p>Es el método de los sobres de toda la vida, pasado a digital. Cuando entra el sueldo, lo repartís en sobres (súper, auto, salidas, Japón) y la pregunta de todos los días deja de ser “¿cuánto tengo?” para pasar a ser “¿cuánto me queda para esto?”. Con inflación alta funciona mejor que un presupuesto anual, porque se rearma cada mes.</p>
+    </div>
+    <div class="why">
+      <h3>Por qué este nombre</h3>
+      <ul>
+        <li>Lo entiende cualquiera: todos alguna vez separamos plata en sobres.</li>
+        <li>Nombra un método, no la plata en sí. La app pasa a guiar, no solo a registrar.</li>
+        <li>Da un ícono claro, con la moneda asomando del sobre, y un verbo para la interfaz: “meter en el sobre”.</li>
+      </ul>
+    </div>
+  </div>
+</header>
+
+<section>
+  <div class="wrap">
+    <div class="sec-h"><span class="eyebrow">Sistema</span><h2>Blandito, redondo y con relieve</h2><p>Superficies tipo arcilla: radios grandes, brillo arriba y sombra suave abajo. Cada sobre tiene su color pastel y se “llena” como un vaso. El color fuerte (ciruela) queda para acciones y texto, y el rojo solo para los sobres pasados de gasto.</p></div>
+    <div class="sys">
+      <div class="panel">
+        <h3>Paleta · un pastel por sobre</h3>
+        <div class="blobs">
+          <div class="blob"><i style="background:var(--menta)"></i><b>Menta</b>súper</div>
+          <div class="blob"><i style="background:var(--manteca)"></i><b>Manteca</b>auto</div>
+          <div class="blob"><i style="background:var(--durazno)"></i><b>Durazno</b>salidas</div>
+          <div class="blob"><i style="background:var(--cielo)"></i><b>Cielo</b>servicios</div>
+          <div class="blob"><i style="background:var(--lila)"></i><b>Lila</b>metas</div>
+          <div class="blob"><i style="background:var(--rosa)"></i><b>Rosa</b>alerta suave</div>
+          <div class="blob"><i style="background:var(--ciruela)"></i><b>Ciruela</b>texto, acción</div>
+          <div class="blob"><i style="background:var(--fondo)"></i><b>Niebla</b>fondo</div>
+        </div>
+      </div>
+      <div class="panel">
+        <h3>Tipografía</h3>
+        <p class="num-spec">$ 16.000</p>
+        <p style="font-size:13px;color:var(--ciruela-2);margin-top:8px">Nunito 800/900 redondeada para montos y títulos · Figtree para el texto. Las cifras se leen amables, no intimidan.</p>
+      </div>
+      <div class="panel">
+        <h3>Movimiento</h3>
+        <div class="motion">
+          <div><b>El sobre se vacía</b> con una ola cuando cargás un gasto.</div>
+          <div><b>Arrastrar entre sobres</b> mueve plata con vibración háptica.</div>
+          <div><b>Sueldo repartido:</b> confeti chiquito, una vez por mes, nada más.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-h"><span class="eyebrow">Pantallas</span><h2>Lo que te queda, no lo que tenés</h2><p>Los sobres son el inicio. Los vencimientos pasan a ser “sobres fijos” que se pagan solos, el vehículo vive adentro de su sobre y las metas son sobres de largo plazo. En la segunda pantalla podés repartir el sueldo.</p></div>
+    <div class="phones">
+      <!-- Inicio -->
+      <div class="pcol">
+        <h4>Sobres</h4>
+        <p>Cada tarjeta muestra lo que queda y se ve más o menos llena. Arriba, la señal de que todo está repartido.</p>
+        <div class="phone"><div class="screen">
+          <div class="status"><span>10:41</span><span>5G</span></div>
+          <div class="top"><div><h3>Octubre</h3><div class="month">quedan 13 días</div></div><span class="chip ok">✓ todo repartido</span></div>
+          <div class="env-grid">
+            <div class="env"><span class="fill" style="height:5%;background:var(--menta)"></span><span class="em">🛒</span><b>Súper</b><div class="left">$ 16.000</div><small>de $ 300.000</small><span class="tag">¡ojo!</span></div>
+            <div class="env over"><span class="fill" style="height:0;background:var(--durazno)"></span><span class="em">🍻</span><b>Salidas</b><div class="left">−$ 8.000</div><small>de $ 120.000</small><span class="tag" style="background:var(--rosa)">cubrir</span></div>
+            <div class="env"><span class="fill" style="height:45%;background:var(--manteca)"></span><span class="em">🚗</span><b>Auto</b><div class="left">$ 68.000</div><small>de $ 150.000</small></div>
+            <div class="env"><span class="fill" style="height:72%;background:var(--cielo)"></span><span class="em">💡</span><b>Fijos</b><div class="left">$ 478.600</div><small>3 por pagar</small><span class="tag">auto</span></div>
+            <div class="env"><span class="fill" style="height:80%;background:var(--rosa)"></span><span class="em">🩹</span><b>Imprevistos</b><div class="left">$ 160.000</div><small>de $ 200.000</small></div>
+            <div class="env"><span class="fill" style="height:58%;background:var(--lila)"></span><span class="em">🗾</span><b>Japón</b><div class="left">US$ 2.900</div><small>meta US$ 5.000</small></div>
+          </div>
+        </div>
+        <nav class="tabbar"><a class="on"><svg class="i"><use href="#env"/></svg>Sobres</a><a><svg class="i"><use href="#list"/></svg>Movs</a><span class="add"><svg class="i"><use href="#plus"/></svg></span><a><svg class="i"><use href="#piggy"/></svg>Ahorro</a><a><svg class="i"><use href="#user"/></svg>Vos</a></nav>
+        </div>
+      </div>
+
+      <!-- Repartir -->
+      <div class="pcol">
+        <h4>Repartir el sueldo (interactivo)</h4>
+        <p>Cuando entra el sueldo, aparece esto. Movés los sliders hasta que “sin asignar” llegue a cero. También podés copiar el reparto del mes anterior.</p>
+        <div class="phone"><div class="screen">
+          <div class="status"><span>1 nov</span><span>5G</span></div>
+          <div class="top"><h3>Llegó el sueldo 🎉</h3></div>
+          <div class="income">
+            <small>Galicia · 1 de noviembre</small>
+            <div class="bigleft">$ 2.100.000</div>
+            <div class="left-to" id="s-left"><span>Sin asignar</span><b id="s-left-v">$ 0</b></div>
+          </div>
+          <div id="s-sliders"></div>
+          <button class="ghost" id="s-copy">↺ Copiar reparto de octubre</button>
+        </div>
+        <nav class="tabbar"><a class="on"><svg class="i"><use href="#env"/></svg>Sobres</a><a><svg class="i"><use href="#list"/></svg>Movs</a><span class="add"><svg class="i"><use href="#plus"/></svg></span><a><svg class="i"><use href="#piggy"/></svg>Ahorro</a><a><svg class="i"><use href="#user"/></svg>Vos</a></nav>
+        </div>
+      </div>
+
+      <!-- Detalle Auto -->
+      <div class="pcol">
+        <h4>Adentro del sobre Auto</h4>
+        <p>El módulo de Vehículos deja de ser una pantalla aparte: rendimiento, costo por km y service viven acá, al lado de la plata que les toca.</p>
+        <div class="phone"><div class="screen">
+          <div class="status"><span>10:43</span><span>5G</span></div>
+          <div class="top"><span class="chip"><svg class="i" style="width:14px;height:14px"><use href="#back"/></svg>Sobres</span><span class="chip">Mover plata</span></div>
+          <div class="hero-env">
+            <div style="font-size:26px">🚗</div>
+            <div class="row"><div><div style="font:800 14px var(--round)">Auto · Corolla</div><div class="bigleft">$ 68.000</div></div><div class="daily">≈ $ 5.200/día</div></div>
+            <div class="track"><i style="width:55%"></i></div>
+            <div class="daily" style="margin-top:6px">gastaste $ 82.000 de $ 150.000</div>
+          </div>
+          <div class="stats">
+            <div class="stat"><b>11,8</b><span>km/L</span></div>
+            <div class="stat"><b>$ 312</b><span>por km</span></div>
+            <div class="stat"><b style="color:var(--rojo)">420</b><span>km al service</span></div>
+          </div>
+          <div class="card">
+            <h5>Se viene</h5>
+            <div class="mv"><span class="e" style="background:var(--rosa)">🔧</span><span class="t">Service 85.000 km<span>estimado $ 160.000 · no entra en el sobre</span></span><span class="m" style="color:var(--rojo)">−$ 92.000</span></div>
+            <div class="mv"><span class="e" style="background:var(--cielo)">📋</span><span class="t">VTV<span>28 de noviembre</span></span><span class="m">$ 38.000</span></div>
+          </div>
+          <div class="card">
+            <h5>Movimientos</h5>
+            <div class="mv"><span class="e" style="background:var(--manteca)">⛽</span><span class="t">YPF Av. Libertador<span>sáb 17 · tanque lleno</span></span><span class="m">−$ 52.000</span></div>
+            <div class="mv"><span class="e" style="background:var(--manteca)">🧽</span><span class="t">Lavadero<span>mié 7</span></span><span class="m">−$ 12.000</span></div>
+          </div>
+        </div>
+        <nav class="tabbar"><a class="on"><svg class="i"><use href="#env"/></svg>Sobres</a><a><svg class="i"><use href="#list"/></svg>Movs</a><span class="add"><svg class="i"><use href="#plus"/></svg></span><a><svg class="i"><use href="#piggy"/></svg>Ahorro</a><a><svg class="i"><use href="#user"/></svg>Vos</a></nav>
+        </div>
+      </div>
+
+      <!-- Cubrir -->
+      <div class="pcol">
+        <h4>Cubrir un sobre en rojo</h4>
+        <p>Si un sobre se pasa, la app no te reta: te pregunta de dónde sacás la plata y te sugiere el sobre con más margen.</p>
+        <div class="phone"><div class="screen">
+          <div class="status"><span>10:44</span><span>5G</span></div>
+          <div class="top"><h3>Octubre</h3></div>
+          <div class="env-grid">
+            <div class="env"><span class="fill" style="height:5%;background:var(--menta)"></span><span class="em">🛒</span><b>Súper</b><div class="left">$ 16.000</div></div>
+            <div class="env over"><span class="em">🍻</span><b>Salidas</b><div class="left">−$ 8.000</div></div>
+          </div>
+          <div class="scrim"></div>
+          <div class="sheet">
+            <div class="grab"></div>
+            <h5>Salidas se pasó por $ 8.000</h5>
+            <p>¿De qué sobre lo cubrimos? Te ordené los que tienen más margen para lo que queda del mes.</p>
+            <div class="pick sel"><span style="font-size:20px">🩹</span><span class="t">Imprevistos<span>queda $ 160.000 · sugerido</span></span><b>$ 8.000</b></div>
+            <div class="pick"><span style="font-size:20px">🚗</span><span class="t">Auto<span>queda $ 68.000 · ojo con el service</span></span><b>—</b></div>
+            <div class="pick"><span style="font-size:20px">🛒</span><span class="t">Súper<span>queda $ 16.000 · muy justo</span></span><b>—</b></div>
+            <button class="cta">Mover $ 8.000</button>
+          </div>
+        </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-h"><span class="eyebrow">Arquitectura</span><h2>Reorganización de los módulos</h2><p>Todo se acomoda alrededor del sobre. Hay un concepto nuevo, el sobre, y casi todos los módulos actuales se vuelven un tipo de sobre.</p></div>
+    <div class="map">
+      <div class="mcol" style="background:var(--menta)"><h3>✉️ Sobres</h3><p class="from">antes: Inicio + Vencimientos + Vehículos</p><ul><li>Sobres variables (súper, salidas)</li><li>Sobres fijos con fecha y débito: los vencimientos</li><li>Sobre Auto con la ficha del vehículo</li></ul></div>
+      <div class="mcol" style="background:var(--cielo)"><h3>📋 Movimientos</h3><p class="from">antes: Actividad + Análisis + Búsqueda</p><ul><li>Lista con buscador semántico arriba</li><li>“Cómo te fue”: cierre del mes por sobre</li><li>Cada gasto se asigna a un sobre</li></ul></div>
+      <div class="mcol" style="background:var(--lila)"><h3>🐷 Ahorro</h3><p class="from">antes: Proyecciones + Portafolio + Cuentas</p><ul><li>Metas = sobres de largo plazo</li><li>Acciones y dólares</li><li>Dónde está físicamente la plata (cuentas)</li></ul></div>
+      <div class="mcol" style="background:var(--durazno)"><h3>🙂 Vos</h3><p class="from">antes: Perfil, categorías, exportar</p><ul><li>Plantilla de reparto</li><li>Bot de Telegram (“¿cuánto me queda en súper?”)</li><li>Exportar, seguridad</li></ul></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-h"><span class="eyebrow">Componentes</span><h2>Lo que cambia</h2></div>
+    <div class="comp">
+      <div class="panel"><span class="em">🫙</span><h3>Tarjeta-sobre</h3><p>Reemplaza a la vez las categorías y el gráfico de torta. El nivel de “líquido” muestra lo que queda, y el número grande es lo disponible, no lo gastado.</p></div>
+      <div class="panel"><span class="em">🎚️</span><h3>Repartidor de sueldo</h3><p>Es un flujo guiado con “sin asignar” que baja a cero, y aparece solo cuando se detecta un ingreso de categoría Salario.</p></div>
+      <div class="panel"><span class="em">🔁</span><h3>Cubrir y mover</h3><p>Pasarse de un sobre no es un error: es mover plata de otro. Así el presupuesto aguanta los meses reales.</p></div>
+      <div class="panel"><span class="em">📅</span><h3>Sobres fijos</h3><p>Los vencimientos reservan su plata cuando entra el sueldo y se marcan pagados con el débito. Nunca te los gastás sin darte cuenta.</p></div>
+      <div class="panel"><span class="em">🤖</span><h3>Categorizar = asignar sobre</h3><p>La categorización automática ya existe: ahora también elige el sobre. “30 lucas super” descuenta del sobre Súper y el bot te contesta cuánto queda.</p></div>
+      <div class="panel"><span class="em">🏁</span><h3>Cierre del mes</h3><p>Lo que sobró en cada sobre lo podés pasar al mes siguiente, mandar a una meta o dejarlo en Imprevistos. Una decisión por mes, nada más.</p></div>
+    </div>
+  </div>
+</section>
+
+<footer><div class="wrap">Sobres · propuesta de identidad · los datos son de ejemplo.</div></footer>
+
+<script>
+  const TOTAL = 2100000;
+  const ENVS = [
+    ["🛒", "Súper", 300000, 0, 600000],
+    ["💡", "Fijos", 520000, 0, 900000],
+    ["🚗", "Auto", 150000, 0, 400000],
+    ["🍻", "Salidas", 120000, 0, 400000],
+    ["🩹", "Imprevistos", 200000, 0, 500000],
+    ["🗾", "Japón", 380000, 0, 900000],
+  ];
+  const OCT = ENVS.map(e => e[2]);
+  const vals = ENVS.map(() => 0);
+  const box = document.getElementById("s-sliders");
+  const fmt = n => (n < 0 ? "−" : "") + "$ " + Math.abs(n).toLocaleString("es-AR");
+  box.innerHTML = ENVS.map((e, i) => `
+    <div class="slider"><div class="sl-top"><span>${e[0]} ${e[1]}</span><span id="s-v${i}">$ 0</span></div>
+    <input type="range" min="${e[3]}" max="${e[4]}" step="10000" value="0" data-i="${i}" aria-label="${e[1]}">
+    <small>octubre: ${fmt(e[2])}</small></div>`).join("");
+  function update() {
+    const left = TOTAL - vals.reduce((a, b) => a + b, 0);
+    vals.forEach((v, i) => document.getElementById("s-v" + i).textContent = fmt(v));
+    const el = document.getElementById("s-left");
+    document.getElementById("s-left-v").textContent = fmt(left);
+    el.classList.toggle("done", left === 0);
+    el.firstElementChild.textContent = left === 0 ? "¡Todo repartido!" : left < 0 ? "Te pasaste" : "Sin asignar";
+  }
+  box.addEventListener("input", e => { vals[+e.target.dataset.i] = +e.target.value; update(); });
+  document.getElementById("s-copy").addEventListener("click", () => {
+    OCT.forEach((v, i) => { vals[i] = v; box.querySelector(`[data-i="${i}"]`).value = v; });
+    vals[5] += TOTAL - OCT.reduce((a, b) => a + b, 0);
+    box.querySelector(`[data-i="5"]`).value = vals[5];
+    update();
+  });
+  update();
+</script>
+</body>
+</html>

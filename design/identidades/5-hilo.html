@@ -1,0 +1,401 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hilo — Propuesta de identidad</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;700;900&family=Martian+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --blanco: #F7F7F5;
+    --negro: #0E0E0E;
+    --gris: #8A8A86;
+    --gris-2: #D9D9D4;
+    --cobalto: #2340FF;
+    --cobalto-2: #E3E7FF;
+    --rojo: #E1341E;
+    --sans: "Schibsted Grotesk", system-ui, sans-serif;
+    --mono: "Martian Mono", ui-monospace, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body { background: var(--blanco); color: var(--negro); font-family: var(--sans); line-height: 1.45; font-size: 15px; }
+  .wrap { max-width: 1200px; margin: 0 auto; padding: 0 16px; }
+  .mono { font-family: var(--mono); }
+  .meta { font: 400 10.5px var(--mono); text-transform: uppercase; letter-spacing: .04em; color: var(--gris); }
+  svg.i { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: square; flex: none; }
+
+  /* Portada: grilla suiza */
+  .hero { border-bottom: 2px solid var(--negro); }
+  .hero-grid { display: grid; grid-template-columns: 1fr; }
+  @media (min-width: 900px) { .hero-grid { grid-template-columns: repeat(12, 1fr); } }
+  .hero-a { padding: 40px 0 32px; }
+  @media (min-width: 900px) { .hero-a { grid-column: 1 / 9; padding-right: 32px; border-right: 1px solid var(--gris-2); } .hero-b { grid-column: 9 / 13; padding: 40px 0 32px 24px; } }
+  .hero h1 { font: 900 clamp(88px, 19vw, 220px) var(--sans); letter-spacing: -.065em; line-height: .8; margin-top: 18px; display: flex; align-items: flex-end; gap: .06em; }
+  .hero h1 .dot { display: inline-block; width: .2em; height: .2em; background: var(--cobalto); border-radius: 50%; margin-bottom: .06em; }
+  .thread-line { height: 2px; background: var(--negro); margin-top: 22px; position: relative; }
+  .thread-line::after { content: ""; position: absolute; left: 62%; top: -6px; width: 14px; height: 14px; border-radius: 50%; background: var(--cobalto); }
+  .hero h2 { font: 700 clamp(22px, 3vw, 30px) var(--sans); letter-spacing: -.02em; margin-top: 22px; max-width: 24ch; }
+  .hero p { color: #444; margin-top: 10px; max-width: 56ch; }
+  .hero-b h3 { font: 700 13px var(--sans); text-transform: uppercase; letter-spacing: .04em; }
+  .hero-b ol { padding-left: 18px; display: grid; gap: 8px; margin-top: 10px; font-size: 14px; color: #444; }
+
+  section { border-bottom: 2px solid var(--negro); padding: 44px 0; }
+  .sec-h { display: grid; gap: 12px; grid-template-columns: 1fr; }
+  @media (min-width: 900px) { .sec-h { grid-template-columns: 4fr 8fr; } }
+  .sec-h h2 { font: 900 clamp(34px, 5vw, 56px) var(--sans); letter-spacing: -.045em; line-height: .95; }
+  .sec-h p { color: #444; max-width: 60ch; align-self: end; }
+
+  .sys { display: grid; grid-template-columns: 1fr; margin-top: 32px; border-top: 1px solid var(--negro); }
+  @media (min-width: 900px) { .sys { grid-template-columns: repeat(3, 1fr); } }
+  .sys > div { padding: 16px 16px 16px 0; border-bottom: 1px solid var(--gris-2); }
+  @media (min-width: 900px) { .sys > div { border-bottom: 0; border-right: 1px solid var(--gris-2); padding-left: 16px; } .sys > div:first-child { padding-left: 0; } .sys > div:last-child { border-right: 0; } }
+  .sw { display: grid; grid-template-columns: repeat(4, 1fr); margin-top: 12px; }
+  .sw div { height: 96px; padding: 8px; display: flex; flex-direction: column; justify-content: flex-end; font: 10px var(--mono); }
+  .spec { font: 900 76px var(--sans); letter-spacing: -.06em; line-height: .9; margin-top: 10px; }
+  .rules { margin-top: 10px; display: grid; gap: 10px; font-size: 14px; }
+  .rules div { display: grid; grid-template-columns: 28px 1fr; }
+  .rules span:first-child { font: 500 11px var(--mono); color: var(--cobalto); padding-top: 3px; }
+
+  /* Teléfonos */
+  .phones { display: grid; gap: 28px; margin-top: 36px; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); justify-items: center; }
+  .pcol { width: 100%; max-width: 320px; }
+  .pcol h4 { font: 900 22px var(--sans); letter-spacing: -.03em; border-top: 2px solid var(--negro); padding-top: 8px; }
+  .pcol p { font-size: 13px; color: #555; margin: 4px 0 12px; min-height: 4.6em; }
+  .phone { position: relative; height: 650px; background: var(--blanco); border: 2px solid var(--negro); border-radius: 34px; overflow: hidden; }
+  .screen { position: absolute; inset: 0; overflow-y: auto; padding: 0 0 128px; scrollbar-width: none; }
+  .screen::-webkit-scrollbar { display: none; }
+  .ph-top { position: sticky; top: 0; z-index: 2; background: var(--blanco); padding: 16px 16px 10px; border-bottom: 1px solid var(--negro); }
+  .status { display: flex; justify-content: space-between; font: 400 10px var(--mono); margin-bottom: 10px; }
+  .ph-top .row { display: flex; justify-content: space-between; align-items: flex-end; }
+  .ph-top .bal { font: 900 30px var(--sans); letter-spacing: -.05em; line-height: 1; }
+  .ph-top .bal small { font: 400 10px var(--mono); letter-spacing: 0; display: block; color: var(--gris); margin-top: 4px; }
+  .wordmark { font: 900 18px var(--sans); letter-spacing: -.05em; display: flex; align-items: center; gap: 3px; }
+  .wordmark i { width: 6px; height: 6px; background: var(--cobalto); border-radius: 50%; display: inline-block; }
+  .filters { display: flex; gap: 6px; margin-top: 10px; overflow-x: auto; scrollbar-width: none; }
+  .filters::-webkit-scrollbar { display: none; }
+  .filters button { flex: none; border: 1px solid var(--negro); background: none; border-radius: 99px; padding: 3px 10px; font: 500 12px var(--sans); cursor: pointer; color: var(--negro); }
+  .filters button.on { background: var(--negro); color: var(--blanco); }
+
+  .feed { position: relative; padding: 0 16px 0 40px; }
+  .feed::before { content: ""; position: absolute; left: 22px; top: 0; bottom: 0; width: 1px; background: var(--negro); }
+  .day-h { font: 500 10px var(--mono); text-transform: uppercase; color: var(--gris); padding: 14px 0 4px; position: relative; }
+  .post { position: relative; padding: 9px 0; border-bottom: 1px solid var(--gris-2); }
+  .post::before { content: ""; position: absolute; left: -22px; top: 15px; width: 9px; height: 9px; background: var(--blanco); border: 1.5px solid var(--negro); border-radius: 50%; }
+  .post.future { color: var(--gris); }
+  .post.future::before { border-style: dashed; border-color: var(--gris); }
+  .post.sys::before { background: var(--cobalto); border-color: var(--cobalto); }
+  .post .l { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
+  .post .l b { font-weight: 700; font-size: 14px; }
+  .post .l .n { font: 400 12px var(--mono); white-space: nowrap; }
+  .post .s { font-size: 11.5px; color: var(--gris); }
+  .post.future .l b { color: var(--negro); font-weight: 500; }
+  .post .callout { margin-top: 6px; background: var(--cobalto-2); padding: 10px; font-size: 13px; }
+  .post .callout b { color: var(--cobalto); }
+  .post .acts { display: flex; gap: 6px; margin-top: 6px; }
+  .post .acts button { border: 1px solid var(--negro); background: var(--blanco); font: 500 11.5px var(--sans); padding: 3px 9px; cursor: pointer; color: var(--negro); }
+  .post .acts button.pri { background: var(--cobalto); border-color: var(--cobalto); color: #fff; }
+  .now { position: relative; margin: 6px 0 0 -40px; padding: 6px 16px 6px 40px; background: var(--negro); color: var(--blanco); font: 500 10.5px var(--mono); display: flex; justify-content: space-between; }
+  .now::before { content: ""; position: absolute; left: 17px; top: 50%; width: 11px; height: 11px; margin-top: -5.5px; background: var(--cobalto); border-radius: 50%; box-shadow: 0 0 0 3px var(--negro), 0 0 0 4px var(--cobalto); }
+  .post[hidden] { display: none; }
+
+  .composer { position: absolute; left: 0; right: 0; bottom: 64px; padding: 8px 12px; background: var(--blanco); border-top: 1px solid var(--negro); }
+  .composer div { display: flex; align-items: center; gap: 8px; border: 1.5px solid var(--negro); border-radius: 99px; padding: 8px 8px 8px 14px; font-size: 13px; color: var(--gris); }
+  .composer span.go { margin-left: auto; width: 28px; height: 28px; border-radius: 50%; background: var(--cobalto); color: #fff; display: grid; place-items: center; }
+  .tabbar { position: absolute; left: 0; right: 0; bottom: 0; height: 64px; border-top: 2px solid var(--negro); background: var(--blanco); display: grid; grid-template-columns: repeat(4, 1fr); }
+  .tabbar a { display: grid; place-items: center; align-content: center; gap: 2px; font: 500 11px var(--sans); color: var(--gris); text-decoration: none; border-right: 1px solid var(--gris-2); }
+  .tabbar a:last-child { border-right: 0; }
+  .tabbar a.on { color: var(--negro); font-weight: 700; box-shadow: inset 0 3px 0 var(--cobalto); }
+
+  /* Chat */
+  .chat { padding: 12px 14px; display: grid; gap: 10px; }
+  .msg { max-width: 85%; padding: 9px 12px; font-size: 13.5px; }
+  .msg.me { justify-self: end; background: var(--negro); color: var(--blanco); border-radius: 16px 16px 2px 16px; }
+  .msg.app { background: #fff; border: 1px solid var(--gris-2); border-radius: 16px 16px 16px 2px; }
+  .msg.app b { font-weight: 700; }
+  .msg .via { font: 400 9.5px var(--mono); color: var(--gris); display: block; margin-top: 4px; }
+  .msg.me .via { color: #999; }
+  .msg .card { margin-top: 8px; border-top: 1px solid var(--gris-2); padding-top: 8px; display: grid; gap: 3px; font-size: 12px; }
+  .msg .card div { display: flex; justify-content: space-between; gap: 8px; }
+  .msg .card .n { font: 400 11px var(--mono); }
+  .msg .sum { font: 900 26px var(--sans); letter-spacing: -.04em; }
+  .msg .btns { display: flex; gap: 6px; margin-top: 8px; }
+  .msg .btns span { border: 1px solid var(--negro); padding: 3px 9px; font-size: 11.5px; }
+
+  /* Resumen */
+  .res { padding: 14px 16px; }
+  .res-big { font: 900 54px var(--sans); letter-spacing: -.06em; line-height: .9; }
+  .res-row { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; padding: 10px 0; border-bottom: 1px solid var(--gris-2); }
+  .res-row .n { font: 400 12px var(--mono); }
+  .res-row .bar { grid-column: 1 / -1; height: 10px; background: var(--gris-2); }
+  .res-row .bar i { display: block; height: 100%; background: var(--negro); }
+  .res-row .bar i.c { background: var(--cobalto); }
+  .res-row .bar i.r { background: var(--rojo); }
+  .res h5 { font: 700 12px var(--sans); text-transform: uppercase; letter-spacing: .04em; margin-top: 18px; border-top: 2px solid var(--negro); padding-top: 6px; }
+
+  /* Detalle */
+  .det { padding: 14px 16px; }
+  .det .n { font: 900 44px var(--sans); letter-spacing: -.05em; line-height: 1; }
+  .kv { display: grid; grid-template-columns: 90px 1fr; border-top: 1px solid var(--negro); margin-top: 14px; }
+  .kv span { padding: 7px 0; border-bottom: 1px solid var(--gris-2); font-size: 13px; }
+  .kv span:nth-child(odd) { font: 400 10px var(--mono); text-transform: uppercase; color: var(--gris); padding-top: 9px; }
+  .ins { margin-top: 14px; background: var(--cobalto); color: #fff; padding: 12px; }
+  .ins b { font: 900 22px var(--sans); letter-spacing: -.03em; display: block; }
+  .ins span { font-size: 12.5px; }
+  .ins svg { width: 100%; height: 44px; margin-top: 8px; display: block; }
+
+  /* Mapa */
+  .map { margin-top: 32px; display: grid; grid-template-columns: 1fr; border-top: 2px solid var(--negro); }
+  .map-row { display: grid; grid-template-columns: 1fr; gap: 4px 16px; padding: 14px 0; border-bottom: 1px solid var(--gris-2); }
+  @media (min-width: 900px) { .map-row { grid-template-columns: 3fr 3fr 6fr; } }
+  .map-row h3 { font: 900 26px var(--sans); letter-spacing: -.04em; line-height: 1; }
+  .map-row .old { font: 400 11px var(--mono); color: var(--gris); padding-top: 6px; }
+  .map-row .new { font-size: 14px; color: #333; }
+  .lens { display: inline-block; border: 1px solid var(--negro); border-radius: 99px; padding: 0 8px; font-size: 12px; margin: 2px 2px 0 0; }
+  .comp { margin-top: 32px; display: grid; grid-template-columns: 1fr; gap: 0 32px; }
+  @media (min-width: 800px) { .comp { grid-template-columns: 1fr 1fr 1fr; } }
+  .comp article { border-top: 2px solid var(--negro); padding: 12px 0 24px; }
+  .comp .k { font: 500 11px var(--mono); color: var(--cobalto); }
+  .comp h3 { font: 900 22px var(--sans); letter-spacing: -.03em; margin-top: 4px; }
+  .comp p { color: #444; font-size: 14px; margin-top: 6px; }
+  footer { padding: 24px 0 56px; font: 400 11px var(--mono); color: var(--gris); }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="thread" viewBox="0 0 24 24"><path d="M5 3v18"/><circle cx="5" cy="7" r="2"/><circle cx="5" cy="15" r="2"/><path d="M10 7h10M10 15h10"/></symbol>
+  <symbol id="bars" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></symbol>
+  <symbol id="box" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18"/><path d="M3 12h18M12 3v18"/></symbol>
+  <symbol id="user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></symbol>
+  <symbol id="up" viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6"/></symbol>
+  <symbol id="back" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></symbol>
+</svg>
+
+<header class="hero">
+  <div class="wrap hero-grid">
+    <div class="hero-a">
+      <span class="meta">Propuesta 5 de 6 — Identidad suiza / feed</span>
+      <h1>hilo<span class="dot"></span></h1>
+      <div class="thread-line"></div>
+      <h2>Todo lo que pasa con tu plata, en un solo hilo.</h2>
+      <p>Hoy la app tiene once pantallas. Hilo tiene una línea de tiempo: lo que viene arriba, lo que pasó abajo y una marca de “ahora” en el medio. Los movimientos, los vencimientos, el service del auto, la suba de una acción y el resumen de la semana son todos posts del mismo hilo. Abajo hay un campo para escribir, que es el mismo chat del bot de Telegram.</p>
+    </div>
+    <div class="hero-b">
+      <h3>Por qué este nombre</h3>
+      <ol>
+        <li>Describe exactamente la interfaz: un hilo cronológico, como un chat o un feed.</li>
+        <li>“Seguir el hilo” de tus gastos: nada queda en otra pantalla.</li>
+        <li>Cuatro letras, se lee igual en todos lados, y el punto azul es el “ahora”.</li>
+        <li>El chat con el bot y la app pasan a ser la misma conversación.</li>
+      </ol>
+    </div>
+  </div>
+</header>
+
+<section>
+  <div class="wrap">
+    <div class="sec-h"><h2>Sistema</h2><p>Estilo tipográfico internacional: grilla visible, filetes negros en vez de tarjetas, tipografía pesada y un solo color. El cobalto marca lo que dice la app (resúmenes, alertas, respuestas) y el negro lo que hiciste vos. No hay sombras ni gradientes, y las esquinas solo se redondean en lo que se toca.</p></div>
+    <div class="sys">
+      <div>
+        <span class="meta">Color</span>
+        <div class="sw">
+          <div style="background:var(--negro);color:#fff">Negro<br>#0E0E0E</div>
+          <div style="background:var(--blanco);color:var(--negro);box-shadow:inset 0 0 0 1px var(--gris-2)">Blanco<br>#F7F7F5</div>
+          <div style="background:var(--cobalto);color:#fff">Cobalto<br>#2340FF</div>
+          <div style="background:var(--rojo);color:#fff">Rojo<br>#E1341E</div>
+        </div>
+      </div>
+      <div>
+        <span class="meta">Tipografía</span>
+        <p class="spec">−52.000</p>
+        <p style="font-size:13px;color:#555;margin-top:8px">Schibsted Grotesk 900 para cifras y titulares · 400/700 para texto · <span class="mono" style="font-size:11px">Martian Mono</span> para horas, fechas y montos chicos.</p>
+      </div>
+      <div>
+        <span class="meta">Reglas</span>
+        <div class="rules">
+          <div><span>01</span><span>Todo es un post con hora. Si no tiene fecha, no va en el hilo.</span></div>
+          <div><span>02</span><span>El futuro va en gris punteado; el pasado, en negro sólido.</span></div>
+          <div><span>03</span><span>Los módulos se vuelven <b>filtros</b> del hilo, no pantallas.</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-h"><h2>Pantallas</h2><p>En la primera pantalla, tocá los filtros: Auto, Fechas o Inversiones reemplazan a las pantallas de Vehículos, Vencimientos y Portafolio sin salir del hilo.</p></div>
+    <div class="phones">
+      <!-- Hilo -->
+      <div class="pcol">
+        <h4>Hilo</h4>
+        <p>Arriba lo que viene, abajo lo que pasó y el “ahora” en el medio. Los posts en azul son de la app.</p>
+        <div class="phone"><div class="screen">
+          <div class="ph-top">
+            <div class="status"><span>10:41</span><span>5G</span></div>
+            <div class="row"><div class="bal">$ 4.812.300<small>≈ US$ 3.318 · MEP 1.450</small></div><span class="wordmark">hilo<i></i></span></div>
+            <div class="filters" id="h-filters">
+              <button class="on" data-f="all">Todo</button><button data-f="gasto">Gastos</button><button data-f="fecha">Fechas</button><button data-f="auto">Auto</button><button data-f="inv">Inversiones</button>
+            </div>
+          </div>
+          <div class="feed" id="h-feed">
+            <div class="day-h">Próximos días</div>
+            <div class="post future" data-t="fecha"><div class="l"><b>VTV Corolla</b><span class="n">28/11</span></div><div class="s">en 41 días</div></div>
+            <div class="post future" data-t="fecha auto"><div class="l"><b>Service 85.000 km</b><span class="n">~420 km</span></div><div class="s">estimado a mediados de noviembre</div></div>
+            <div class="post future" data-t="fecha"><div class="l"><b>Seguro moto</b><span class="n">$ 27.500</span></div><div class="s">viernes 23 · débito MP</div></div>
+            <div class="post future" data-t="fecha"><div class="l"><b>Visa Galicia</b><span class="n">$ 412.900</span></div><div class="s">martes 20 · mín. $ 41.300</div></div>
+            <div class="post future" data-t="fecha"><div class="l"><b>Edenor</b><span class="n">$ 38.200</span></div><div class="s">mañana · débito Galicia</div></div>
+            <div class="now"><span>AHORA</span><span>DOM 18 · 10:41</span></div>
+            <div class="day-h">Hoy</div>
+            <div class="post" data-t="gasto"><div class="l"><b>Carrefour</b><span class="n">−30.000</span></div><div class="s">Súper · Galicia · 09:12 · vía Telegram</div></div>
+            <div class="post sys" data-t="inv"><div class="l"><b>Tu portafolio subió 4,2%</b><span class="n">+US$ 50</span></div><div class="callout">AAPL y MELI empujaron. <b>US$ 1.240</b> en total.</div></div>
+            <div class="day-h">Ayer</div>
+            <div class="post" data-t="gasto auto"><div class="l"><b>YPF Av. Libertador</b><span class="n">−52.000</span></div><div class="s">Auto · Mercado Pago · tanque lleno</div></div>
+            <div class="post sys" data-t="auto"><div class="l"><b>Rendimiento del tanque</b><span class="n">11,8 km/L</span></div><div class="callout">Mejor que tu promedio (11,1). Costo por km: <b>$ 312</b>.</div></div>
+            <div class="day-h">Semana pasada</div>
+            <div class="post sys" data-t="gasto"><div class="l"><b>Resumen semana 41</b><span class="n">−$ 286.400</span></div><div class="callout">Gastaste <b>12% menos</b> que tu promedio. Lo que más pesó: súper.</div></div>
+            <div class="post" data-t="inv"><div class="l"><b>Compra AAPL ×2</b><span class="n">−US$ 462</span></div><div class="s">Broker · 15/10</div></div>
+            <div class="post" data-t="gasto"><div class="l"><b>Cambio MEP</b><span class="n">+US$ 500</span></div><div class="s">−$ 725.150 de Galicia · 14/10</div></div>
+          </div>
+        </div>
+        <div class="composer"><div>Escribí un gasto o una pregunta…<span class="go"><svg class="i" style="width:14px;height:14px"><use href="#up"/></svg></span></div></div>
+        <nav class="tabbar"><a class="on"><svg class="i"><use href="#thread"/></svg>Hilo</a><a><svg class="i"><use href="#bars"/></svg>Resumen</a><a><svg class="i"><use href="#box"/></svg>Cosas</a><a><svg class="i"><use href="#user"/></svg>Vos</a></nav>
+        </div>
+      </div>
+
+      <!-- Chat -->
+      <div class="pcol">
+        <h4>Escribir</h4>
+        <p>Es el mismo hilo que el bot de Telegram: lo que mandás desde el celular por chat aparece acá, y al revés. Las preguntas se responden con la suma real y el detalle.</p>
+        <div class="phone"><div class="screen">
+          <div class="ph-top"><div class="status"><span>10:42</span><span>5G</span></div><div class="row"><span class="wordmark" style="font-size:22px">hilo<i></i></span><span class="meta">sincronizado con Telegram</span></div></div>
+          <div class="chat">
+            <div class="msg me">30 lucas super carrefour galicia<span class="via">09:12 · Telegram</span></div>
+            <div class="msg app">Anotado: <b>−$ 30.000</b> en Súper, de Galicia. Galicia queda en <b>$ 2.088.000</b>.<span class="via">09:12</span></div>
+            <div class="msg me">cuánto gasté en el auto el verano pasado<span class="via">10:40 · app</span></div>
+            <div class="msg app">
+              <span class="meta">21 dic 2025 – 20 mar 2026 · auto</span>
+              <div class="sum">$ 486.300</div>
+              14 movimientos. ≈ US$ 372 al MEP de cada día.
+              <div class="card">
+                <div><span>Nafta ×9</span><span class="n">$ 248.200</span></div>
+                <div><span>Service 80.000 km</span><span class="n">$ 148.000</span></div>
+                <div><span>Seguro ×3</span><span class="n">$ 78.100</span></div>
+                <div><span>Lavadero</span><span class="n">$ 12.000</span></div>
+              </div>
+              <div class="btns"><span>Ver en el hilo</span><span>Fijar filtro</span></div>
+            </div>
+            <div class="msg me">pagué edenor<span class="via">10:41 · app</span></div>
+            <div class="msg app">Marqué <b>Edenor $ 38.200</b> como pagado desde Galicia y lo saqué de “próximos días”.<span class="via">10:41</span></div>
+          </div>
+        </div>
+        <div class="composer"><div>Escribí un gasto o una pregunta…<span class="go"><svg class="i" style="width:14px;height:14px"><use href="#up"/></svg></span></div></div>
+        <nav class="tabbar"><a class="on"><svg class="i"><use href="#thread"/></svg>Hilo</a><a><svg class="i"><use href="#bars"/></svg>Resumen</a><a><svg class="i"><use href="#box"/></svg>Cosas</a><a><svg class="i"><use href="#user"/></svg>Vos</a></nav>
+        </div>
+      </div>
+
+      <!-- Resumen -->
+      <div class="pcol">
+        <h4>Resumen</h4>
+        <p>El análisis pasa a ser un afiche: pocas cifras, barras planas, sin torta. Se arma por mes y se puede compartir como imagen.</p>
+        <div class="phone"><div class="screen">
+          <div class="ph-top"><div class="status"><span>10:43</span><span>5G</span></div><div class="row"><span class="meta">Octubre 2026 · día 18/31</span><span class="wordmark">hilo<i></i></span></div></div>
+          <div class="res">
+            <span class="meta">Ahorrado hasta hoy</span>
+            <div class="res-big">46%</div>
+            <div class="meta" style="margin-top:4px">$ 995.500 de $ 2.100.000</div>
+            <h5>En qué se fue</h5>
+            <div class="res-row"><span>Súper</span><span class="n">284.000</span><div class="bar"><i style="width:100%"></i></div></div>
+            <div class="res-row"><span>Auto</span><span class="n">196.000</span><div class="bar"><i class="r" style="width:69%"></i></div></div>
+            <div class="res-row"><span>Servicios</span><span class="n">121.500</span><div class="bar"><i style="width:43%"></i></div></div>
+            <div class="res-row"><span>Salidas</span><span class="n">88.000</span><div class="bar"><i style="width:31%"></i></div></div>
+            <h5>Rumbo</h5>
+            <div class="res-row"><span>Japón · US$ 2.900 / 5.000</span><span class="n">jul 27</span><div class="bar"><i class="c" style="width:58%"></i></div></div>
+            <div class="res-row"><span>Fondo emergencia</span><span class="n">feb 27</span><div class="bar"><i class="c" style="width:77%"></i></div></div>
+          </div>
+        </div>
+        <nav class="tabbar"><a><svg class="i"><use href="#thread"/></svg>Hilo</a><a class="on"><svg class="i"><use href="#bars"/></svg>Resumen</a><a><svg class="i"><use href="#box"/></svg>Cosas</a><a><svg class="i"><use href="#user"/></svg>Vos</a></nav>
+        </div>
+      </div>
+
+      <!-- Detalle -->
+      <div class="pcol">
+        <h4>Un post abierto</h4>
+        <p>Cada movimiento tiene su propio mini-hilo con el historial de ese comercio y un dato que solo se ve cruzando meses.</p>
+        <div class="phone"><div class="screen">
+          <div class="ph-top"><div class="status"><span>10:44</span><span>5G</span></div><div class="row"><span style="display:flex;align-items:center;gap:4px;font-size:13px"><svg class="i"><use href="#back"/></svg>Hilo</span><span class="meta">editar</span></div></div>
+          <div class="det">
+            <span class="meta">Hoy · 09:12 · vía Telegram</span>
+            <div class="n">−$ 30.000</div>
+            <div style="font:700 18px var(--sans);margin-top:4px">Carrefour</div>
+            <div class="kv">
+              <span>Categoría</span><span>Súper <span class="meta" style="color:var(--cobalto)">· regla local</span></span>
+              <span>Cuenta</span><span>Galicia</span>
+              <span>≈ USD</span><span class="mono" style="font-size:12px">20,69 al MEP</span>
+              <span>Nota</span><span>—</span>
+            </div>
+            <div class="ins">
+              <b>+18% en 3 meses</b>
+              <span>Tu ticket promedio en Carrefour pasó de $ 25.400 a $ 30.000. En pesos de hoy es +4%.</span>
+              <svg viewBox="0 0 260 44" preserveAspectRatio="none"><polyline fill="none" stroke="#fff" stroke-width="2" points="0,36 40,34 80,30 120,31 160,22 200,18 260,8"/></svg>
+            </div>
+            <div class="feed" style="padding-left:24px;margin-top:8px">
+              <div class="post" style="margin-left:0"><div class="l"><b>Carrefour</b><span class="n">−27.800</span></div><div class="s">04/10</div></div>
+              <div class="post"><div class="l"><b>Carrefour</b><span class="n">−31.200</span></div><div class="s">21/09</div></div>
+              <div class="post"><div class="l"><b>Carrefour</b><span class="n">−24.900</span></div><div class="s">06/09</div></div>
+            </div>
+          </div>
+        </div>
+        <nav class="tabbar"><a class="on"><svg class="i"><use href="#thread"/></svg>Hilo</a><a><svg class="i"><use href="#bars"/></svg>Resumen</a><a><svg class="i"><use href="#box"/></svg>Cosas</a><a><svg class="i"><use href="#user"/></svg>Vos</a></nav>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-h"><h2>Reorga&shy;nización</h2><p>Hay cuatro pestañas. Los módulos que tienen fecha pasan a ser filtros del hilo, y los que no (cuentas, vehículos como objeto, acciones como cartera) van a “Cosas”.</p></div>
+    <div class="map">
+      <div class="map-row"><h3>Hilo</h3><span class="old">Inicio · Actividad · Vencimientos · Búsqueda · FAB</span><span class="new">Línea de tiempo única con campo para escribir abajo. Filtros: <span class="lens">Gastos</span><span class="lens">Fechas</span><span class="lens">Auto</span><span class="lens">Inversiones</span><span class="lens">+ filtro guardado</span></span></div>
+      <div class="map-row"><h3>Resumen</h3><span class="old">Análisis · Proyecciones</span><span class="new">Afiche mensual: tasa de ahorro, en qué se fue y rumbo a las metas. El simulador se abre desde cada meta.</span></div>
+      <div class="map-row"><h3>Cosas</h3><span class="old">Cuentas · Portafolio · Vehículos</span><span class="new">Lo que tenés como objetos: cuentas, cartera y vehículos. Cada uno abre su propio hilo filtrado.</span></div>
+      <div class="map-row"><h3>Vos</h3><span class="old">Perfil · Más</span><span class="new">Telegram, categorías y reglas, exportar, seguridad.</span></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-h"><h2>Compo&shy;nentes</h2><p>Lo que se construye nuevo y lo que reemplaza.</p></div>
+    <div class="comp">
+      <article><span class="k">01</span><h3>Marca “Ahora”</h3><p>Separa futuro y pasado en la misma lista. Hoy los vencimientos viven en otra pantalla y te enterás tarde; acá los ves cada vez que abrís la app.</p></article>
+      <article><span class="k">02</span><h3>Post del sistema</h3><p>Resúmenes semanales, rendimiento del tanque y suba del portafolio: la app publica en el hilo cuando hay algo para decir, siempre con números reales.</p></article>
+      <article><span class="k">03</span><h3>Escribir = Telegram</h3><p>Un solo historial para el bot y la app. Reemplaza el FAB, la hoja de transacción y la búsqueda.</p></article>
+      <article><span class="k">04</span><h3>Filtros como módulos</h3><p>“Auto” muestra los movimientos, el service y los km/L en el mismo hilo. Se pueden guardar filtros propios (“vacaciones 2026”).</p></article>
+      <article><span class="k">05</span><h3>Mini-hilo por comercio</h3><p>Abrir un gasto muestra los anteriores en ese mismo lugar y cuánto subió, nominal y real. Es inflación personal, no el IPC.</p></article>
+      <article><span class="k">06</span><h3>Resumen-afiche</h3><p>El análisis se vuelve una página con jerarquía tipográfica, exportable como imagen. Reemplaza los gráficos de torta y las tarjetas de KPI.</p></article>
+    </div>
+  </div>
+</section>
+
+<footer><div class="wrap">HILO — PROPUESTA DE IDENTIDAD — DATOS DE EJEMPLO</div></footer>
+
+<script>
+  const btns = document.querySelectorAll("#h-filters button");
+  btns.forEach(b => b.addEventListener("click", () => {
+    btns.forEach(x => x.classList.toggle("on", x === b));
+    const f = b.dataset.f;
+    document.querySelectorAll("#h-feed .post").forEach(p => {
+      p.hidden = f !== "all" && !p.dataset.t.split(" ").includes(f);
+    });
+    document.querySelectorAll("#h-feed .day-h").forEach(h => {
+      let n = h.nextElementSibling, any = false;
+      while (n && !n.classList.contains("day-h")) { if (n.classList.contains("post") && !n.hidden) any = true; n = n.nextElementSibling; }
+      h.hidden = !any;
+    });
+  }));
+</script>
+</body>
+</html>

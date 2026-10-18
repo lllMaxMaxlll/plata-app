@@ -1,0 +1,523 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Norte — Propuesta de identidad</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --papel: #FAF8F3;
+    --arena: #EFE9DC;
+    --linea: #DDD5C4;
+    --tinta: #1C2420;
+    --niebla: #6F7872;
+    --bosque: #2F5D50;
+    --bosque-2: #DCE7E1;
+    --terracota: #C4623A;
+    --terracota-2: #F4E1D6;
+    --ocre: #C99A2E;
+    --serif: "Instrument Serif", Georgia, serif;
+    --sans: "Geist", system-ui, sans-serif;
+    --mono: "Geist Mono", ui-monospace, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body { background: var(--papel); color: var(--tinta); font-family: var(--sans); line-height: 1.5; font-size: 15px; }
+  .wrap { max-width: 1160px; margin: 0 auto; padding: 0 16px; }
+  .serif { font-family: var(--serif); font-weight: 400; }
+  .mono { font-family: var(--mono); }
+  .kicker { font: 500 11px var(--mono); text-transform: uppercase; letter-spacing: .12em; color: var(--niebla); }
+  hr { border: 0; border-top: 1px solid var(--linea); }
+
+  /* Portada */
+  .hero { padding: 56px 0 48px; }
+  .hero-grid { display: grid; gap: 40px; grid-template-columns: 1fr; }
+  @media (min-width: 880px) { .hero-grid { grid-template-columns: 1.3fr 1fr; align-items: end; } }
+  .logo { display: flex; align-items: center; gap: 18px; margin-top: 18px; }
+  .logo svg { width: clamp(56px, 10vw, 96px); height: auto; flex: none; }
+  .logo h1 { font-family: var(--serif); font-weight: 400; font-size: clamp(72px, 14vw, 148px); line-height: .85; letter-spacing: -.02em; }
+  .hero h2 { font-family: var(--serif); font-style: italic; font-weight: 400; font-size: clamp(26px, 3.6vw, 38px); line-height: 1.15; margin-top: 18px; max-width: 20ch; color: var(--bosque); }
+  .hero p { color: var(--niebla); margin-top: 14px; max-width: 54ch; }
+  .note { border-left: 2px solid var(--terracota); padding: 4px 0 4px 18px; }
+  .note h3 { font: 600 14px var(--sans); margin-bottom: 8px; }
+  .note ul { padding-left: 16px; display: grid; gap: 6px; color: var(--niebla); font-size: 14px; }
+
+  section { padding: 56px 0; border-top: 1px solid var(--linea); }
+  .sec-h { display: grid; gap: 8px; max-width: 64ch; }
+  .sec-h h2 { font-family: var(--serif); font-weight: 400; font-size: clamp(34px, 4.6vw, 52px); line-height: 1; letter-spacing: -.01em; }
+  .sec-h p { color: var(--niebla); }
+
+  /* Sistema */
+  .sys { display: grid; gap: 24px; margin-top: 32px; grid-template-columns: 1fr; }
+  @media (min-width: 880px) { .sys { grid-template-columns: 1fr 1fr 1fr; } }
+  .sw-list { display: grid; gap: 8px; margin-top: 12px; }
+  .sw { display: flex; align-items: center; gap: 12px; font-size: 13px; }
+  .sw i { width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--linea); flex: none; }
+  .sw b { display: block; font-weight: 600; }
+  .sw span { color: var(--niebla); font-family: var(--mono); font-size: 11px; }
+  .specimen { font-family: var(--serif); font-size: 64px; line-height: 1; margin-top: 12px; }
+  .specimen em { color: var(--bosque); }
+  .principles { display: grid; gap: 14px; margin-top: 12px; }
+  .principles div b { display: block; font-weight: 600; }
+  .principles div span { color: var(--niebla); font-size: 14px; }
+
+  /* Teléfonos */
+  .phones { display: grid; gap: 32px; margin-top: 36px; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); justify-items: center; }
+  .pcol { width: 100%; max-width: 320px; }
+  .pcol h4 { font-family: var(--serif); font-weight: 400; font-size: 26px; }
+  .pcol p { font-size: 13px; color: var(--niebla); margin: 2px 0 14px; min-height: 4.5em; }
+  .phone { position: relative; width: 100%; height: 650px; border-radius: 40px; background: var(--papel); border: 1px solid var(--linea); box-shadow: 0 1px 0 #fff inset, 0 30px 60px -30px #1c242040, 0 0 0 8px #fff, 0 0 0 9px var(--linea); overflow: hidden; }
+  .screen { position: absolute; inset: 0; overflow-y: auto; padding: 22px 18px 92px; scrollbar-width: none; }
+  .screen::-webkit-scrollbar { display: none; }
+  .status { display: flex; justify-content: space-between; font: 500 11px var(--mono); color: var(--niebla); margin-bottom: 18px; }
+
+  .tabs { position: absolute; left: 0; right: 0; bottom: 0; height: 74px; background: color-mix(in srgb, var(--papel) 92%, transparent); border-top: 1px solid var(--linea); display: grid; grid-template-columns: repeat(4, 1fr); padding: 8px 6px 18px; }
+  .tabs a { display: grid; justify-items: center; align-content: center; gap: 3px; font-size: 11px; color: var(--niebla); text-decoration: none; position: relative; }
+  .tabs a.on { color: var(--tinta); font-weight: 600; }
+  .tabs a.on::before { content: ""; position: absolute; top: -9px; width: 22px; height: 2px; background: var(--terracota); border-radius: 2px; }
+  svg.i { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+  .fab { position: absolute; right: 16px; bottom: 88px; width: 52px; height: 52px; border-radius: 50%; background: var(--bosque); color: #fff; display: grid; place-items: center; box-shadow: 0 10px 24px -8px #2f5d5090; }
+
+  .date { font-family: var(--serif); font-size: 30px; line-height: 1.05; }
+  .date em { color: var(--niebla); }
+  .figure { margin-top: 22px; }
+  .figure .val { font-family: var(--serif); font-size: 50px; line-height: 1; letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
+  .figure .val small { font-size: 26px; color: var(--niebla); }
+  .toggle { display: inline-flex; margin-top: 10px; border: 1px solid var(--linea); border-radius: 99px; padding: 2px; background: #fff; }
+  .toggle button { border: 0; background: none; border-radius: 99px; padding: 4px 10px; font: 500 11px var(--sans); color: var(--niebla); cursor: pointer; }
+  .toggle button.on { background: var(--tinta); color: var(--papel); }
+  .delta { font: 12px var(--mono); margin-top: 8px; color: var(--niebla); }
+  .delta b { color: var(--bosque); font-weight: 500; }
+
+  .safe { margin-top: 22px; background: var(--bosque); color: #F1F5F2; border-radius: 20px; padding: 16px; }
+  .safe .kicker { color: #B7CBC1; }
+  .safe .val { font-family: var(--serif); font-size: 38px; line-height: 1.05; margin-top: 4px; }
+  .safe p { font-size: 12px; color: #C9D8D0; margin-top: 4px; }
+  .safe-bar { display: flex; height: 6px; border-radius: 99px; overflow: hidden; margin-top: 12px; background: #ffffff22; }
+  .safe-bar i { display: block; height: 100%; }
+  .safe-leg { display: flex; flex-wrap: wrap; gap: 4px 12px; font: 10px var(--mono); color: #C9D8D0; margin-top: 8px; }
+
+  .list { margin-top: 22px; }
+  .list-h { display: flex; justify-content: space-between; align-items: baseline; padding-bottom: 8px; border-bottom: 1px solid var(--tinta); }
+  .list-h a { font-size: 12px; color: var(--bosque); text-decoration: none; }
+  .li { display: flex; align-items: baseline; gap: 12px; padding: 11px 0; border-bottom: 1px solid var(--linea); font-size: 14px; }
+  .li .d { font: 11px var(--mono); color: var(--niebla); width: 38px; flex: none; }
+  .li .t { flex: 1; min-width: 0; }
+  .li .t span { display: block; font-size: 12px; color: var(--niebla); }
+  .li .m { font-family: var(--mono); font-size: 13px; white-space: nowrap; }
+  .li .m.warn { color: var(--terracota); }
+
+  /* Mes */
+  .cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-top: 16px; }
+  .cal .h { font: 10px var(--mono); color: var(--niebla); text-align: center; }
+  .cal .c { aspect-ratio: 1; border-radius: 8px; display: grid; place-items: center; font: 11px var(--mono); position: relative; }
+  .cal .c.today { outline: 1.5px solid var(--tinta); }
+  .cal .c.due::after { content: ""; position: absolute; bottom: 3px; width: 4px; height: 4px; border-radius: 50%; background: var(--terracota); }
+  .cal-leg { display: flex; gap: 14px; font-size: 11px; color: var(--niebla); margin-top: 10px; align-items: center; }
+  .cal-leg i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 4px; vertical-align: -1px; }
+  .letter { margin-top: 22px; background: #fff; border: 1px solid var(--linea); border-radius: 18px; padding: 18px; }
+  .letter h5 { font-family: var(--serif); font-weight: 400; font-size: 22px; }
+  .letter p { font-size: 13.5px; margin-top: 8px; color: #3B4540; }
+  .letter p b { font-weight: 600; color: var(--tinta); }
+  .cats { margin-top: 18px; display: grid; gap: 10px; }
+  .cat { display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; font-size: 13px; }
+  .cat .bar { grid-column: 1 / -1; height: 4px; border-radius: 4px; background: var(--arena); overflow: hidden; }
+  .cat .bar i { display: block; height: 100%; background: var(--tinta); }
+  .cat .bar i.over { background: var(--terracota); }
+  .cat .m { font: 12px var(--mono); color: var(--niebla); }
+
+  /* Rumbo */
+  .goal-big { margin-top: 18px; }
+  .goal-big .kicker { color: var(--terracota); }
+  .goal-big h5 { font-family: var(--serif); font-weight: 400; font-size: 34px; line-height: 1.05; margin-top: 4px; }
+  .goal-big h5 em { color: var(--bosque); }
+  .fan { margin-top: 14px; width: 100%; height: auto; display: block; }
+  .slider { margin-top: 16px; background: #fff; border: 1px solid var(--linea); border-radius: 16px; padding: 14px; }
+  .slider label { display: flex; justify-content: space-between; font-size: 13px; }
+  .slider label b { font-family: var(--mono); font-weight: 500; }
+  input[type=range] { width: 100%; margin-top: 10px; accent-color: var(--bosque); }
+  .slider small { display: block; font-size: 12px; color: var(--niebla); margin-top: 4px; }
+  .goals { margin-top: 18px; }
+  .g { padding: 12px 0; border-bottom: 1px solid var(--linea); }
+  .g-top { display: flex; justify-content: space-between; font-size: 14px; }
+  .g-top span { font: 12px var(--mono); color: var(--niebla); }
+  .g .bar { height: 4px; border-radius: 4px; background: var(--arena); margin-top: 8px; overflow: hidden; }
+  .g .bar i { display: block; height: 100%; background: var(--bosque); }
+  .g small { font-size: 12px; color: var(--niebla); }
+
+  /* Patrimonio */
+  .bal { margin-top: 18px; }
+  .bal-row { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; padding: 10px 0; border-bottom: 1px solid var(--linea); font-size: 14px; }
+  .bal-row span { font-size: 12px; color: var(--niebla); }
+  .bal-row .m { font-family: var(--mono); font-size: 13px; text-align: right; }
+  .bal-row.total { border-bottom: 0; border-top: 1px solid var(--tinta); font-weight: 600; }
+  .grp { font: 500 11px var(--mono); text-transform: uppercase; letter-spacing: .1em; color: var(--niebla); margin-top: 18px; }
+  .veh { margin-top: 10px; background: var(--arena); border-radius: 16px; padding: 14px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; text-align: center; }
+  .veh div b { display: block; font-family: var(--serif); font-size: 22px; font-weight: 400; }
+  .veh div span { font-size: 11px; color: var(--niebla); }
+  .veh h6 { grid-column: 1 / -1; text-align: left; font-size: 14px; font-weight: 600; }
+
+  /* Escritorio */
+  .desk { margin-top: 40px; border: 1px solid var(--linea); border-radius: 18px; background: #fff; overflow: hidden; box-shadow: 0 40px 80px -40px #1c242035; }
+  .desk-bar { height: 34px; background: var(--arena); display: flex; align-items: center; gap: 6px; padding: 0 14px; }
+  .desk-bar i { width: 10px; height: 10px; border-radius: 50%; background: var(--linea); }
+  .desk-body { display: grid; grid-template-columns: 1fr; min-height: 420px; }
+  @media (min-width: 900px) { .desk-body { grid-template-columns: 220px 1fr 300px; } }
+  .side { background: var(--papel); border-right: 1px solid var(--linea); padding: 20px 16px; display: none; }
+  @media (min-width: 900px) { .side { display: block; } }
+  .side .brand { font-family: var(--serif); font-size: 28px; display: flex; align-items: center; gap: 8px; }
+  .side .brand svg { width: 24px; height: 24px; }
+  .side nav { display: grid; gap: 2px; margin-top: 22px; }
+  .side nav a { display: flex; justify-content: space-between; padding: 8px 10px; border-radius: 10px; font-size: 14px; color: var(--niebla); text-decoration: none; }
+  .side nav a.on { background: #fff; color: var(--tinta); font-weight: 600; box-shadow: 0 0 0 1px var(--linea); }
+  .side nav a span { font: 10px var(--mono); }
+  .side .sub { margin-top: 22px; }
+  .main { padding: 24px; }
+  .main h3 { font-family: var(--serif); font-weight: 400; font-size: 40px; line-height: 1; }
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px; margin-top: 22px; }
+  .kpi { border-top: 1px solid var(--tinta); padding-top: 10px; }
+  .kpi b { display: block; font-family: var(--serif); font-weight: 400; font-size: 30px; line-height: 1.1; }
+  .kpi span { font: 11px var(--mono); color: var(--niebla); }
+  .aside { border-left: 1px solid var(--linea); padding: 24px 20px; background: var(--papel); }
+  @media (max-width: 899px) { .aside { border-left: 0; border-top: 1px solid var(--linea); } }
+
+  /* Mapa */
+  .map { display: grid; gap: 0; margin-top: 32px; grid-template-columns: 1fr; border-top: 1px solid var(--tinta); }
+  @media (min-width: 880px) { .map { grid-template-columns: repeat(4, 1fr); } }
+  .mcol { padding: 18px 18px 18px 0; border-bottom: 1px solid var(--linea); }
+  @media (min-width: 880px) { .mcol { border-bottom: 0; border-right: 1px solid var(--linea); padding-left: 18px; } .mcol:first-child { padding-left: 0; } .mcol:last-child { border-right: 0; } }
+  .mcol .kicker { color: var(--terracota); }
+  .mcol h3 { font-family: var(--serif); font-weight: 400; font-size: 32px; line-height: 1.1; }
+  .mcol .q { font-style: italic; font-family: var(--serif); font-size: 18px; color: var(--bosque); margin: 2px 0 10px; }
+  .mcol ul { padding-left: 16px; font-size: 14px; display: grid; gap: 4px; }
+  .mcol .from { font: 11px var(--mono); color: var(--niebla); margin-top: 10px; }
+
+  .comp { display: grid; gap: 28px 40px; margin-top: 32px; grid-template-columns: 1fr; }
+  @media (min-width: 800px) { .comp { grid-template-columns: 1fr 1fr; } }
+  .comp article { border-top: 1px solid var(--tinta); padding-top: 14px; }
+  .comp h3 { font-family: var(--serif); font-weight: 400; font-size: 26px; line-height: 1.1; }
+  .comp p { color: var(--niebla); margin-top: 6px; font-size: 14px; }
+  .comp .ba { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin-top: 10px; font-size: 13px; }
+  .comp .ba b { font: 500 10px var(--mono); text-transform: uppercase; letter-spacing: .1em; color: var(--niebla); padding-top: 3px; }
+  footer { padding: 32px 0 56px; border-top: 1px solid var(--linea); color: var(--niebla); font-size: 13px; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="star" viewBox="0 0 48 48"><path d="M24 2 L28 20 L46 24 L28 28 L24 46 L20 28 L2 24 L20 20 Z" fill="currentColor"/><circle cx="24" cy="24" r="3.2" fill="var(--papel)"/></symbol>
+  <symbol id="sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+  <symbol id="cal" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></symbol>
+  <symbol id="compass" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/></symbol>
+  <symbol id="layers" viewBox="0 0 24 24"><path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/></symbol>
+  <symbol id="plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+</svg>
+
+<header class="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <span class="kicker">Propuesta 2 de 3 · Identidad editorial</span>
+      <div class="logo"><svg style="color:var(--terracota)"><use href="#star"/></svg><h1>Norte</h1></div>
+      <h2>Saber dónde estás, para elegir a dónde ir.</h2>
+      <p>Norte ordena la app por horizonte de tiempo en vez de por tipo de dato: qué pasa hoy, cómo viene el mes, hacia dónde vas y qué tenés. Tiene el tono tranquilo de un diario financiero y pone en primer plano lo que en Argentina más cuesta ver: el valor real de la plata.</p>
+    </div>
+    <div class="note">
+      <h3>Por qué este nombre</h3>
+      <ul>
+        <li>“Tener norte” es tener rumbo. La app ya tiene simulador y metas, y Norte las convierte en el eje.</li>
+        <li>La estrella de cuatro puntas funciona como ícono, como favicon y como marcador de meta en los gráficos.</li>
+        <li>Es sobrio y lo vas a seguir sintiendo tuyo en cinco años, no solo como una app de gastos.</li>
+      </ul>
+    </div>
+  </div>
+</header>
+
+<section>
+  <div class="wrap">
+    <div class="sec-h"><span class="kicker">Sistema</span><h2>Tinta, papel y una sola señal de color</h2><p>Hay una sola serif para cifras y titulares, una sans neutra para la interfaz y hairlines en vez de tarjetas con sombra. El verde bosque es para lo que está bien o es tuyo, y el terracota es para lo que pide atención. El resto de la interfaz va en tinta.</p></div>
+    <div class="sys">
+      <div>
+        <span class="kicker">Paleta</span>
+        <div class="sw-list">
+          <div class="sw"><i style="background:var(--papel)"></i><div><b>Papel</b><span>#FAF8F3 · fondo</span></div></div>
+          <div class="sw"><i style="background:var(--tinta)"></i><div><b>Tinta</b><span>#1C2420 · texto, datos</span></div></div>
+          <div class="sw"><i style="background:var(--bosque)"></i><div><b>Bosque</b><span>#2F5D50 · acción, positivo</span></div></div>
+          <div class="sw"><i style="background:var(--terracota)"></i><div><b>Terracota</b><span>#C4623A · alerta, metas</span></div></div>
+          <div class="sw"><i style="background:var(--arena)"></i><div><b>Arena</b><span>#EFE9DC · superficies</span></div></div>
+        </div>
+      </div>
+      <div>
+        <span class="kicker">Tipografía</span>
+        <p class="specimen">$ 4,8 <em>millones</em></p>
+        <p style="font-size:13px;color:var(--niebla);margin-top:10px">Instrument Serif para cifras grandes y títulos · Geist 400/600 para la interfaz · <span class="mono">Geist Mono</span> para fechas, tasas y montos en listas.</p>
+      </div>
+      <div>
+        <span class="kicker">Principios</span>
+        <div class="principles">
+          <div><b>Valores reales por defecto</b><span>Todo monto histórico se puede ver “en pesos de hoy”, ajustado por inflación.</span></div>
+          <div><b>Un número protagonista por pantalla</b><span>El resto lo acompaña, sin competir con él.</span></div>
+          <div><b>Explicar en palabras</b><span>Cada mes cierra con una carta escrita a partir de números reales, sin redacción generada por IA.</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-h"><span class="kicker">Mobile</span><h2>Cuatro horizontes</h2><p>Las pestañas responden a cuatro preguntas: ¿cómo estoy hoy?, ¿cómo viene el mes?, ¿llego a mis metas?, ¿qué tengo? Movés el ahorro mensual en <em>Rumbo</em> y ves cómo cambia la fecha de llegada.</p></div>
+
+    <div class="phones">
+      <!-- HOY -->
+      <div class="pcol">
+        <h4>Hoy</h4>
+        <p>Patrimonio en grande, con la opción de verlo en valor real. Abajo, lo nuevo: cuánto te queda para gastar este mes sin tocar fijos ni ahorro.</p>
+        <div class="phone">
+          <div class="screen">
+            <div class="status"><span>10:41</span><span>5G</span></div>
+            <div class="date">Domingo 18<br><em>de octubre</em></div>
+            <div class="figure">
+              <span class="kicker">Patrimonio</span>
+              <div class="val" id="n-val">$ 4.812.300</div>
+              <div class="toggle" id="n-tog"><button class="on" data-k="nom">Nominal</button><button data-k="real">Pesos de hoy</button><button data-k="usd">USD</button></div>
+              <div class="delta" id="n-delta">vs. hace un año <b>+38,4%</b> nominal</div>
+            </div>
+            <div class="safe">
+              <span class="kicker">Libre para gastar · quedan 13 días</span>
+              <div class="val">$ 412.000</div>
+              <p>≈ $ 31.700 por día. Ya separé fijos, vencimientos y tu ahorro para Japón.</p>
+              <div class="safe-bar"><i style="width:38%;background:#F1F5F2"></i><i style="width:22%;background:#E8A27F"></i><i style="width:25%;background:#9DBFB0"></i><i style="width:15%;background:#ffffff33"></i></div>
+              <div class="safe-leg"><span>gastado 38%</span><span>fijos 22%</span><span>ahorro 25%</span><span>libre 15%</span></div>
+            </div>
+            <div class="list">
+              <div class="list-h"><span class="kicker" style="color:var(--tinta)">Esta semana</span><a href="#">Mes →</a></div>
+              <div class="li"><span class="d">LUN</span><span class="t">Edenor<span>Débito automático Galicia</span></span><span class="m warn">$ 38.200</span></div>
+              <div class="li"><span class="d">MAR</span><span class="t">Visa Galicia<span>Resumen cerrado</span></span><span class="m warn">$ 412.900</span></div>
+              <div class="li"><span class="d">VIE</span><span class="t">Seguro moto<span>Mercado Pago</span></span><span class="m">$ 27.500</span></div>
+            </div>
+          </div>
+          <span class="fab"><svg class="i"><use href="#plus"/></svg></span>
+          <nav class="tabs"><a class="on"><svg class="i"><use href="#sun"/></svg>Hoy</a><a><svg class="i"><use href="#cal"/></svg>Mes</a><a><svg class="i"><use href="#compass"/></svg>Rumbo</a><a><svg class="i"><use href="#layers"/></svg>Patrimonio</a></nav>
+        </div>
+      </div>
+
+      <!-- MES -->
+      <div class="pcol">
+        <h4>Mes</h4>
+        <p>Actividad, análisis y vencimientos en una sola pantalla. Cada día del calendario se colorea según cuánto gastaste, y los puntos marcan los vencimientos.</p>
+        <div class="phone">
+          <div class="screen">
+            <div class="status"><span>10:42</span><span>5G</span></div>
+            <div class="date">Octubre<br><em>2026</em></div>
+            <div class="cal" id="n-cal"></div>
+            <div class="cal-leg"><span><i style="background:var(--arena)"></i>poco</span><span><i style="background:var(--tinta)"></i>mucho</span><span><i style="background:var(--terracota);border-radius:50%;width:6px;height:6px"></i>vence</span></div>
+            <div class="letter">
+              <span class="kicker">La carta de septiembre</span>
+              <h5>Un mes ordenado, con el auto como excepción.</h5>
+              <p>Ahorraste <b>$ 980.000</b>, el 46% de lo que entró. En pesos de hoy es <b>un 6% más</b> que en agosto. Lo que más creció fue <b>Auto</b> (+$ 140.000): un service y dos tanques más que de costumbre.</p>
+            </div>
+            <div class="cats">
+              <div class="cat"><span>Súper</span><span class="m">$ 284.000 / 300.000</span><div class="bar"><i style="width:94%"></i></div></div>
+              <div class="cat"><span>Auto</span><span class="m">$ 196.000 / 150.000</span><div class="bar"><i class="over" style="width:100%"></i></div></div>
+              <div class="cat"><span>Servicios</span><span class="m">$ 121.500 / 140.000</span><div class="bar"><i style="width:86%"></i></div></div>
+              <div class="cat"><span>Salidas</span><span class="m">$ 88.000 / 120.000</span><div class="bar"><i style="width:73%"></i></div></div>
+            </div>
+          </div>
+          <span class="fab"><svg class="i"><use href="#plus"/></svg></span>
+          <nav class="tabs"><a><svg class="i"><use href="#sun"/></svg>Hoy</a><a class="on"><svg class="i"><use href="#cal"/></svg>Mes</a><a><svg class="i"><use href="#compass"/></svg>Rumbo</a><a><svg class="i"><use href="#layers"/></svg>Patrimonio</a></nav>
+        </div>
+      </div>
+
+      <!-- RUMBO -->
+      <div class="pcol">
+        <h4>Rumbo</h4>
+        <p>El simulador pasa a ser una pestaña. En vez de un gráfico con cinco curvas, responde una sola pregunta: ¿cuándo llego?</p>
+        <div class="phone">
+          <div class="screen">
+            <div class="status"><span>10:43</span><span>5G</span></div>
+            <div class="goal-big">
+              <span class="kicker">Meta principal</span>
+              <h5>Japón llega en <em id="n-when">julio 2027</em></h5>
+            </div>
+            <svg class="fan" viewBox="0 0 280 150" id="n-fan" aria-label="Proyección de ahorro con rango optimista y pesimista"></svg>
+            <div class="slider">
+              <label for="n-range">Ahorro mensual <b id="n-save">US$ 260</b></label>
+              <input type="range" id="n-range" min="100" max="600" step="20" value="260">
+              <small id="n-hint">Banda: escenario con inflación 2% a 4% mensual y dólar MEP ±15%.</small>
+            </div>
+            <div class="goals">
+              <div class="g"><div class="g-top">Japón <span>US$ 2.900 / 5.000</span></div><div class="bar"><i style="width:58%"></i></div></div>
+              <div class="g"><div class="g-top">Fondo de emergencia <span>$ 3,1 M / 4 M</span></div><div class="bar"><i style="width:77%"></i></div><small>6 meses de fijos cubiertos en feb 2027</small></div>
+              <div class="g"><div class="g-top">Cambiar el auto <span>US$ 4.100 / 12.000</span></div><div class="bar"><i style="width:34%"></i></div><small>empieza a sumar cuando termine Japón</small></div>
+            </div>
+          </div>
+          <span class="fab"><svg class="i"><use href="#plus"/></svg></span>
+          <nav class="tabs"><a><svg class="i"><use href="#sun"/></svg>Hoy</a><a><svg class="i"><use href="#cal"/></svg>Mes</a><a class="on"><svg class="i"><use href="#compass"/></svg>Rumbo</a><a><svg class="i"><use href="#layers"/></svg>Patrimonio</a></nav>
+        </div>
+      </div>
+
+      <!-- PATRIMONIO -->
+      <div class="pcol">
+        <h4>Patrimonio</h4>
+        <p>Un balance de verdad: cuentas, inversiones y vehículos, con el pasivo de la tarjeta restado. El vehículo muestra cuánto cuesta por kilómetro.</p>
+        <div class="phone">
+          <div class="screen">
+            <div class="status"><span>10:44</span><span>5G</span></div>
+            <div class="date">Lo que<br><em>tenés</em></div>
+            <div class="bal">
+              <div class="grp">Liquidez</div>
+              <div class="bal-row"><span style="font-size:14px;color:var(--tinta)">Galicia</span><span class="m">$ 2.118.000</span><span>caja de ahorro ARS</span></div>
+              <div class="bal-row"><span style="font-size:14px;color:var(--tinta)">Mercado Pago</span><span class="m">$ 486.300</span><span>rinde 32% TNA</span></div>
+              <div class="bal-row"><span style="font-size:14px;color:var(--tinta)">Dólares</span><span class="m">US$ 1.090</span><span>efectivo + Galicia USD</span></div>
+              <div class="grp">Inversiones</div>
+              <div class="bal-row"><span style="font-size:14px;color:var(--tinta)">Portafolio</span><span class="m">US$ 1.240</span><span>4 posiciones · +4,2%</span></div>
+              <div class="grp">Deudas</div>
+              <div class="bal-row"><span style="font-size:14px;color:var(--tinta)">Visa Galicia</span><span class="m" style="color:var(--terracota)">−$ 412.900</span><span>vence el martes 20</span></div>
+              <div class="bal-row total"><span style="font-size:14px;color:var(--tinta)">Neto</span><span class="m">$ 4.812.300</span></div>
+            </div>
+            <div class="veh">
+              <h6>Corolla 2019 · 84.580 km</h6>
+              <div><b>11,8</b><span>km/L</span></div>
+              <div><b>$ 312</b><span>por km</span></div>
+              <div><b>420</b><span>km al service</span></div>
+            </div>
+          </div>
+          <span class="fab"><svg class="i"><use href="#plus"/></svg></span>
+          <nav class="tabs"><a><svg class="i"><use href="#sun"/></svg>Hoy</a><a><svg class="i"><use href="#cal"/></svg>Mes</a><a><svg class="i"><use href="#compass"/></svg>Rumbo</a><a class="on"><svg class="i"><use href="#layers"/></svg>Patrimonio</a></nav>
+        </div>
+      </div>
+    </div>
+
+    <!-- Escritorio -->
+    <div class="desk" aria-label="Vista de escritorio">
+      <div class="desk-bar"><i></i><i></i><i></i></div>
+      <div class="desk-body">
+        <aside class="side">
+          <div class="brand"><svg style="color:var(--terracota)"><use href="#star"/></svg>Norte</div>
+          <nav><a class="on">Hoy</a><a>Mes <span>3 vencen</span></a><a>Rumbo</a><a>Patrimonio</a></nav>
+          <div class="sub"><span class="kicker">Herramientas</span><nav style="margin-top:8px"><a>Buscar <span>⌘K</span></a><a>Exportar</a><a>Telegram</a><a>Ajustes</a></nav></div>
+        </aside>
+        <div class="main">
+          <span class="kicker">Domingo 18 de octubre</span>
+          <h3>Buen mes, por ahora.</h3>
+          <div class="kpis">
+            <div class="kpi"><b>$ 4,81 M</b><span>patrimonio · +6% real</span></div>
+            <div class="kpi"><b>$ 412 mil</b><span>libre para gastar</span></div>
+            <div class="kpi"><b>46%</b><span>tasa de ahorro sept</span></div>
+            <div class="kpi"><b>jul 2027</b><span>llegás a Japón</span></div>
+          </div>
+          <div class="list" style="margin-top:28px">
+            <div class="list-h"><span class="kicker" style="color:var(--tinta)">Movimientos de la semana</span><a href="#">Ver mes →</a></div>
+            <div class="li"><span class="d">18/10</span><span class="t">Carrefour<span>Súper · Galicia</span></span><span class="m">−$ 30.000</span></div>
+            <div class="li"><span class="d">17/10</span><span class="t">YPF Av. Libertador<span>Auto · Mercado Pago</span></span><span class="m">−$ 52.000</span></div>
+            <div class="li"><span class="d">15/10</span><span class="t">Compra AAPL<span>Portafolio · 2 acciones</span></span><span class="m">−US$ 462</span></div>
+          </div>
+        </div>
+        <div class="aside">
+          <span class="kicker">Lo que viene</span>
+          <div class="li"><span class="d">LUN</span><span class="t">Edenor</span><span class="m warn">$ 38.200</span></div>
+          <div class="li"><span class="d">MAR</span><span class="t">Visa Galicia</span><span class="m warn">$ 412.900</span></div>
+          <div class="li"><span class="d">VIE</span><span class="t">Seguro moto</span><span class="m">$ 27.500</span></div>
+          <div class="li"><span class="d">~NOV</span><span class="t">Service Corolla<span>en 420 km</span></span><span class="m">—</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-h"><span class="kicker">Arquitectura</span><h2>Reorganización de los módulos</h2><p>Hoy la app agrupa por tipo de dato (cuentas, actividad, análisis…). Norte agrupa por horizonte de tiempo. Búsqueda, Exportar y Ajustes pasan a herramientas globales: ⌘K en escritorio y un gesto en el encabezado en mobile.</p></div>
+    <div class="map">
+      <div class="mcol"><span class="kicker">01</span><h3>Hoy</h3><p class="q">¿Cómo estoy?</p><ul><li>Patrimonio nominal / real / USD</li><li>Libre para gastar</li><li>Lo de esta semana</li></ul><p class="from">absorbe: Inicio</p></div>
+      <div class="mcol"><span class="kicker">02</span><h3>Mes</h3><p class="q">¿Cómo viene?</p><ul><li>Calendario de gasto + vencimientos</li><li>Topes por categoría</li><li>La carta del mes</li><li>Lista de movimientos</li></ul><p class="from">absorbe: Actividad, Análisis, Vencimientos</p></div>
+      <div class="mcol"><span class="kicker">03</span><h3>Rumbo</h3><p class="q">¿Llego?</p><ul><li>Metas encadenadas</li><li>Simulador con banda de escenarios</li><li>Fondo de emergencia</li></ul><p class="from">absorbe: Proyecciones</p></div>
+      <div class="mcol"><span class="kicker">04</span><h3>Patrimonio</h3><p class="q">¿Qué tengo?</p><ul><li>Balance: liquidez, inversiones, deudas</li><li>Portafolio como una línea más</li><li>Vehículos con costo por km</li></ul><p class="from">absorbe: Cuentas, Portafolio, Vehículos</p></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-h"><span class="kicker">Componentes</span><h2>Lo que cambia</h2></div>
+    <div class="comp">
+      <article><h3>Libre para gastar</h3><p>Es el número más útil que la app todavía no muestra. Se calcula como ingresos del mes − fijos − vencimientos pendientes − aporte a metas − lo ya gastado. Los datos ya están; falta juntarlos.</p><div class="ba"><b>Antes</b><span>Patrimonio y torta de gastos</span><b>Después</b><span>Un monto y un “por día”</span></div></article>
+      <article><h3>Pesos de hoy</h3><p>Es un toggle global que ajusta montos históricos por IPC. Así, comparar octubre con marzo sirve de algo. Los macro settings que ya existen alcanzan como fuente.</p><div class="ba"><b>Antes</b><span>Solo nominal o USD</span><b>Después</b><span>Nominal · real · USD</span></div></article>
+      <article><h3>La carta del mes</h3><p>Es un resumen en prosa armado con plantillas y números reales: cuánto ahorraste, qué creció y qué se vino. No hay redacción generada por IA, así que no puede inventar cifras.</p><div class="ba"><b>Antes</b><span>Sin cierre mensual</span><b>Después</b><span>Un párrafo, una vez por mes</span></div></article>
+      <article><h3>Metas encadenadas</h3><p>El simulador deja de mostrar un gráfico para interpretar y pasa a dar una fecha. Cuando una meta termina, el aporte pasa solo a la siguiente.</p><div class="ba"><b>Antes</b><span>Curvas a 1-5 años + KPIs</span><b>Después</b><span>“Llegás en junio 2027” + slider</span></div></article>
+      <article><h3>Balance con deudas</h3><p>El resumen de la tarjeta se resta del patrimonio mientras no esté pagado. Así, el neto que ves es el que realmente tenés.</p><div class="ba"><b>Antes</b><span>Suma de cuentas</span><b>Después</b><span>Activos − pasivos</span></div></article>
+      <article><h3>Listas con hairlines</h3><p>Se reemplazan las tarjetas con sombra y borde por filas con línea fina, y la fecha va en mono a la izquierda. Entra el doble de información sin que se sienta apretada.</p><div class="ba"><b>Antes</b><span>Card + badge + ícono de color</span><b>Después</b><span>Fecha · concepto · monto</span></div></article>
+    </div>
+  </div>
+</section>
+
+<footer><div class="wrap">Norte · propuesta de identidad · los datos son de ejemplo.</div></footer>
+
+<script>
+  // Patrimonio: nominal / pesos de hoy / USD
+  const VALS = {
+    nom: ["$ 4.812.300", "vs. hace un año <b>+38,4%</b> nominal"],
+    real: ["$ 4.812.300", "vs. hace un año <b>+6,1%</b> en pesos de hoy"],
+    usd: ["US$ 3.318", "vs. hace un año <b>+11,2%</b> en dólares MEP"],
+  };
+  document.querySelectorAll("#n-tog button").forEach(b => b.addEventListener("click", () => {
+    document.querySelectorAll("#n-tog button").forEach(x => x.classList.toggle("on", x === b));
+    document.getElementById("n-val").textContent = VALS[b.dataset.k][0];
+    document.getElementById("n-delta").innerHTML = VALS[b.dataset.k][1];
+  }));
+
+  // Calendario de octubre 2026 (empieza jueves)
+  const cal = document.getElementById("n-cal");
+  const spend = [2,1,0,3,1,0,1,2,4,1,0,2,1,1,3,2,4,2,0,0,0,0,0,0,0,0,0,0,0,0,0];
+  const due = [5, 10, 19, 20, 23];
+  const shades = ["#F3EEE3", "#E3DACB", "#B9B3A6", "#6F7872", "#1C2420"];
+  ["L","M","M","J","V","S","D"].forEach(d => cal.insertAdjacentHTML("beforeend", `<span class="h">${d}</span>`));
+  for (let i = 0; i < 3; i++) cal.insertAdjacentHTML("beforeend", "<span></span>");
+  for (let d = 1; d <= 31; d++) {
+    const s = d <= 18 ? spend[d - 1] : -1;
+    const bg = s < 0 ? "transparent" : shades[s];
+    const fg = s >= 3 ? "#FAF8F3" : "var(--tinta)";
+    const cls = ["c", d === 18 ? "today" : "", due.includes(d) ? "due" : ""].join(" ");
+    cal.insertAdjacentHTML("beforeend", `<span class="${cls}" style="background:${bg};color:${s < 0 ? "var(--niebla)" : fg}">${d}</span>`);
+  }
+
+  // Rumbo: fecha de llegada y banda de escenarios
+  const MONTHS = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
+  const fan = document.getElementById("n-fan");
+  function draw(save) {
+    const left = 5000 - 2900;
+    const months = Math.ceil(left / save);
+    const d = new Date(2026, 9 + months, 1);
+    document.getElementById("n-when").textContent = `${["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"][d.getMonth()]} ${d.getFullYear()}`;
+    document.getElementById("n-save").textContent = `US$ ${save}`;
+    const W = 280, H = 150, N = 24, max = 9000;
+    const x = i => 10 + (i / N) * (W - 20);
+    const y = v => H - 20 - (Math.min(v, max) / max) * (H - 34);
+    let mid = "", hi = "", lo = "";
+    for (let i = 0; i <= N; i++) {
+      mid += `${i ? "L" : "M"}${x(i)},${y(2900 + save * i)}`;
+      hi += `${i ? "L" : "M"}${x(i)},${y(2900 + save * 1.15 * i)}`;
+    }
+    for (let i = N; i >= 0; i--) lo += `L${x(i)},${y(2900 + save * .8 * i)}`;
+    const mx = Math.min(months, N);
+    let ticks = "";
+    for (let i = 0; i <= N; i += 6) {
+      const td = new Date(2026, 9 + i, 1);
+      ticks += `<text x="${x(i)}" y="${H - 4}" font-size="9" font-family="Geist Mono" fill="#6F7872" text-anchor="${i === 0 ? "start" : i === N ? "end" : "middle"}">${MONTHS[td.getMonth()]} ${String(td.getFullYear()).slice(2)}</text>`;
+    }
+    fan.innerHTML = `
+      <path d="${hi}${lo}Z" fill="#DCE7E1"/>
+      <line x1="10" x2="${W - 10}" y1="${y(5000)}" y2="${y(5000)}" stroke="#C4623A" stroke-dasharray="3 3"/>
+      <text x="${W - 10}" y="${y(5000) - 5}" font-size="10" font-family="Geist Mono" fill="#C4623A" text-anchor="end">US$ 5.000</text>
+      <path d="${mid}" fill="none" stroke="#1C2420" stroke-width="1.6"/>
+      ${months <= N ? `<g transform="translate(${x(mx)},${y(5000)})"><path d="M0,-8 L2,-2 L8,0 L2,2 L0,8 L-2,2 L-8,0 L-2,-2Z" fill="#C4623A"/></g>` : ""}
+      <line x1="10" x2="${W - 10}" y1="${H - 20}" y2="${H - 20}" stroke="#DDD5C4"/>
+      ${ticks}`;
+  }
+  const range = document.getElementById("n-range");
+  range.addEventListener("input", () => draw(+range.value));
+  draw(+range.value);
+</script>
+</body>
+</html>

@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Seis identidades</title>
+<style>
+  :root { --bg: #F6F5F2; --text: #171717; --muted: #6b6b6b; --line: #dedbd3; }
+  * { box-sizing: border-box; margin: 0; }
+  body { background: var(--bg); color: var(--text); font: 15px/1.5 system-ui, sans-serif; }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 48px 16px; }
+  h1 { font-size: clamp(30px, 5vw, 44px); letter-spacing: -.03em; }
+  .lead { color: var(--muted); max-width: 60ch; margin-top: 8px; }
+  .cards { display: grid; gap: 16px; margin-top: 32px; grid-template-columns: 1fr; }
+  @media (min-width: 860px) { .cards { grid-template-columns: repeat(3, 1fr); } }
+  a.card { display: block; border-radius: 16px; padding: 22px; text-decoration: none; min-height: 260px; transition: transform .15s; }
+  a.card:hover { transform: translateY(-3px); }
+  .card h2 { font-size: 40px; letter-spacing: -.03em; line-height: 1; margin-top: 8px; }
+  .card p { margin-top: 10px; font-size: 14px; }
+  .card small { font: 11px ui-monospace, monospace; text-transform: uppercase; letter-spacing: .1em; opacity: .7; }
+  .card ul { margin-top: 12px; padding-left: 16px; font-size: 13px; display: grid; gap: 3px; }
+  .lucas { background: #D4FF3A; color: #141414; border: 2px solid #141414; box-shadow: 4px 4px 0 #141414; }
+  .norte { background: #FAF8F3; color: #1C2420; border: 1px solid #DDD5C4; }
+  .norte h2 { font-family: Georgia, serif; font-weight: 400; }
+  .pulso { background: #0A0B0D; color: #E6E8EB; border: 1px solid #23272E; }
+  .pulso h2 { color: #F5B83D; }
+  .sobres { background: #D9CCFF; color: #2B1B3D; border-radius: 28px; box-shadow: 0 1px 0 #fff inset, 0 12px 24px -12px #2b1b3d55; }
+  .sobres h2 { font-weight: 900; }
+  .hilo { background: #F7F7F5; color: #0E0E0E; border: 2px solid #0E0E0E; border-radius: 0; }
+  .hilo h2 { font-weight: 900; letter-spacing: -.06em; }
+  .hilo h2::after { content: "●"; color: #2340FF; font-size: .4em; }
+  .abaco { background: #2851A3; color: #fff; border: 3px solid #151515; border-radius: 0; }
+  .abaco h2 { text-transform: uppercase; font-weight: 900; color: #F2C230; }
+  table { width: 100%; border-collapse: collapse; margin-top: 40px; font-size: 14px; }
+  .tw { overflow-x: auto; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font: 600 11px ui-monospace, monospace; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+  td:first-child { font-weight: 600; white-space: nowrap; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Seis nombres, seis identidades</h1>
+  <p class="lead">Las seis propuestas para reemplazar a PLATA. Cada una arma la app distinto, así que no cambia solo la estética: también cambia qué se ve primero y dónde vive cada módulo.</p>
+  <div class="cards">
+    <a class="card lucas" href="1-lucas.html"><small>01 · lúdica</small><h2>lucas</h2><p>Tu plata, anotada en criollo. Papel, tinta y lima.</p><ul><li>Una barra para anotar y preguntar</li><li>Hoy · Plata · Anotar · Agenda · Yo</li><li>Ideal si cargás mucho desde el celu</li></ul></a>
+    <a class="card norte" href="2-norte.html"><small>02 · editorial</small><h2>Norte</h2><p>Saber dónde estás para elegir a dónde ir. Serif, verde bosque y terracota.</p><ul><li>Libre para gastar · pesos de hoy</li><li>Hoy · Mes · Rumbo · Patrimonio</li><li>Ideal si querés planificar y ahorrar</li></ul></a>
+    <a class="card pulso" href="3-pulso.html"><small>03 · cockpit</small><h2>Pulso</h2><p>Tu plata en tiempo real y en dos monedas. Oscuro, mono y ámbar.</p><ul><li>Cinta de dólar y paleta ⌘K</li><li>Panel · Movs · Mercado · Agenda · Rumbo</li><li>Ideal si usás más la compu y seguís el mercado</li></ul></a>
+    <a class="card sobres" href="4-sobres.html"><small>04 · presupuesto táctil</small><h2>sobres</h2><p>Cada peso con un destino. Pastel, redondo y con relieve.</p><ul><li>Repartir el sueldo en sobres</li><li>Sobres · Movs · Ahorro · Vos</li><li>Ideal si querés controlar cuánto te queda</li></ul></a>
+    <a class="card hilo" href="5-hilo.html"><small>05 · suiza / feed</small><h2>hilo</h2><p>Todo lo que pasa con tu plata, en un solo hilo. Blanco, negro y cobalto.</p><ul><li>Línea de tiempo con “ahora” en el medio</li><li>Hilo · Resumen · Cosas · Vos</li><li>Ideal si usás mucho el bot de Telegram</li></ul></a>
+    <a class="card abaco" href="6-abaco.html"><small>06 · tablero modular</small><h2>Ábaco</h2><p>Armá tu tablero. Bauhaus: formas puras y primarios.</p><ul><li>Inicio con piezas S/M/L configurables</li><li>Tablero · Movs · Módulos · Ajustes</li><li>Ideal si usás cada módulo con distinta frecuencia</li></ul></a>
+  </div>
+  <div class="tw"><table>
+    <thead><tr><th></th><th>Lucas</th><th>Norte</th><th>Pulso</th><th>Sobres</th><th>Hilo</th><th>Ábaco</th></tr></thead>
+    <tbody>
+      <tr><td>Pantalla principal</td><td>Saldo + ritmo semanal</td><td>Patrimonio + libre para gastar</td><td>KPIs + cotizaciones</td><td>Sobres con lo que queda</td><td>Feed: futuro / ahora / pasado</td><td>Tablero de piezas configurable</td></tr>
+      <tr><td>Cómo se carga</td><td>Lenguaje natural (como el bot)</td><td>FAB → formulario simplificado</td><td>⌘K / alta rápida</td><td>FAB → se asigna a un sobre</td><td>Campo para escribir, mismo chat que Telegram</td><td>Alta rápida en Movs</td></tr>
+      <tr><td>Búsqueda</td><td>Misma barra que Anotar</td><td>Herramienta global</td><td>Paleta de comandos</td><td>Barra en Movimientos</td><td>Preguntando en el campo para escribir</td><td>Módulo / ⌘K</td></tr>
+      <tr><td>Vencimientos + Vehículos</td><td>Agenda unificada</td><td>Calendario del Mes + Patrimonio</td><td>Agenda + Activos en el sidebar</td><td>Sobres fijos + sobre Auto</td><td>Filtros “Fechas” y “Auto” del hilo</td><td>Piezas + módulos</td></tr>
+      <tr><td>Proyecciones</td><td>Metas dentro de Plata</td><td>Pestaña Rumbo, es el eje</td><td>Sección Rumbo</td><td>Metas = sobres de largo plazo</td><td>En Resumen, se abre desde cada meta</td><td>Módulo Metas</td></tr>
+      <tr><td>Idea nueva clave</td><td>Anotar = Telegram en la app</td><td>Valores ajustados por inflación</td><td>≈ USD por movimiento</td><td>Repartir sueldo y cubrir sobres</td><td>Inflación personal por comercio</td><td>Inicio que arma cada uno</td></tr>
+      <tr><td>Esfuerzo estimado</td><td>Medio: el parser ya existe</td><td>Medio-alto: hay que calcular el IPC y lo libre para gastar</td><td>Medio: hay que construir la paleta y los atajos</td><td>Alto: modelo nuevo de presupuesto</td><td>Medio: el feed une datos que ya existen</td><td>Medio-alto: hay que construir las piezas y el layout persistente</td></tr>
+    </tbody>
+  </table></div>
+</div>
+</body>
+</html>
