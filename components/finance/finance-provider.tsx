@@ -16,6 +16,7 @@ import {
   type Goal,
 } from "@/lib/finance-data"
 import { getApiAuthHeaders, getSupabase } from "@/lib/supabase/client"
+import { compressAvatar } from "@/lib/compress-avatar"
 import {
   fromAccount,
   fromDueItem,
@@ -44,6 +45,8 @@ export interface User {
   email: string
   emailVerified: boolean
   providerId: string | null
+  /** URL pública de la foto de perfil; `null` muestra la inicial. */
+  avatarUrl: string | null
 }
 
 export interface NewTransactionInput {
@@ -108,6 +111,8 @@ interface FinanceContextValue {
   changePassword: (currentPassword?: string, newPassword?: string) => Promise<void>
   sendEmailVerificationLink: () => Promise<void>
   reloadUser: () => Promise<void>
+  /** `avatar: null` borra la foto; sin `avatar` no se toca. */
+  updateProfile: (changes: { name?: string; avatar?: File | null }) => Promise<void>
 
   accounts: Account[]
   transactions: Transaction[]
@@ -192,6 +197,10 @@ interface FinanceContextValue {
 const FinanceContext = createContext<FinanceContextValue | null>(null)
 
 const SETTINGS_PERSIST_DELAY_MS = 600
+
+const AVATAR_BUCKET = "avatars"
+/** Una foto por usuario, siempre en la misma ruta: reemplazarla es un upsert. */
+const avatarPath = (uid: string) => `${uid}/avatar`
 
 const DEFAULT_PROJECTION_SETTINGS: ProjectionSettings = {
   horizonMonths: 36,
@@ -331,10 +340,22 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       if (!u) return null
       return {
         uid: u.id,
-        name: u.user_metadata?.full_name || u.user_metadata?.name || u.email?.split("@")[0] || "Usuario",
+        // `profile_*` es lo que el usuario eligió en Yo. Las claves de Google
+        // (`full_name`, `avatar_url`) no sirven para eso: el proveedor las
+        // vuelve a escribir en cada login.
+        name:
+          u.user_metadata?.profile_name ||
+          u.user_metadata?.full_name ||
+          u.user_metadata?.name ||
+          u.email?.split("@")[0] ||
+          "Usuario",
         email: u.email || "",
         emailVerified: Boolean(u.email_confirmed_at || u.confirmed_at),
         providerId: u.app_metadata?.provider ?? null,
+        avatarUrl:
+          u.user_metadata?.profile_avatar_url === undefined
+            ? (u.user_metadata?.avatar_url ?? null)
+            : u.user_metadata.profile_avatar_url,
       }
     }
 
@@ -687,6 +708,44 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       prev ? { ...prev, emailVerified: Boolean(data.user.email_confirmed_at), email: data.user.email || prev.email } : prev
     )
   }, [supabase])
+
+  // El perfil vive en user_metadata, que el usuario puede editar: sirve para
+  // mostrar, nunca para autorizar. onAuthStateChange trae el usuario
+  // actualizado (USER_UPDATED), así que no hace falta tocar el estado acá.
+  const updateProfile = useCallback(
+    async (changes: { name?: string; avatar?: File | null }) => {
+      if (!uid) throw new Error("Usuario no autenticado.")
+      const data: Record<string, string | null> = {}
+
+      if (changes.name !== undefined) {
+        const name = changes.name.trim()
+        if (!name) throw new Error("El nombre no puede quedar vacío.")
+        data.profile_name = name.slice(0, 60)
+      }
+
+      if (changes.avatar === null) {
+        const { error } = await supabase.storage.from(AVATAR_BUCKET).remove([avatarPath(uid)])
+        if (error) fail(error, "No se pudo borrar la foto.")
+        data.profile_avatar_url = null
+      } else if (changes.avatar) {
+        const blob = await compressAvatar(changes.avatar)
+        const path = avatarPath(uid)
+        const { error } = await supabase.storage
+          .from(AVATAR_BUCKET)
+          .upload(path, blob, { upsert: true, contentType: blob.type, cacheControl: "3600" })
+        if (error) fail(error, "No se pudo subir la foto.")
+        const { data: pub } = supabase.storage.from(AVATAR_BUCKET).getPublicUrl(path)
+        // La ruta no cambia al reemplazarla: sin esto el navegador y el CDN
+        // seguirían mostrando la foto anterior.
+        data.profile_avatar_url = `${pub.publicUrl}?v=${Date.now()}`
+      }
+
+      if (Object.keys(data).length === 0) return
+      const { error } = await supabase.auth.updateUser({ data })
+      if (error) fail(error, "No se pudo guardar el perfil.")
+    },
+    [supabase, uid]
+  )
 
   // ---------------------------------------------------------------------------
   // Cuentas
@@ -1344,6 +1403,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       changePassword,
       sendEmailVerificationLink,
       reloadUser,
+      updateProfile,
       accounts,
       transactions,
       categories,
@@ -1406,6 +1466,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       changePassword,
       sendEmailVerificationLink,
       reloadUser,
+      updateProfile,
       accounts,
       transactions,
       categories,

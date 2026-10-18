@@ -1,10 +1,13 @@
 "use client"
 
+import { useRef, useState } from "react"
 import Link from "next/link"
-import { ChevronRight, Download, LogOut, Search, ShieldCheck, Tag, Wallet, type LucideIcon } from "lucide-react"
+import { toast } from "sonner"
+import { Camera, Check, ChevronRight, Download, LogOut, Pencil, Search, ShieldCheck, Tag, Wallet, X, type LucideIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { formatShort, type Currency } from "@/lib/finance-data"
 import { ROUTES } from "@/lib/routes"
+import { cn } from "@/lib/utils"
 import { useFinance } from "./finance-provider"
 import { PageHeader } from "./page-header"
 import { useUI } from "./ui-context"
@@ -12,6 +15,7 @@ import { IconTile, pageClass } from "./lucas-ui"
 import { Wordmark } from "./app-icon"
 import { ThemeToggle } from "./theme-toggle"
 import { OptionSelect } from "./option-select"
+import { UserAvatar } from "./user-avatar"
 
 type Item =
   | { Icon: LucideIcon; label: string; hint: string; tone: string; onClick: () => void }
@@ -24,7 +28,7 @@ export function ProfileView({
   onManageCategories: () => void
   onManageSecurity: () => void
 }) {
-  const { user, logout, accounts, transactions, totalsByCurrency } = useFinance()
+  const { logout, accounts, transactions, totalsByCurrency } = useFinance()
   const { mask, handleOpenExport } = useUI()
 
   const items: Item[] = [
@@ -41,15 +45,7 @@ export function ProfileView({
 
       <div className="mt-4 grid grid-cols-1 items-start gap-5 lg:grid-cols-2">
         <div className="space-y-5">
-          <section className="flex items-center gap-3.5 rounded-2xl border-2 border-foreground bg-lime p-4 text-ink shadow-md">
-            <span className="flex size-14 shrink-0 items-center justify-center rounded-full border-2 border-ink bg-white text-xl font-extrabold">
-              {user?.name?.charAt(0)?.toUpperCase() ?? "U"}
-            </span>
-            <div className="min-w-0">
-              <p className="truncate text-lg font-extrabold">{user?.name}</p>
-              <p className="truncate font-mono text-xs">{user?.email}</p>
-            </div>
-          </section>
+          <ProfileCard />
 
           <div className="grid grid-cols-3 gap-2.5">
             <Stat label="Cuentas" value={String(accounts.length)} />
@@ -110,6 +106,121 @@ export function ProfileView({
         </div>
       </div>
     </div>
+  )
+}
+
+/** Nombre y foto, editables en el lugar. */
+function ProfileCard() {
+  const { user, updateProfile } = useFinance()
+  const fileRef = useRef<HTMLInputElement>(null)
+  const [editingName, setEditingName] = useState(false)
+  const [name, setName] = useState("")
+  const [busy, setBusy] = useState<"name" | "photo" | null>(null)
+
+  async function run(kind: "name" | "photo", changes: Parameters<typeof updateProfile>[0], done: string) {
+    setBusy(kind)
+    try {
+      await updateProfile(changes)
+      toast.success(done)
+      if (kind === "name") setEditingName(false)
+    } catch (err) {
+      toast.error((err as Error).message || "No se pudo guardar el perfil.")
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  return (
+    <section className="flex items-center gap-3.5 rounded-2xl border-2 border-foreground bg-lime p-4 text-ink shadow-md">
+      <div className="relative shrink-0">
+        <button
+          type="button"
+          onClick={() => fileRef.current?.click()}
+          disabled={busy !== null}
+          aria-label={user?.avatarUrl ? "Cambiar foto de perfil" : "Agregar foto de perfil"}
+          className="group relative block cursor-pointer rounded-full focus-visible:ring-3 focus-visible:ring-ink focus-visible:outline-none"
+        >
+          <UserAvatar user={user} className={cn("size-16 border-ink bg-white text-2xl", busy === "photo" && "opacity-50")} />
+          <span className="absolute -right-1 -bottom-1 flex size-7 items-center justify-center rounded-full border-2 border-ink bg-card text-foreground transition-transform group-hover:scale-110">
+            <Camera className="size-3.5" />
+          </span>
+        </button>
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0]
+            e.target.value = ""
+            if (file) void run("photo", { avatar: file }, "Foto actualizada.")
+          }}
+        />
+      </div>
+
+      <div className="min-w-0 flex-1">
+        {editingName ? (
+          <form
+            className="flex items-center gap-1.5"
+            onSubmit={(e) => {
+              e.preventDefault()
+              void run("name", { name }, "Nombre actualizado.")
+            }}
+          >
+            <input
+              autoFocus
+              value={name}
+              maxLength={60}
+              disabled={busy === "name"}
+              onChange={(e) => setName(e.target.value)}
+              onKeyDown={(e) => e.key === "Escape" && setEditingName(false)}
+              aria-label="Tu nombre"
+              className="h-9 min-w-0 flex-1 rounded-xl border-2 border-ink bg-white px-2.5 text-base font-extrabold outline-none focus-visible:ring-3 focus-visible:ring-ink/30"
+            />
+            <button
+              type="submit"
+              disabled={busy === "name" || !name.trim()}
+              aria-label="Guardar nombre"
+              className="flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-xl border-2 border-ink bg-ink text-lime disabled:opacity-50"
+            >
+              <Check className="size-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setEditingName(false)}
+              aria-label="Cancelar"
+              className="flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-xl border-2 border-ink bg-white"
+            >
+              <X className="size-4" />
+            </button>
+          </form>
+        ) : (
+          <button
+            type="button"
+            onClick={() => {
+              setName(user?.name ?? "")
+              setEditingName(true)
+            }}
+            className="group flex max-w-full cursor-pointer items-center gap-1.5 rounded-md text-left focus-visible:ring-3 focus-visible:ring-ink focus-visible:outline-none"
+            aria-label="Editar nombre"
+          >
+            <span className="truncate text-lg font-extrabold">{user?.name}</span>
+            <Pencil className="size-3.5 shrink-0 opacity-60 transition-opacity group-hover:opacity-100" />
+          </button>
+        )}
+        <p className="truncate font-mono text-xs">{user?.email}</p>
+        {user?.avatarUrl && !editingName && (
+          <button
+            type="button"
+            disabled={busy !== null}
+            onClick={() => void run("photo", { avatar: null }, "Foto quitada.")}
+            className="mt-1 cursor-pointer font-mono text-[11px] font-semibold underline underline-offset-2 disabled:opacity-50"
+          >
+            quitar foto
+          </button>
+        )}
+      </div>
+    </section>
   )
 }
 

@@ -34,6 +34,7 @@ import { formatShort } from "@/lib/finance-data"
 import { ROUTES, activeTab, findRoute, type RouteKey } from "@/lib/routes"
 import { useIsDesktop } from "@/lib/use-is-desktop"
 import { cn } from "@/lib/utils"
+import { UserAvatar } from "@/components/finance/user-avatar"
 
 /** El sidebar de escritorio repite las pestañas de mobile, con sus pantallas colgando. */
 const NAV: { tab: RouteKey; Icon: LucideIcon; children: RouteKey[] }[] = [
@@ -159,9 +160,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
             <div className="mt-4 flex flex-col gap-2 border-t-2 border-foreground pt-4">
               <div className="flex items-center gap-2.5 px-1 py-1">
-                <span className="flex size-8 shrink-0 items-center justify-center rounded-full border-2 border-foreground bg-lime text-xs font-extrabold text-ink">
-                  {user?.name?.charAt(0)?.toUpperCase() ?? "U"}
-                </span>
+                <UserAvatar user={user} className="size-8 text-xs" />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-xs font-bold text-foreground">{user?.name}</p>
                   <p className="truncate font-mono text-[11px] text-muted-foreground">{user?.email}</p>
