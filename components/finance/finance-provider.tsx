@@ -15,7 +15,9 @@ import {
   type DueItem,
   type Goal,
 } from "@/lib/finance-data"
+import { isAuthRetryableFetchError } from "@supabase/supabase-js"
 import { getApiAuthHeaders, getSupabase } from "@/lib/supabase/client"
+import { readLastUser, readSnapshot, writeLastUser, writeSnapshot } from "@/lib/offline-cache"
 import { compressAvatar } from "@/lib/compress-avatar"
 import {
   fromAccount,
@@ -329,6 +331,12 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     uidRef.current = uid
   }, [uid])
 
+  // Guarda la copia offline de una tabla, salvo que la sesión haya cambiado
+  // mientras volvía la respuesta: después de un logout no se escribe nada.
+  const keepSnapshot = useCallback((key: string, owner: string | undefined, value: unknown) => {
+    if (owner && owner === uidRef.current) writeSnapshot(key, owner, value)
+  }, [])
+
   // ---------------------------------------------------------------------------
   // Autenticación
   // ---------------------------------------------------------------------------
@@ -363,21 +371,37 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     // revocada, vencida o de un usuario borrado la da por buena. getUser() la
     // valida contra el servidor, que es lo único que sirve para decidir si
     // alguien está realmente adentro.
+    // El último usuario queda guardado para poder entrar sin conexión
+    const applyUser = (next: User | null) => {
+      writeLastUser(next)
+      setUser(next)
+    }
+
     supabase.auth.getUser().then(async ({ data, error }) => {
       if (!alive) return
-      if (error || !data.user) {
+      if (isAuthRetryableFetchError(error)) {
+        // Sin red no hay contra quién validar, y eso no dice nada de la sesión:
+        // cerrarla dejaría a alguien sin acceso a sus datos guardados sólo por
+        // abrir la app en el subte. Se sigue con lo que hay en el dispositivo y
+        // al volver la red Supabase refresca el token (o avisa SIGNED_OUT).
+        const { data: local } = await supabase.auth.getSession()
+        if (alive) setUser(mapUser(local.session?.user) ?? readLastUser<User>())
+      } else if (error || !data.user) {
         const { data: local } = await supabase.auth.getSession()
         if (local.session) await supabase.auth.signOut()
-        if (alive) setUser(null)
+        if (alive) applyUser(null)
       } else {
-        setUser(mapUser(data.user))
+        applyUser(mapUser(data.user))
       }
       if (alive) setLoading(false)
     })
 
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       if (!alive) return
-      setUser(mapUser(session?.user))
+      // Offline con el token vencido, la sesión inicial llega vacía aunque siga
+      // guardada: quién está adentro lo decide getUser() de arriba.
+      if (event === "INITIAL_SESSION" && !session) return
+      applyUser(mapUser(session?.user))
       setLoading(false)
 
       // El enlace de recuperación crea una sesión válida, así que sin esto el
@@ -407,84 +431,118 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   // ---------------------------------------------------------------------------
 
   const loadAccounts = useCallback(async () => {
+    const owner = uidRef.current
     const { data, error } = await withAuthRetry(supabase, () =>
       supabase.from("account_balances").select("*").order("name")
     )
     if (error) return console.error("No se pudieron leer las cuentas:", error.message)
-    setAccounts((data ?? []).map(toAccount))
-  }, [supabase])
+    const rows = (data ?? []).map(toAccount)
+    setAccounts(rows)
+    keepSnapshot("accounts", owner, rows)
+  }, [supabase, keepSnapshot])
 
   const loadTransactions = useCallback(async () => {
+    const owner = uidRef.current
     const { data, error } = await withAuthRetry(supabase, () =>
       supabase.from("transactions").select("*").order("occurred_at", { ascending: false })
     )
     if (error) return console.error("No se pudieron leer los movimientos:", error.message)
-    setTransactions((data ?? []).map(toTransaction))
-  }, [supabase])
+    const rows = (data ?? []).map(toTransaction)
+    setTransactions(rows)
+    keepSnapshot("transactions", owner, rows)
+  }, [supabase, keepSnapshot])
 
   const loadCategories = useCallback(async () => {
+    const owner = uidRef.current
     const { data, error } = await withAuthRetry(supabase, () =>
       supabase.from("categories").select("*").order("name")
     )
     if (error) return console.error("No se pudieron leer las categorías:", error.message)
-    setCategories((data ?? []).map(toCategory))
+    const rows = (data ?? []).map(toCategory)
+    setCategories(rows)
+    keepSnapshot("categories", owner, rows)
     return data ?? []
-  }, [supabase])
+  }, [supabase, keepSnapshot])
 
   const loadVehicles = useCallback(async () => {
+    const owner = uidRef.current
     const { data, error } = await withAuthRetry(supabase, () =>
       supabase.from("vehicles").select("*").order("created_at", { ascending: false })
     )
     if (error) return console.error("No se pudieron leer los vehículos:", error.message)
-    setVehicles((data ?? []).map(toVehicle))
-  }, [supabase])
+    const rows = (data ?? []).map(toVehicle)
+    setVehicles(rows)
+    keepSnapshot("vehicles", owner, rows)
+  }, [supabase, keepSnapshot])
 
   const loadVehicleLogs = useCallback(async () => {
+    const owner = uidRef.current
     const { data, error } = await withAuthRetry(supabase, () =>
       supabase.from("vehicle_logs").select("*").order("occurred_at", { ascending: false })
     )
     if (error) return console.error("No se pudieron leer los registros de vehículo:", error.message)
-    setVehicleLogs((data ?? []).map(toVehicleLog))
-  }, [supabase])
+    const rows = (data ?? []).map(toVehicleLog)
+    setVehicleLogs(rows)
+    keepSnapshot("vehicleLogs", owner, rows)
+  }, [supabase, keepSnapshot])
 
   const loadDueItems = useCallback(async () => {
+    const owner = uidRef.current
     const { data, error } = await withAuthRetry(supabase, () =>
       supabase.from("due_items").select("*").order("due_date")
     )
     if (error) return console.error("No se pudieron leer los vencimientos:", error.message)
-    setDueItems((data ?? []).map(toDueItem))
-  }, [supabase])
+    const rows = (data ?? []).map(toDueItem)
+    setDueItems(rows)
+    keepSnapshot("dueItems", owner, rows)
+  }, [supabase, keepSnapshot])
 
   const loadStockTrades = useCallback(async () => {
+    const owner = uidRef.current
     const { data, error } = await withAuthRetry(supabase, () =>
       supabase.from("stock_trades").select("*").order("occurred_at", { ascending: false })
     )
     if (error) return console.error("No se pudieron leer las operaciones:", error.message)
-    setStockTransactions((data ?? []).map(toStockTransaction))
-  }, [supabase])
+    const rows = (data ?? []).map(toStockTransaction)
+    setStockTransactions(rows)
+    keepSnapshot("stockTransactions", owner, rows)
+  }, [supabase, keepSnapshot])
 
   const loadWatchlist = useCallback(async () => {
+    const owner = uidRef.current
     const { data, error } = await withAuthRetry(supabase, () =>
       supabase.from("watchlist").select("*").order("symbol")
     )
     if (error) return console.error("No se pudo leer la watchlist:", error.message)
-    setWatchlist((data ?? []).map(toWatchlistStock))
-  }, [supabase])
+    const rows = (data ?? []).map(toWatchlistStock)
+    setWatchlist(rows)
+    keepSnapshot("watchlist", owner, rows)
+  }, [supabase, keepSnapshot])
+
+  const applySettingsRow = useCallback(
+    (row: Parameters<typeof toMacroSettings>[0]) => {
+      applyMacroSettings({ ...macroSettingsRef.current, ...toMacroSettings(row) })
+      applyProjectionSettings(toProjectionSettings(row))
+      applyDefaultAccounts(toDefaultAccounts(row))
+    },
+    [applyMacroSettings, applyProjectionSettings, applyDefaultAccounts]
+  )
 
   const loadSettings = useCallback(async () => {
+    const owner = uidRef.current
     const { data, error } = await withAuthRetry(supabase, () =>
       supabase.from("user_settings").select("*").maybeSingle()
     )
     if (error) return console.error("No se pudieron leer las preferencias:", error.message)
     if (data) {
-      applyMacroSettings({ ...macroSettingsRef.current, ...toMacroSettings(data) })
-      applyProjectionSettings(toProjectionSettings(data))
-      applyDefaultAccounts(toDefaultAccounts(data))
+      applySettingsRow(data)
+      keepSnapshot("settings", owner, data)
     }
     setSettingsLoaded(true)
-  }, [supabase, applyMacroSettings, applyProjectionSettings, applyDefaultAccounts])
+  }, [supabase, applySettingsRow, keepSnapshot])
 
   const loadGoals = useCallback(async () => {
+    const owner = uidRef.current
     const { data, error } = await withAuthRetry(supabase, () =>
       supabase
         .from("goals")
@@ -493,8 +551,10 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         .order("created_at", { ascending: true })
     )
     if (error) return console.error("No se pudieron leer las metas:", error.message)
-    setGoals((data ?? []).map(toGoal))
-  }, [supabase])
+    const rows = (data ?? []).map(toGoal)
+    setGoals(rows)
+    keepSnapshot("goals", owner, rows)
+  }, [supabase, keepSnapshot])
 
   // Alta de las categorías por defecto la primera vez
   const seedCategories = useCallback(async () => {
@@ -527,6 +587,32 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     }
 
     let alive = true
+
+    // Primero lo último guardado, así la app abre al toque y también sin red;
+    // la relectura de abajo lo reemplaza apenas contesta Supabase.
+    const restore = <T,>(key: string, apply: (value: T) => void) => {
+      const value = readSnapshot<T>(key, uid)
+      if (value === undefined) return false
+      apply(value)
+      return true
+    }
+    const restored = [
+      restore("accounts", setAccounts),
+      restore("transactions", setTransactions),
+      restore("categories", setCategories),
+      restore("vehicles", setVehicles),
+      restore("vehicleLogs", setVehicleLogs),
+      restore("dueItems", setDueItems),
+      restore("stockTransactions", setStockTransactions),
+      restore("watchlist", setWatchlist),
+      restore("goals", setGoals),
+    ].some(Boolean)
+    const cachedSettings = readSnapshot<Parameters<typeof applySettingsRow>[0]>("settings", uid)
+    if (cachedSettings) {
+      applySettingsRow(cachedSettings)
+      setSettingsLoaded(true)
+    }
+    if (restored) setDataLoaded(true)
 
     Promise.all([
       loadAccounts(),
@@ -562,6 +648,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     loadSettings,
     loadGoals,
     seedCategories,
+    applySettingsRow,
     applyMacroSettings,
     applyProjectionSettings,
     applyDefaultAccounts,
@@ -623,9 +710,11 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       void loadStockTrades()
     }
     document.addEventListener("visibilitychange", resync)
+    window.addEventListener("online", resync)
 
     return () => {
       document.removeEventListener("visibilitychange", resync)
+      window.removeEventListener("online", resync)
       void supabase.removeChannel(channel)
     }
   }, [
@@ -658,7 +747,9 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   )
 
   const logout = useCallback(async () => {
-    await supabase.auth.signOut()
+    // Sin red, el signOut global falla y deja la sesión puesta: offline sólo se
+    // puede cerrar la de este dispositivo.
+    await supabase.auth.signOut(navigator.onLine ? undefined : { scope: "local" })
     const { clearUserScopedStorage } = await import("@/lib/user-storage")
     clearUserScopedStorage()
   }, [supabase])

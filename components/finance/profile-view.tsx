@@ -16,6 +16,7 @@ import { Wordmark } from "./app-icon"
 import { ThemeToggle } from "./theme-toggle"
 import { OptionSelect } from "./option-select"
 import { UserAvatar } from "./user-avatar"
+import { InstallAppSection } from "./pwa-ui"
 
 type Item =
   | { Icon: LucideIcon; label: string; hint: string; tone: string; onClick: () => void }
@@ -65,6 +66,8 @@ export function ProfileView({
         </div>
 
         <div className="space-y-5">
+          <InstallAppSection />
+
           <ul className="overflow-hidden rounded-2xl border-2 border-foreground bg-card">
             {items.map((item) => {
               const content = (

@@ -35,6 +35,7 @@ import { ROUTES, activeTab, findRoute, type RouteKey } from "@/lib/routes"
 import { useIsDesktop } from "@/lib/use-is-desktop"
 import { cn } from "@/lib/utils"
 import { UserAvatar } from "@/components/finance/user-avatar"
+import { OfflineBanner } from "@/components/finance/pwa-ui"
 
 /** El sidebar de escritorio repite las pestañas de mobile, con sus pantallas colgando. */
 const NAV: { tab: RouteKey; Icon: LucideIcon; children: RouteKey[] }[] = [
@@ -89,6 +90,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     <>
       {!isDesktop && (
         <div className="mx-auto min-h-dvh w-full max-w-md bg-background">
+          <OfflineBanner />
           <main className="pt-[env(safe-area-inset-top)] pb-28">{children}</main>
           <BottomNav onAnotar={ui.handleOpenAnotar} />
         </div>
@@ -180,6 +182,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </aside>
 
           <main className="flex min-w-0 flex-1 flex-col overflow-y-auto bg-background">
+            <OfflineBanner />
             <header className="flex shrink-0 items-center justify-between gap-4 border-b-2 border-foreground bg-background px-6 py-3">
               {/* Ruta y no título: el <h1> lo pone cada vista con el mismo nombre. */}
               <nav aria-label="Ubicación" className="flex items-center gap-1.5 text-sm">
