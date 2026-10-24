@@ -178,7 +178,7 @@ export function ProjectionControls({
           </div>
 
           {/* Real vs Nominal Terms Switch */}
-          <div className="flex items-center justify-between rounded-xl border-2 border-foreground/20 bg-background p-3">
+          <div className="flex items-center justify-between rounded-xl border-2 border-border bg-background p-3">
             <div className="space-y-0.5">
               <div className="flex items-center gap-2">
                 <Flame className="size-4" />
@@ -298,7 +298,7 @@ export function ProjectionControls({
                 usesEstimatedSavings ? (
                   <Badge
                     variant="secondary"
-                    className="text-[11px] font-medium border-foreground bg-lime text-ink"
+                    className="text-[11px] font-medium border-border bg-lime text-ink"
                   >
                     Calculado de tus movimientos
                   </Badge>
@@ -390,7 +390,7 @@ export function ProjectionControls({
                 <Badge variant="secondary" className="text-[11px] font-mono font-semibold bg-success/10 text-success border-success/20">
                   Blue: ${dollarRates.blue}
                 </Badge>
-                <Badge variant="secondary" className="text-[11px] font-mono font-semibold border-foreground bg-lime text-ink">
+                <Badge variant="secondary" className="text-[11px] font-mono font-semibold border-border bg-lime text-ink">
                   MEP: ${dollarRates.mep}
                 </Badge>
                 <Badge variant="secondary" className="text-[11px] font-mono font-semibold bg-muted text-muted-foreground">
@@ -438,7 +438,7 @@ export function ProjectionControls({
         {showAdvanced && (
           <CardContent
             id="ajustes-macro"
-            className="space-y-5 border-t-2 border-dashed border-foreground/15 pt-4 animate-in fade-in slide-in-from-top-2 duration-200"
+            className="space-y-5 border-t-2 border-dashed border-border pt-4 animate-in fade-in slide-in-from-top-2 duration-200"
           >
             {/* Annual Inflation Slider */}
             <div className="space-y-2">

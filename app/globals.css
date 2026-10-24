@@ -3,8 +3,9 @@
 @import 'shadcn/tailwind.css';
 
 /*
- * Lucas: papel y tinta. El modo oscuro invierte papel ↔ tinta y el lima queda
- * igual en los dos. El tema efectivo lo fija `lib/theme.ts` en
+ * EN MANO: Perla en claro, Tinta suave en oscuro y lima para las acciones.
+ * Los contornos usan `border`, independientes del color del texto.
+ * El tema efectivo lo fija `lib/theme.ts` en
  * <html data-theme>, según lo que eligió el usuario o, si no eligió, el sistema.
  */
 @custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
@@ -65,7 +66,7 @@
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
 
-  /* Sombras duras, sin blur: el relieve de Lucas es de imprenta, no de vidrio. */
+  /* Sombras duras: relieve de imprenta en Perla, más discreto en Tinta suave. */
   --shadow-2xs: 1px 1px 0 var(--shadow-ink);
   --shadow-xs: 2px 2px 0 var(--shadow-ink);
   --shadow-sm: 3px 3px 0 var(--shadow-ink);
@@ -79,92 +80,96 @@
 :root {
   color-scheme: light;
 
-  --paper: #f3eee3;
+  --paper: #f1f3ef;
   --ink: #141414;
   --lime: #d4ff3a;
-  --coral: #ff6b4a;
-  --sky: #9fd4ff;
-  --grape: #c8b6ff;
+  --coral: #ff9479;
+  --sky: #b3d6e8;
+  --grape: #d0c2e7;
   --shadow-ink: #141414;
 
   --background: var(--paper);
-  --foreground: var(--ink);
-  --card: #ffffff;
-  --card-foreground: var(--ink);
-  --popover: #ffffff;
-  --popover-foreground: var(--ink);
-  --primary: var(--ink);
-  --primary-foreground: var(--lime);
-  --secondary: #e9e2d2;
-  --secondary-foreground: var(--ink);
-  --muted: #e9e2d2;
-  --muted-foreground: #66625a;
+  --foreground: #20271e;
+  --card: #fcfdfb;
+  --card-foreground: var(--foreground);
+  --popover: #fcfdfb;
+  --popover-foreground: var(--foreground);
+  --primary: var(--lime);
+  --primary-foreground: var(--ink);
+  --secondary: #e4e9df;
+  --secondary-foreground: var(--foreground);
+  --muted: #e4e9df;
+  --muted-foreground: #5c6657;
   --accent: var(--lime);
   --accent-foreground: var(--ink);
   /* Coral oscurecido: el coral de marca no llega a contraste AA como texto. */
-  --destructive: #c8341b;
-  --success: #17803d;
+  --destructive: #b03221;
+  --success: #21643b;
   --success-foreground: #ffffff;
-  --warning: #a86a00;
+  --warning: #805500;
   --warning-foreground: var(--ink);
-  --border: var(--ink);
-  --input: var(--ink);
-  --ring: var(--ink);
+  --border: #c4cebe;
+  --input: #85917e;
+  --ring: #537520;
   --chart-1: #7fb800;
-  --chart-2: #ff6b4a;
+  --chart-2: #d9684e;
   --chart-3: #3f9ae0;
   --chart-4: #8f6ef0;
   --chart-5: #e0a000;
   --radius: 0.625rem;
   --sidebar: var(--paper);
-  --sidebar-foreground: var(--ink);
+  --sidebar-foreground: var(--foreground);
   --sidebar-primary: var(--ink);
   --sidebar-primary-foreground: var(--lime);
   --sidebar-accent: var(--lime);
   --sidebar-accent-foreground: var(--ink);
-  --sidebar-border: var(--ink);
-  --sidebar-ring: var(--ink);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
 }
 
 :root[data-theme="dark"] {
   color-scheme: dark;
 
-  --shadow-ink: #000000;
+  --shadow-ink: #0b0e0b;
+  --lime: #c6e76b;
+  --coral: #f0aa95;
+  --sky: #accbdf;
+  --grape: #c6b9e2;
 
-  --background: #141414;
-  --foreground: var(--paper);
-  --card: #1f1e1b;
-  --card-foreground: var(--paper);
-  --popover: #1f1e1b;
-  --popover-foreground: var(--paper);
+  --background: #181a18;
+  --foreground: #f2f0e8;
+  --card: #232622;
+  --card-foreground: var(--foreground);
+  --popover: #232622;
+  --popover-foreground: var(--foreground);
   --primary: var(--lime);
   --primary-foreground: var(--ink);
-  --secondary: #2b2925;
-  --secondary-foreground: var(--paper);
-  --muted: #2b2925;
-  --muted-foreground: #a9a397;
+  --secondary: #30352e;
+  --secondary-foreground: var(--foreground);
+  --muted: #30352e;
+  --muted-foreground: #b6bbae;
   --accent: var(--lime);
   --accent-foreground: var(--ink);
-  --destructive: #ff7a5c;
-  --success: #6fdc8c;
+  --destructive: #ffb29d;
+  --success: #a5d4ae;
   --success-foreground: var(--ink);
   --warning: #f2b440;
   --warning-foreground: var(--ink);
-  --border: #e9e2d2;
-  --input: #e9e2d2;
+  --border: #51594d;
+  --input: #7d8877;
   --ring: var(--lime);
-  --chart-1: #d4ff3a;
-  --chart-2: #ff6b4a;
-  --chart-3: #9fd4ff;
-  --chart-4: #c8b6ff;
+  --chart-1: var(--lime);
+  --chart-2: var(--coral);
+  --chart-3: var(--sky);
+  --chart-4: var(--grape);
   --chart-5: #f2c230;
-  --sidebar: #141414;
-  --sidebar-foreground: var(--paper);
+  --sidebar: var(--background);
+  --sidebar-foreground: var(--foreground);
   --sidebar-primary: var(--lime);
   --sidebar-primary-foreground: var(--ink);
   --sidebar-accent: var(--lime);
   --sidebar-accent-foreground: var(--ink);
-  --sidebar-border: #e9e2d2;
+  --sidebar-border: var(--border);
   --sidebar-ring: var(--lime);
 }
 

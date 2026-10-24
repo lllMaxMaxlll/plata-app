@@ -377,15 +377,14 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       setUser(next)
     }
 
-    supabase.auth.getUser().then(async ({ data, error }) => {
+    const validateUser = () => supabase.auth.getUser().then(async ({ data, error }) => {
       if (!alive) return
       if (isAuthRetryableFetchError(error)) {
         // Sin red no hay contra quién validar, y eso no dice nada de la sesión:
         // cerrarla dejaría a alguien sin acceso a sus datos guardados sólo por
         // abrir la app en el subte. Se sigue con lo que hay en el dispositivo y
         // al volver la red Supabase refresca el token (o avisa SIGNED_OUT).
-        const { data: local } = await supabase.auth.getSession()
-        if (alive) setUser(mapUser(local.session?.user) ?? readLastUser<User>())
+        if (alive) setUser(readLastUser<User>())
       } else if (error || !data.user) {
         const { data: local } = await supabase.auth.getSession()
         if (local.session) await supabase.auth.signOut()
@@ -395,6 +394,15 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       }
       if (alive) setLoading(false)
     })
+
+    if (!navigator.onLine) {
+      setUser(readLastUser<User>())
+      setLoading(false)
+    } else {
+      void validateUser()
+    }
+    const onReconnect = () => { void validateUser() }
+    window.addEventListener("online", onReconnect)
 
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       if (!alive) return
@@ -417,6 +425,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
 
     return () => {
       alive = false
+      window.removeEventListener("online", onReconnect)
       sub.subscription.unsubscribe()
     }
   }, [supabase])

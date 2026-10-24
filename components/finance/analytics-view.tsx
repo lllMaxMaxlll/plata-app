@@ -341,7 +341,7 @@ export function AnalyticsView({ onEditTransaction }: AnalyticsViewProps) {
 
       {/* Resumen del mes */}
       <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-        <section className="rounded-3xl border-2 border-foreground bg-lime p-4 text-ink shadow-md md:col-span-2">
+        <section className="rounded-3xl border-2 border-border bg-card p-4 text-card-foreground shadow-md md:col-span-2">
           <p className="text-sm font-bold">Gastaste en {formatMonthName(selectedMonth)}</p>
           <p className="mt-1 text-[2.5rem] leading-none font-extrabold tracking-tighter">
             {formatShort(analyticsData.total, selectedCurrency)}
@@ -355,8 +355,8 @@ export function AnalyticsView({ onEditTransaction }: AnalyticsViewProps) {
               <>
                 <span
                   className={cn(
-                    "inline-flex items-center gap-1 rounded-full border-2 border-ink px-2 py-0.5",
-                    analyticsData.totalDiff > 0 ? "bg-coral" : "bg-white"
+                    "inline-flex items-center gap-1 rounded-full border-2 border-border px-2 py-0.5",
+                    analyticsData.totalDiff > 0 ? "bg-coral text-ink" : "bg-muted"
                   )}
                 >
                   {analyticsData.totalDiff > 0 ? <TrendingUp className="size-3" /> : <TrendingDown className="size-3" />}
@@ -372,7 +372,7 @@ export function AnalyticsView({ onEditTransaction }: AnalyticsViewProps) {
           </div>
         </section>
 
-        <section className="rounded-3xl border-2 border-foreground bg-card p-4">
+        <section className="rounded-3xl border-2 border-border bg-card p-4">
           <p className="text-sm font-bold">Promedio de {trendMonths} meses</p>
           <p className="mt-1 text-3xl font-extrabold tracking-tighter">{formatShort(trendData.avgTotal, selectedCurrency)}</p>
           <p className="mt-3 font-mono text-[11px] text-muted-foreground">
@@ -384,7 +384,7 @@ export function AnalyticsView({ onEditTransaction }: AnalyticsViewProps) {
       </div>
 
       {/* Mes a mes */}
-      <section className="rounded-2xl border-2 border-foreground bg-card p-4">
+      <section className="rounded-2xl border-2 border-border bg-card p-4">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
           <div>
             <h2 className="text-base font-extrabold tracking-tight">Mes a mes</h2>
@@ -415,7 +415,7 @@ export function AnalyticsView({ onEditTransaction }: AnalyticsViewProps) {
       </section>
 
       {/* Por categoría */}
-      <section className="rounded-2xl border-2 border-foreground bg-card p-4">
+      <section className="rounded-2xl border-2 border-border bg-card p-4">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
           <div>
             <h2 className="text-base font-extrabold tracking-tight">Por categoría</h2>
@@ -435,16 +435,16 @@ export function AnalyticsView({ onEditTransaction }: AnalyticsViewProps) {
         </div>
 
         {analyticsData.rows.length === 0 ? (
-          <p className="rounded-2xl border-2 border-dashed border-foreground/30 py-8 text-center text-sm text-muted-foreground">
+          <p className="rounded-2xl border-2 border-dashed border-border py-8 text-center text-sm text-muted-foreground">
             No hay gastos en {selectedCurrency} en {formatMonthName(selectedMonth)}.
           </p>
         ) : (
           <>
-            <div className="flex h-6 overflow-hidden rounded-lg border-2 border-foreground">
+            <div className="flex h-6 overflow-hidden rounded-lg border-2 border-border">
               {analyticsData.rows.map((r) => (
                 <span
                   key={r.category}
-                  className="h-full border-r-2 border-foreground last:border-r-0"
+                  className="h-full border-r-2 border-border last:border-r-0"
                   style={{ width: `${(r.amount / analyticsData.total) * 100}%`, background: getCategoryColor(r.category) }}
                   title={`${r.category} ${Math.round((r.amount / analyticsData.total) * 100)}%`}
                 />
@@ -467,7 +467,7 @@ export function AnalyticsView({ onEditTransaction }: AnalyticsViewProps) {
                       <div className="flex items-center justify-between gap-3">
                         <span className="flex min-w-0 items-center gap-2">
                           <span
-                            className="size-3 shrink-0 rounded-[4px] border-[1.5px] border-foreground"
+                            className="size-3 shrink-0 rounded-[4px] border-[1.5px] border-border"
                             style={{ background: getCategoryColor(r.category) }}
                           />
                           <span className="truncate font-bold">{r.category}</span>
@@ -477,7 +477,7 @@ export function AnalyticsView({ onEditTransaction }: AnalyticsViewProps) {
                           {r.percentChange !== null && (
                             <span
                               className={cn(
-                                "rounded-full border-[1.5px] border-foreground px-1.5 py-0.5 font-mono text-[10px] font-semibold",
+                                "rounded-full border-[1.5px] border-border px-1.5 py-0.5 font-mono text-[10px] font-semibold",
                                 Math.round(r.percentChange) > 0 ? "bg-coral text-ink" : "bg-card"
                               )}
                             >
@@ -495,7 +495,7 @@ export function AnalyticsView({ onEditTransaction }: AnalyticsViewProps) {
                       </div>
                     </button>
                     {isExpanded && (
-                      <div className="mb-3 rounded-xl border-2 border-foreground/20 bg-background px-3 py-1">
+                      <div className="mb-3 rounded-xl border-2 border-border bg-background px-3 py-1">
                         <TransactionList transactions={categoryTxs} onEditTransaction={onEditTransaction} />
                       </div>
                     )}
@@ -509,7 +509,7 @@ export function AnalyticsView({ onEditTransaction }: AnalyticsViewProps) {
 
       {/* Vehículos */}
       {vehicleSpendData.length > 0 && (
-        <section className="rounded-2xl border-2 border-foreground bg-card p-4">
+        <section className="rounded-2xl border-2 border-border bg-card p-4">
           <h2 className="mb-3 text-base font-extrabold tracking-tight">Vehículos · {formatMonthName(selectedMonth)}</h2>
           <ul className="space-y-3">
             {vehicleSpendData.map((v) => {
@@ -566,10 +566,10 @@ function TrendBars({
   const many = data.length > 6
   return (
     <div>
-      <div className="relative flex h-48 items-end gap-1.5 border-b-2 border-foreground sm:gap-3">
+      <div className="relative flex h-48 items-end gap-1.5 border-b-2 border-border sm:gap-3">
         {average > 0 && (
           <div
-            className="pointer-events-none absolute inset-x-0 z-10 border-t-2 border-dashed border-foreground/60"
+            className="pointer-events-none absolute inset-x-0 z-10 border-t-2 border-dashed border-border"
             style={{ bottom: `${(average / max) * 100}%` }}
             aria-hidden
           />
@@ -598,7 +598,7 @@ function TrendBars({
               </span>
               <span
                 className={cn(
-                  "flex w-full max-w-14 flex-col-reverse overflow-hidden rounded-t-md border-2 border-b-0 border-foreground transition-opacity",
+                  "flex w-full max-w-14 flex-col-reverse overflow-hidden rounded-t-md border-2 border-b-0 border-border transition-opacity",
                   !active && "opacity-60 group-hover:opacity-90"
                 )}
                 style={{ height: `${(total / max) * 100}%` }}
@@ -609,7 +609,7 @@ function TrendBars({
                   return (
                     <span
                       key={category}
-                      className="w-full border-t-[1.5px] border-foreground first:border-t-0"
+                      className="w-full border-t-[1.5px] border-border first:border-t-0"
                       style={{ height: `${(value / total) * 100}%`, background: colorOf(category) }}
                     />
                   )
@@ -636,7 +636,7 @@ function TrendBars({
         <ul className="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-xs">
           {categories.map((category) => (
             <li key={category} className="flex items-center gap-1.5">
-              <span className="size-2.5 rounded-[3px] border-[1.5px] border-foreground" style={{ background: colorOf(category) }} />
+              <span className="size-2.5 rounded-[3px] border-[1.5px] border-border" style={{ background: colorOf(category) }} />
               {category}
             </li>
           ))}

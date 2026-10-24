@@ -86,7 +86,7 @@ export function AccountsView({
         <button
           type="button"
           onClick={onAddAccount}
-          className="mx-auto mt-10 flex w-full max-w-md cursor-pointer flex-col items-center gap-2 rounded-2xl border-2 border-dashed border-foreground/40 px-6 py-10 text-center transition-colors hover:bg-lime/25"
+          className="mx-auto mt-10 flex w-full max-w-md cursor-pointer flex-col items-center gap-2 rounded-2xl border-2 border-dashed border-border px-6 py-10 text-center transition-colors hover:bg-lime/25"
         >
           <IconTile Icon={Plus} className="bg-lime" />
           <span className="text-lg font-extrabold">Agregá tu primera cuenta</span>
@@ -122,7 +122,7 @@ export function AccountsView({
           <section
             key={g.currency}
             className={cn(
-              "rounded-3xl border-2 border-foreground p-4 text-ink shadow-md",
+              "rounded-3xl border-2 border-border p-4 text-ink shadow-md",
               g.currency === "ARS" ? "bg-lime" : "bg-sky"
             )}
           >
@@ -149,7 +149,7 @@ export function AccountsView({
               aria-pressed={active}
               onClick={() => setSelectedKind(kindKey)}
               className={cn(
-                "flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full border-2 border-foreground px-3 py-1 text-xs font-semibold transition-colors",
+                "flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full border-2 border-border px-3 py-1 text-xs font-semibold transition-colors",
                 active ? "bg-lime text-ink" : "bg-card hover:bg-muted"
               )}
             >
@@ -170,7 +170,7 @@ export function AccountsView({
             <section key={g.currency}>
               <h2 className="mb-2 text-base font-extrabold tracking-tight">{g.label}</h2>
               {groupAccounts.length > 0 && (
-                <ul className="rounded-2xl border-2 border-foreground bg-card px-3.5 divide-y-[1.5px] divide-dashed divide-foreground/15">
+                <ul className="rounded-2xl border-2 border-border bg-card px-3.5 divide-y-[1.5px] divide-dashed divide-foreground/15">
                   {groupAccounts.map((acc) => {
                     const share = totalBalance > 0 ? acc.balance / totalBalance : 0
                     return (
@@ -207,7 +207,7 @@ export function AccountsView({
               <button
                 type="button"
                 onClick={onAddAccount}
-                className="mt-2 flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-foreground/40 py-2.5 text-xs font-semibold text-muted-foreground transition-colors hover:border-foreground hover:text-foreground"
+                className="mt-2 flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-border py-2.5 text-xs font-semibold text-muted-foreground transition-colors hover:border-border hover:text-foreground"
               >
                 <Plus className="size-3.5" />
                 Cuenta en {g.currency === "ARS" ? "pesos" : "dólares"}

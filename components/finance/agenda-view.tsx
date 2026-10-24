@@ -77,7 +77,7 @@ export function AgendaView() {
                 <li
                   key={day.toISOString()}
                   className={cn(
-                    "rounded-[10px] border-2 border-foreground py-1.5 text-center",
+                    "rounded-[10px] border-2 border-border py-1.5 text-center",
                     i === 0 ? "bg-ink text-lime dark:bg-lime dark:text-ink" : busy ? "bg-coral text-ink" : "bg-card"
                   )}
                 >
@@ -88,7 +88,7 @@ export function AgendaView() {
             })}
           </ol>
 
-          <section className="rounded-2xl border-2 border-foreground bg-lime p-4 text-ink shadow-sm">
+          <section className="rounded-2xl border-2 border-border bg-card p-4 text-card-foreground shadow-sm">
             <p className="text-sm font-bold">A pagar esta semana</p>
             <p className="mt-1 text-3xl font-extrabold tracking-tighter">{mask(formatShort(toPayARS, "ARS"))}</p>
             {toPayUSD > 0 && <p className="text-lg font-extrabold">+ {mask(formatShort(toPayUSD, "USD"))}</p>}
@@ -112,7 +112,7 @@ export function AgendaView() {
 
         <div className="space-y-6 lg:col-start-1 lg:row-start-1">
           {groups.length === 0 ? (
-            <div className="rounded-2xl border-2 border-dashed border-foreground/30 px-4 py-10 text-center">
+            <div className="rounded-2xl border-2 border-dashed border-border px-4 py-10 text-center">
               <p className="text-lg font-extrabold">Estás al día 🙌</p>
               <p className="mt-1 text-sm text-muted-foreground">Nada vence ni toca service en los próximos 30 días.</p>
             </div>
@@ -148,7 +148,7 @@ function AgendaCard({ item, onPay }: { item: AgendaItem; onPay: (item: DueItem) 
   return (
     <li
       className={cn(
-        "rounded-2xl border-2 border-foreground p-3.5",
+        "rounded-2xl border-2 border-border p-3.5",
         item.urgency === "overdue" ? "bg-coral/25" : "bg-card"
       )}
     >
@@ -173,7 +173,7 @@ function AgendaCard({ item, onPay }: { item: AgendaItem; onPay: (item: DueItem) 
 
       {item.kind === "service" && item.progress !== null && (
         <div className="mt-3">
-          <div className="h-2 overflow-hidden rounded-full border-[1.5px] border-foreground bg-background">
+          <div className="h-2 overflow-hidden rounded-full border-[1.5px] border-border bg-background">
             <div className="h-full bg-foreground" style={{ width: `${item.progress * 100}%` }} />
           </div>
           <p className="mt-1 font-mono text-[10px] text-muted-foreground">

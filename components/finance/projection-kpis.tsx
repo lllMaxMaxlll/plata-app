@@ -24,7 +24,7 @@ function StatTile({
   hint?: React.ReactNode
 }) {
   return (
-    <section className="rounded-2xl border-2 border-foreground bg-card p-4">
+    <section className="rounded-2xl border-2 border-border bg-card p-4">
       <p className="flex items-center gap-1.5 font-mono text-[10px] font-semibold uppercase text-muted-foreground">
         {icon}
         {label}
@@ -58,7 +58,7 @@ export function ProjectionKPIs({
 
   return (
     <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-      <section className="col-span-2 rounded-3xl border-2 border-foreground bg-lime p-4 text-ink shadow-md">
+      <section className="col-span-2 rounded-3xl border-2 border-border bg-card p-4 text-card-foreground shadow-md">
         <p className="text-sm font-bold">
           En {years} {years === 1 ? "año" : "años"} tendrías
         </p>
@@ -66,9 +66,9 @@ export function ProjectionKPIs({
           {formatShort(neutral, displayCurrency)}
         </p>
         <div className="mt-4">
-          <div className="relative h-3 rounded-full border-2 border-ink bg-white">
+          <div className="relative h-3 rounded-full border-2 border-border bg-muted">
             <span
-              className="absolute top-1/2 size-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-ink bg-ink"
+              className="absolute top-1/2 size-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-border bg-ink"
               style={{ left: `${neutralAt * 100}%` }}
               aria-hidden
             />
@@ -95,7 +95,7 @@ export function ProjectionKPIs({
         hint="Rendimientos, escenario neutro"
       />
 
-      <section className="col-span-2 rounded-2xl border-2 border-foreground bg-grape p-4 text-ink xl:col-span-4">
+      <section className="col-span-2 rounded-2xl border-2 border-border bg-grape p-4 text-ink xl:col-span-4">
         <p className="flex items-center gap-1.5 font-mono text-[10px] font-semibold uppercase">
           <Target className="size-3.5" />
           Próxima meta

@@ -6,7 +6,7 @@ interface AppIconProps {
 }
 
 /**
- * La moneda de Lucas: un círculo lima con borde de tinta y sombra dura. Va en
+ * La moneda de EN MANO: un círculo lima con borde de tinta y sombra dura. Va en
  * SVG en línea para que no dependa de una imagen ni de su carga.
  */
 export function AppIcon({ className, pulse = false }: AppIconProps) {
@@ -31,12 +31,12 @@ export function AppIcon({ className, pulse = false }: AppIconProps) {
   )
 }
 
-/** Moneda + "lucas", para el sidebar y las pantallas de bienvenida. */
+/** Moneda + EN MANO, para el sidebar y las pantallas de bienvenida. */
 export function Wordmark({ className, iconClassName }: { className?: string; iconClassName?: string }) {
   return (
     <span className={cn("inline-flex items-center gap-2 font-extrabold tracking-tighter", className)}>
       <AppIcon className={cn("size-[1.1em]", iconClassName)} />
-      lucas
+      EN MANO
     </span>
   )
 }

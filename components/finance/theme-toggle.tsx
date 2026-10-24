@@ -20,7 +20,7 @@ export function ThemeToggle({ className }: { className?: string }) {
     <div
       role="radiogroup"
       aria-label="Tema"
-      className={cn("inline-flex rounded-xl border-2 border-foreground bg-card p-0.5", className)}
+      className={cn("inline-flex rounded-xl border-2 border-border bg-card p-0.5", className)}
     >
       {OPTIONS.map(({ value, label, Icon }) => {
         const active = themePreference === value

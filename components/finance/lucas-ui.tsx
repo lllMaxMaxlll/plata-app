@@ -51,7 +51,7 @@ export function IconTile({ Icon, className }: { Icon: LucideIcon; className?: st
   return (
     <span
       className={cn(
-        "flex size-9 shrink-0 items-center justify-center rounded-[10px] border-2 border-foreground text-ink",
+        "flex size-9 shrink-0 items-center justify-center rounded-[10px] border-2 border-border text-ink",
         className
       )}
     >
@@ -64,7 +64,7 @@ export function Pill({ tone, children }: { tone: "coral" | "lime" | "plain"; chi
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-full border-[1.5px] border-foreground px-2 py-0.5 font-mono text-[10px] font-semibold whitespace-nowrap",
+        "inline-flex items-center rounded-full border-[1.5px] border-border px-2 py-0.5 font-mono text-[10px] font-semibold whitespace-nowrap",
         tone === "coral" && "bg-coral text-ink",
         tone === "lime" && "bg-lime text-ink",
         tone === "plain" && "bg-card"
@@ -121,7 +121,7 @@ export function AgendaRow({ item }: { item: AgendaItem }) {
   const account = item.kind === "due" && item.accountId ? getAccount(item.accountId) : undefined
 
   return (
-    <li className="flex items-center gap-3 border-b-[1.5px] border-dashed border-foreground/15 py-2.5 last:border-b-0">
+    <li className="flex items-center gap-3 border-b-[1.5px] border-dashed border-border py-2.5 last:border-b-0">
       <IconTile Icon={agendaIcon(item, vehicle?.type)} className={agendaTone(item)} />
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-semibold">{item.title}</p>

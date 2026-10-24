@@ -13,7 +13,7 @@ export function UserAvatar({ user, className }: { user: User | null; className?:
   return (
     <span
       className={cn(
-        "flex shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-foreground bg-lime font-extrabold text-ink",
+        "flex shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-border bg-lime font-extrabold text-ink",
         className
       )}
     >

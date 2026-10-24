@@ -84,11 +84,11 @@ function WhereItIs() {
       <p className="text-3xl font-extrabold tracking-tighter">{mask(formatShort(inARS, "ARS"))}</p>
       {slices.length > 0 ? (
         <>
-          <div className="mt-3 flex h-6 overflow-hidden rounded-lg border-2 border-foreground">
+          <div className="mt-3 flex h-6 overflow-hidden rounded-lg border-2 border-border">
             {slices.map((s) => (
               <span
                 key={s.name}
-                className={cn("h-full border-r-2 border-foreground last:border-r-0", s.color)}
+                className={cn("h-full border-r-2 border-border last:border-r-0", s.color)}
                 style={{ width: `${s.share * 100}%` }}
                 title={`${s.name} ${Math.round(s.share * 100)}%`}
               />
@@ -97,7 +97,7 @@ function WhereItIs() {
           <ul className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs">
             {slices.map((s) => (
               <li key={s.name} className="flex items-center gap-1.5">
-                <span className={cn("size-2.5 rounded-[3px] border-[1.5px] border-foreground", s.color)} />
+                <span className={cn("size-2.5 rounded-[3px] border-[1.5px] border-border", s.color)} />
                 {s.name} {Math.round(s.share * 100)}%
               </li>
             ))}
@@ -174,7 +174,7 @@ function Tile({
   return (
     <Link
       href={href}
-      className="block rounded-2xl border-2 border-foreground bg-card p-3 transition-colors hover:bg-lime/30"
+      className="block rounded-2xl border-2 border-border bg-card p-3 transition-colors hover:bg-lime/30"
     >
       <span className="font-mono text-[10px] font-semibold uppercase text-muted-foreground">{label}</span>
       <span className="mt-0.5 block truncate text-lg font-extrabold tracking-tight">{value}</span>
@@ -227,17 +227,17 @@ function WhereItGoes() {
     <section>
       <BlockHeader title={`En qué se va · ${monthName}`} href={ROUTES.analytics.href} linkLabel="detalle" />
       {rows.length === 0 ? (
-        <p className="rounded-2xl border-2 border-dashed border-foreground/30 px-4 py-5 text-sm text-muted-foreground">
+        <p className="rounded-2xl border-2 border-dashed border-border px-4 py-5 text-sm text-muted-foreground">
           Todavía no hay gastos este mes.
         </p>
       ) : (
-        <ul className="space-y-3 rounded-2xl border-2 border-foreground bg-card p-3.5">
+        <ul className="space-y-3 rounded-2xl border-2 border-border bg-card p-3.5">
           {rows.map((row) => (
             <li key={row.name}>
               <div className="flex items-baseline justify-between gap-3 text-sm">
                 <span className="flex min-w-0 items-center gap-2 font-semibold">
                   <span
-                    className="size-2.5 shrink-0 rounded-[3px] border-[1.5px] border-foreground"
+                    className="size-2.5 shrink-0 rounded-[3px] border-[1.5px] border-border"
                     style={{ background: row.color }}
                   />
                   <span className="truncate">{row.name}</span>
@@ -278,7 +278,7 @@ function Goals() {
       {pending.length === 0 ? (
         <Link
           href={ROUTES.projections.href}
-          className="flex items-center gap-3 rounded-2xl border-2 border-dashed border-foreground/40 px-4 py-4 text-sm transition-colors hover:bg-grape/30"
+          className="flex items-center gap-3 rounded-2xl border-2 border-dashed border-border px-4 py-4 text-sm transition-colors hover:bg-grape/30"
         >
           <Target className="size-5 shrink-0" />
           <span>
@@ -291,7 +291,7 @@ function Goals() {
             <li key={goal.id}>
               <Link
                 href={ROUTES.projections.href}
-                className="flex items-center justify-between gap-3 rounded-2xl border-2 border-foreground bg-grape px-3.5 py-3 text-ink transition-transform hover:-translate-y-px"
+                className="flex items-center justify-between gap-3 rounded-2xl border-2 border-border bg-grape px-3.5 py-3 text-ink transition-transform hover:-translate-y-px"
               >
                 <span className="min-w-0">
                   <span className="block truncate font-bold">{goal.name}</span>

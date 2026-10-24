@@ -245,7 +245,7 @@ export function exportToExcel({
 
   // Sheet 2: Summary
   const summaryData = [
-    { Concepto: "Reporte Mensual", Valor: `Lucas - Movimientos ${monthLabel}` },
+    { Concepto: "Reporte Mensual", Valor: `EN MANO - Movimientos ${monthLabel}` },
     { Concepto: "Usuario", Valor: userName },
     { Concepto: "Fecha de Emisión", Valor: new Date().toLocaleString("es-AR") },
     { Concepto: "Total Movimientos", Valor: summary.count },
@@ -307,7 +307,7 @@ export function exportToPdf({
   doc.setTextColor(255, 255, 255)
   doc.setFontSize(20)
   doc.setFont("helvetica", "bold")
-  doc.text("Lucas", 14, 18)
+  doc.text("EN MANO", 14, 18)
 
   doc.setFontSize(10)
   doc.setFont("helvetica", "normal")
@@ -469,7 +469,7 @@ export function exportToMarkdown({
   const vehicleMap = new Map<string, Vehicle>()
   for (const v of vehicles) vehicleMap.set(v.id, v)
 
-  let md = `# Lucas - Reporte Mensual de Movimientos\n\n`
+  let md = `# EN MANO - Reporte Mensual de Movimientos\n\n`
   md += `- **Período:** ${monthLabel}\n`
   md += `- **Usuario:** ${userName}\n`
   md += `- **Fecha de generación:** ${new Date().toLocaleString("es-AR")}\n`
@@ -509,7 +509,7 @@ export function exportToMarkdown({
     }
   }
 
-  md += `\n---\n*Reporte generado automáticamente por Lucas.*\n`
+  md += `\n---\n*Reporte generado automáticamente por EN MANO.*\n`
 
   const blob = new Blob([md], { type: "text/markdown;charset=utf-8" })
   const monthPadded = String(month).padStart(2, "0")

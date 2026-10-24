@@ -193,7 +193,7 @@ export function ActivityView({
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Buscar por nota, categoría o cuenta"
               aria-label="Buscar movimientos"
-              className="h-12 w-full rounded-2xl border-2 border-foreground bg-card pr-10 pl-10 text-sm font-semibold shadow-sm outline-none placeholder:font-normal placeholder:text-muted-foreground focus-visible:ring-3 focus-visible:ring-lime"
+              className="h-12 w-full rounded-2xl border-2 border-border bg-card pr-10 pl-10 text-sm font-semibold shadow-sm outline-none placeholder:font-normal placeholder:text-muted-foreground focus-visible:ring-3 focus-visible:ring-ring"
             />
             {search.trim() !== "" && (
               <button
@@ -250,7 +250,7 @@ export function ActivityView({
             </div>
           </div>
 
-          <section className="rounded-2xl border-2 border-foreground bg-lime p-4 text-ink shadow-sm">
+          <section className="rounded-2xl border-2 border-border bg-card p-4 text-card-foreground shadow-sm">
             <div className="flex items-center justify-between gap-2">
               <p className="text-sm font-bold">
                 {filtered.length} {filtered.length === 1 ? "movimiento" : "movimientos"}
@@ -268,7 +268,7 @@ export function ActivityView({
             {(["ARS", "USD"] as const)
               .filter((c) => totals[c].in > 0 || totals[c].out > 0 || c === "ARS")
               .map((c) => (
-                <div key={c} className="mt-3 grid grid-cols-3 gap-2 border-t-2 border-ink/15 pt-3">
+                <div key={c} className="mt-3 grid grid-cols-3 gap-2 border-t-2 border-border pt-3">
                   <div>
                     <p className="font-mono text-[10px] font-semibold uppercase">Entró</p>
                     <p className="truncate text-sm font-extrabold">{mask(formatShort(totals[c].in, c))}</p>
@@ -305,7 +305,7 @@ export function ActivityView({
                     </span>
                   )}
                 </div>
-                <div className="rounded-2xl border-2 border-foreground bg-card px-3.5">
+                <div className="rounded-2xl border-2 border-border bg-card px-3.5">
                   <TransactionList transactions={group.items} onEditTransaction={onEditTransaction} showDate={false} />
                 </div>
               </section>

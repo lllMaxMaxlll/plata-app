@@ -5,7 +5,7 @@ import { Providers } from './providers'
 import { AppShell } from './shell'
 import { Bricolage_Grotesque, JetBrains_Mono } from "next/font/google";
 import { cn } from "@/lib/utils";
-import { THEME_SCRIPT } from "@/lib/theme";
+import { THEME_COLORS, THEME_SCRIPT } from "@/lib/theme";
 import { ThemedToaster } from "@/components/finance/theme-toggle";
 
 const bricolage = Bricolage_Grotesque({ subsets: ['latin'], variable: '--font-lucas-sans' });
@@ -13,10 +13,10 @@ const bricolage = Bricolage_Grotesque({ subsets: ['latin'], variable: '--font-lu
 const jetbrainsMono = JetBrains_Mono({ subsets: ['latin'], variable: '--font-lucas-mono' });
 
 export const metadata: Metadata = {
-  title: 'Lucas — Tu plata, anotada en criollo',
+  title: 'EN MANO — Tu plata, en claro',
   description:
     'Finanzas personales para Argentina: cuentas en pesos y dólares, gastos anotados en una línea y todo lo que vence en una sola agenda.',
-  appleWebApp: { capable: true, statusBarStyle: 'default', title: 'Lucas' },
+  appleWebApp: { capable: true, statusBarStyle: 'default', title: 'EN MANO' },
   icons: {
     icon: [
       {
@@ -37,8 +37,8 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   colorScheme: 'light dark',
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#f3eee3' },
-    { media: '(prefers-color-scheme: dark)', color: '#141414' },
+    { media: '(prefers-color-scheme: light)', color: THEME_COLORS.light },
+    { media: '(prefers-color-scheme: dark)', color: THEME_COLORS.dark },
   ],
   width: 'device-width',
   initialScale: 1,

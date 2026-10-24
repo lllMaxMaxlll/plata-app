@@ -1,4 +1,4 @@
-// Service worker de Lucas: la app abre y se navega sin conexión.
+// Service worker de EN MANO: la app abre y se navega sin conexión.
 //
 // - Páginas: primero la red, y si no hay (o tarda demasiado) la última copia
 //   guardada. El HTML no tiene nada del usuario —los datos los trae el cliente
@@ -10,7 +10,7 @@
 //
 // Subir VERSION descarta los caches anteriores en la próxima activación.
 
-const VERSION = "v1"
+const VERSION = "v2"
 const PAGES_CACHE = `lucas-pages-${VERSION}`
 const STATIC_CACHE = `lucas-static-${VERSION}`
 
@@ -60,7 +60,7 @@ self.addEventListener("activate", (event) => {
     (async () => {
       const keep = new Set([PAGES_CACHE, STATIC_CACHE])
       for (const key of await caches.keys()) {
-        if (!keep.has(key)) await caches.delete(key)
+        if (key.startsWith("lucas-") && !keep.has(key)) await caches.delete(key)
       }
       await self.clients.claim()
     })()
@@ -90,7 +90,7 @@ self.addEventListener("fetch", (event) => {
   if (url.searchParams.has("_rsc") || request.headers.get("RSC")) return
 
   if (PUBLIC_ASSETS.includes(url.pathname)) {
-    event.respondWith(staleWhileRevalidate(request))
+    event.respondWith(staleWhileRevalidate(event))
   }
 })
 
@@ -134,15 +134,16 @@ async function navigation(event, url) {
   const key = url.pathname
   const cached = await cache.match(key)
 
-  const network = fetch(event.request).then((response) => {
+  const network = fetch(event.request).then(async (response) => {
     if (isCacheable(response)) {
       const copy = response.clone()
-      event.waitUntil(cache.put(key, copy))
+      await cache.put(key, copy)
     }
     return response
   })
   // Si ganó el timeout, el fallo posterior de la red no le importa a nadie
   network.catch(() => {})
+  event.waitUntil(network.catch(() => {}))
 
   try {
     if (!cached) return await network
@@ -167,7 +168,8 @@ async function cacheFirst(request) {
   return response
 }
 
-async function staleWhileRevalidate(request) {
+async function staleWhileRevalidate(event) {
+  const { request } = event
   const cache = await caches.open(STATIC_CACHE)
   const cached = await cache.match(request)
   const network = fetch(request)
@@ -176,6 +178,7 @@ async function staleWhileRevalidate(request) {
       return response
     })
     .catch(() => cached ?? Response.error())
+  event.waitUntil(network.then(() => {}))
   return cached ?? network
 }
 
@@ -198,10 +201,10 @@ function timeout(ms) {
 function offlineResponse() {
   return new Response(
     '<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
-      '<title>Lucas</title><body style="font-family:system-ui;background:#f3eee3;color:#141414;' +
+      '<title>EN MANO</title><body style="font-family:system-ui;background:#f1f3ef;color:#20271e;' +
       'display:grid;place-items:center;min-height:100dvh;margin:0;text-align:center;padding:16px">' +
       "<div><p style=\"font-size:20px;font-weight:700\">Sin conexión</p>" +
-      "<p>Abrí Lucas una vez con internet para poder usarlo offline.</p></div>",
+      "<p>Abrí EN MANO una vez con internet para poder usarlo offline.</p></div>",
     { status: 503, headers: { "Content-Type": "text/html; charset=utf-8" } }
   )
 }

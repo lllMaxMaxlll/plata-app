@@ -306,7 +306,7 @@ export function VencimientosView() {
       />
 
       <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-        <section className="rounded-3xl border-2 border-foreground bg-lime p-4 text-ink shadow-md">
+        <section className="rounded-3xl border-2 border-border bg-card p-4 text-card-foreground shadow-md">
           <p className="text-sm font-bold">Te queda por pagar este mes</p>
           <p className="mt-1 text-3xl font-extrabold tracking-tighter">{formatShort(totalDueThisMonth.ARS, "ARS")}</p>
           {totalDueThisMonth.USD > 0 && (
@@ -316,7 +316,7 @@ export function VencimientosView() {
 
         <section
           className={cn(
-            "rounded-3xl border-2 border-foreground p-4",
+            "rounded-3xl border-2 border-border p-4",
             overdueItems.length > 0 ? "bg-coral text-ink" : "bg-card"
           )}
         >
@@ -334,7 +334,7 @@ export function VencimientosView() {
           )}
         </section>
 
-        <section className="rounded-3xl border-2 border-foreground bg-card p-4">
+        <section className="rounded-3xl border-2 border-border bg-card p-4">
           <p className="text-sm font-bold">Lo próximo</p>
           {urgentUpcomingItems.length === 0 ? (
             <p className="mt-2 text-sm text-muted-foreground">No hay nada pendiente.</p>
@@ -356,7 +356,7 @@ export function VencimientosView() {
                   <button
                     type="button"
                     onClick={() => handleOpenPayModal(item)}
-                    className="flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-lg border-2 border-foreground bg-lime text-ink transition-transform active:scale-95"
+                    className="flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-lg border-2 border-border bg-lime text-ink transition-transform active:scale-95"
                     aria-label={`Pagar ${item.title}`}
                   >
                     <Check className="size-4" />
@@ -386,7 +386,7 @@ export function VencimientosView() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               aria-label="Buscar vencimiento"
-              className="h-9 w-full rounded-xl border-2 border-foreground bg-card pr-3 pl-9 text-sm outline-none placeholder:text-muted-foreground focus-visible:ring-3 focus-visible:ring-lime"
+              className="h-9 w-full rounded-xl border-2 border-border bg-card pr-3 pl-9 text-sm outline-none placeholder:text-muted-foreground focus-visible:ring-3 focus-visible:ring-ring"
             />
           </div>
         )}
@@ -418,7 +418,7 @@ export function VencimientosView() {
               aria-pressed={statusFilter === f.key}
               onClick={() => setStatusFilter(f.key)}
               className={cn(
-                "shrink-0 cursor-pointer rounded-full border-2 border-foreground px-3 py-1 text-xs font-semibold transition-colors",
+                "shrink-0 cursor-pointer rounded-full border-2 border-border px-3 py-1 text-xs font-semibold transition-colors",
                 statusFilter === f.key ? "bg-lime text-ink" : "bg-card hover:bg-muted"
               )}
             >
@@ -433,7 +433,7 @@ export function VencimientosView() {
           <button
             type="button"
             onClick={handleOpenCreate}
-            className="flex w-full cursor-pointer flex-col items-center gap-2 rounded-2xl border-2 border-dashed border-foreground/40 px-6 py-10 text-center transition-colors hover:bg-lime/25"
+            className="flex w-full cursor-pointer flex-col items-center gap-2 rounded-2xl border-2 border-dashed border-border px-6 py-10 text-center transition-colors hover:bg-lime/25"
           >
             <Receipt className="size-7" />
             <span className="font-extrabold">
@@ -456,10 +456,10 @@ export function VencimientosView() {
                   className={cn(
                     "flex flex-col rounded-2xl border-2 p-4",
                     isPaid
-                      ? "border-dashed border-foreground/40 bg-transparent"
+                      ? "border-dashed border-border bg-transparent"
                       : isOverdue
-                        ? "border-foreground bg-coral/25"
-                        : "border-foreground bg-card"
+                        ? "border-border bg-coral/25"
+                        : "border-border bg-card"
                   )}
                 >
                   <div className="flex items-start gap-3">
@@ -481,7 +481,7 @@ export function VencimientosView() {
                     vence {format(parseISO(item.dueDate), "d/M/yyyy")} · {FREQUENCY_LABELS[item.frequency]}
                   </p>
 
-                  <div className="mt-3 flex items-center gap-2 border-t-[1.5px] border-dashed border-foreground/15 pt-3">
+                  <div className="mt-3 flex items-center gap-2 border-t-[1.5px] border-dashed border-border pt-3">
                     {isPaid ? (
                       <Button size="sm" variant="ghost" onClick={() => markDueItemAsPending(item.id)}>
                         <RotateCcw />
@@ -537,7 +537,7 @@ export function VencimientosView() {
             </div>
           </div>
 
-          <div className="rounded-2xl border-2 border-foreground bg-card p-2 sm:p-3">
+          <div className="rounded-2xl border-2 border-border bg-card p-2 sm:p-3">
             <div className="mb-2 grid grid-cols-7 gap-1 text-center font-mono text-[10px] font-semibold text-muted-foreground uppercase">
               {["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"].map((d) => (
                 <div key={d}>{d}</div>
@@ -564,8 +564,8 @@ export function VencimientosView() {
                       !day.isCurrentMonth
                         ? "cursor-default border-transparent opacity-30"
                         : isSelected
-                          ? "border-foreground bg-lime/40"
-                          : "border-foreground/15 hover:border-foreground"
+                          ? "border-border bg-lime/40"
+                          : "border-border hover:border-border"
                     )}
                   >
                     <span
@@ -581,7 +581,7 @@ export function VencimientosView() {
                         <div
                           key={item.id}
                           className={cn(
-                            "truncate rounded border-[1.5px] border-foreground px-1 text-[10px] font-semibold",
+                            "truncate rounded border-[1.5px] border-border px-1 text-[10px] font-semibold",
                             item.status === "paid"
                               ? "bg-card text-muted-foreground line-through"
                               : item.computedStatusTag === "overdue" || item.computedStatusTag === "due_soon"
@@ -603,7 +603,7 @@ export function VencimientosView() {
           </div>
 
           {selectedCalendarDateIso && (
-            <section className="rounded-2xl border-2 border-foreground bg-card p-4">
+            <section className="rounded-2xl border-2 border-border bg-card p-4">
               <div className="mb-2 flex items-center justify-between">
                 <h3 className="font-extrabold">{format(parseISO(selectedCalendarDateIso), "EEEE d 'de' MMMM", { locale: es })}</h3>
                 <Button size="sm" variant="ghost" onClick={() => setSelectedCalendarDateIso(null)}>

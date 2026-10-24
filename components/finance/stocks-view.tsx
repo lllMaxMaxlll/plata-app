@@ -270,7 +270,7 @@ export function StocksView() {
       />
 
       {/* Valor del portafolio y cómo se reparte */}
-      <section className="rounded-3xl border-2 border-foreground bg-lime p-4 text-ink shadow-md sm:p-5">
+      <section className="rounded-3xl border-2 border-border bg-card p-4 text-card-foreground shadow-md sm:p-5">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <p className="text-sm font-bold">Tu cartera vale</p>
@@ -278,7 +278,7 @@ export function StocksView() {
               {mask(formatShort(portfolioTotalValue, "USD"))}
             </p>
           </div>
-          <span className="inline-flex items-center gap-1 rounded-full border-2 border-ink bg-white px-2.5 py-1 font-mono text-xs font-semibold">
+          <span className="inline-flex items-center gap-1 rounded-full border-2 border-border bg-muted px-2.5 py-1 font-mono text-xs font-semibold">
             {portfolioTotalProfitLoss >= 0 ? <TrendingUp className="size-3.5" /> : <TrendingDown className="size-3.5" />}
             {portfolioTotalProfitLoss >= 0 ? "+" : ""}
             {mask(formatShort(portfolioTotalProfitLoss, "USD"))} · {portfolioTotalProfitLossPercent}%
@@ -286,11 +286,11 @@ export function StocksView() {
         </div>
         {allocation.length > 0 && (
           <>
-            <div className="mt-4 flex h-5 overflow-hidden rounded-lg border-2 border-ink bg-white">
+            <div className="mt-4 flex h-5 overflow-hidden rounded-lg border-2 border-border bg-muted">
               {allocation.map((slice) => (
                 <span
                   key={slice.symbol}
-                  className={cn("h-full border-r-2 border-ink last:border-r-0", slice.color)}
+                  className={cn("h-full border-r-2 border-border last:border-r-0", slice.color)}
                   style={{ width: `${slice.share * 100}%` }}
                   title={`${slice.symbol} ${Math.round(slice.share * 100)}%`}
                 />
@@ -299,7 +299,7 @@ export function StocksView() {
             <ul className="mt-2 flex flex-wrap gap-x-3 gap-y-1 font-mono text-[11px] font-semibold">
               {allocation.map((slice) => (
                 <li key={slice.symbol} className="flex items-center gap-1.5">
-                  <span className={cn("size-2.5 rounded-[3px] border-[1.5px] border-ink", slice.color)} />
+                  <span className={cn("size-2.5 rounded-[3px] border-[1.5px] border-border", slice.color)} />
                   {slice.symbol} {Math.round(slice.share * 100)}%
                 </li>
               ))}
@@ -359,12 +359,12 @@ export function StocksView() {
                 const up = h.profitLoss >= 0
                 const share = portfolioTotalValue > 0 ? h.currentValue / portfolioTotalValue : 0
                 return (
-                  <li key={h.symbol} className="flex flex-col rounded-2xl border-2 border-foreground bg-card p-3">
+                  <li key={h.symbol} className="flex flex-col rounded-2xl border-2 border-border bg-card p-3">
                     <div className="flex items-start justify-between gap-2">
                       <span className="text-lg leading-none font-extrabold tracking-tight">{h.symbol}</span>
                       <span
                         className={cn(
-                          "rounded-full border-[1.5px] border-foreground px-1.5 py-0.5 font-mono text-[10px] font-semibold text-ink",
+                          "rounded-full border-[1.5px] border-border px-1.5 py-0.5 font-mono text-[10px] font-semibold text-ink",
                           up ? "bg-lime" : "bg-coral"
                         )}
                       >
@@ -524,7 +524,7 @@ export function StocksView() {
                 const hasPrice = Boolean(priceInfo) && currentPrice > 0
 
                 return (
-                  <li key={w.symbol} className="flex flex-col rounded-2xl border-2 border-foreground bg-card p-3">
+                  <li key={w.symbol} className="flex flex-col rounded-2xl border-2 border-border bg-card p-3">
                     <div className="flex items-start justify-between gap-2">
                       <span className="text-lg leading-none font-extrabold tracking-tight">{w.symbol}</span>
                       <button

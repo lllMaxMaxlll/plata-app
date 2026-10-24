@@ -51,15 +51,15 @@ export function AnotarSheet({ open, onClose }: { open: boolean; onClose: () => v
 
   return (
     <ResponsiveDialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-      <ResponsiveDialogContent className="sm:max-w-lg">
+      <ResponsiveDialogContent className="sm:max-w-lg" drawerClassName="h-[calc(100dvh-1rem)]">
         <ResponsiveDialogHeader>
           <ResponsiveDialogTitle className="text-2xl font-extrabold tracking-tight">Anotar</ResponsiveDialogTitle>
-          <ResponsiveDialogDescription>
+          <ResponsiveDialogDescription className="hidden md:block">
             Escribilo como lo dirías. Si empieza con “cuánto” o “qué”, lo busco en tu historial.
           </ResponsiveDialogDescription>
         </ResponsiveDialogHeader>
 
-        <div className="mt-3">
+        <div className="sticky top-0 bg-popover py-2 md:static md:mt-3 md:bg-transparent">
           {/* El campo pertenece al formulario del panel activo: Enter guarda o busca. */}
           <input
             ref={inputRef}
@@ -70,9 +70,9 @@ export function AnotarSheet({ open, onClose }: { open: boolean; onClose: () => v
             enterKeyHint={question ? "search" : "done"}
             placeholder="30 lucas super galicia"
             aria-label="Anotar un movimiento o hacer una pregunta"
-            className="w-full rounded-2xl border-2 border-foreground bg-card px-4 py-3.5 text-lg font-semibold shadow-md outline-none placeholder:font-normal placeholder:text-muted-foreground focus-visible:ring-3 focus-visible:ring-lime"
+            className="w-full rounded-2xl border-2 border-input bg-card px-4 py-3.5 text-lg font-semibold shadow-md outline-none placeholder:font-normal placeholder:text-muted-foreground focus-visible:ring-3 focus-visible:ring-ring"
           />
-          <p className="mt-2 font-mono text-[11px] text-muted-foreground">
+          <p className="mt-2 hidden font-mono text-[11px] text-muted-foreground md:block">
             entiendo lucas · k · palos · “ayer” · nombre de la cuenta
           </p>
         </div>
@@ -115,7 +115,7 @@ function Starters({ onPick }: { onPick: (value: string) => void }) {
               key={example}
               type="button"
               onClick={() => onPick(example)}
-              className="cursor-pointer rounded-full border-2 border-foreground bg-card px-3 py-1 text-xs font-semibold transition-colors hover:bg-lime hover:text-ink"
+              className="cursor-pointer rounded-full border-2 border-border bg-card px-3 py-1 text-xs font-semibold transition-colors hover:bg-lime hover:text-ink"
             >
               {example}
             </button>
@@ -123,7 +123,7 @@ function Starters({ onPick }: { onPick: (value: string) => void }) {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-1 gap-2 min-[380px]:grid-cols-2">
         <Button type="button" variant="outline" onClick={() => { ui.handleCloseAnotar(); ui.handleAddTransaction() }}>
           <ListPlus />
           Formulario completo
@@ -222,13 +222,13 @@ function ExpensePanel({ text, onSaved }: { text: string; onSaved: () => void }) 
         e.preventDefault()
         void save()
       }}
-      className="mt-5 rounded-2xl border-2 border-foreground bg-card p-4"
+      className="mt-2 rounded-2xl border-2 border-border bg-card p-3 md:mt-5 md:p-4"
     >
       <div className="flex items-center justify-between gap-2">
         <p className="font-mono text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
           Lo entendí así
         </p>
-        <div className="inline-flex overflow-hidden rounded-full border-2 border-foreground" role="group" aria-label="Tipo">
+        <div className="inline-flex overflow-hidden rounded-full border-2 border-border" role="group" aria-label="Tipo">
           {(["expense", "income"] as const).map((value) => (
             <button
               key={value}
@@ -340,7 +340,7 @@ function QuestionPanel({ query, onClose }: { query: string; onClose: () => void 
         setAskedFor(query)
         void search(query)
       }}
-      className="mt-5 rounded-2xl border-2 border-foreground bg-card p-4"
+      className="mt-5 rounded-2xl border-2 border-border bg-card p-4"
     >
       <p className="font-mono text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
         Es una pregunta · busco en tu historial
@@ -354,11 +354,11 @@ function QuestionPanel({ query, onClose }: { query: string; onClose: () => void 
       ) : (
         <div className="mt-3 space-y-3">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-xl border-2 border-foreground bg-sky px-2.5 py-1 text-sm font-bold text-ink">
+            <span className="rounded-xl border-2 border-border bg-sky px-2.5 py-1 text-sm font-bold text-ink">
               {result.transactions.length} {result.transactions.length === 1 ? "movimiento" : "movimientos"}
             </span>
             {result.dateRange && (
-              <span className="inline-flex items-center gap-1 rounded-xl border-2 border-foreground bg-sky px-2.5 py-1 text-sm font-bold text-ink">
+              <span className="inline-flex items-center gap-1 rounded-xl border-2 border-border bg-sky px-2.5 py-1 text-sm font-bold text-ink">
                 <CalendarRange className="size-3.5" />
                 {result.dateRange.label}
               </span>
@@ -430,9 +430,9 @@ function Chip({
     <span
       className={cn(
         "max-w-full rounded-xl border-2 px-2.5 py-1.5 text-sm font-semibold",
-        tone === "coral" && "border-foreground bg-coral text-ink",
-        tone === "plain" && "border-foreground bg-background",
-        tone === "missing" && "border-dashed border-foreground/60 text-muted-foreground"
+        tone === "coral" && "border-border bg-coral text-ink",
+        tone === "plain" && "border-border bg-background",
+        tone === "missing" && "border-dashed border-border text-muted-foreground"
       )}
     >
       <span className={cn("block font-mono text-[10px] font-normal", tone === "coral" ? "text-ink/70" : "text-muted-foreground")}>
@@ -459,7 +459,7 @@ function Option({ active, onClick, children }: { active: boolean; onClick: () =>
       onClick={onClick}
       aria-pressed={active}
       className={cn(
-        "shrink-0 cursor-pointer rounded-full border-2 border-foreground px-3 py-1 text-xs font-semibold transition-colors",
+        "min-h-11 shrink-0 cursor-pointer rounded-full border-2 border-border px-3 py-1 text-xs font-semibold transition-colors",
         active ? "bg-lime text-ink" : "bg-card hover:bg-muted"
       )}
     >

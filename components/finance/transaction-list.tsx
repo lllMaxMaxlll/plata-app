@@ -81,7 +81,7 @@ export function TransactionList({
 }) {
   if (transactions.length === 0) {
     return (
-      <div className="my-2 flex flex-col items-center gap-3 rounded-xl border-2 border-dashed border-foreground/30 py-8 text-center text-sm text-muted-foreground">
+      <div className="my-2 flex flex-col items-center gap-3 rounded-xl border-2 border-dashed border-border py-8 text-center text-sm text-muted-foreground">
         {empty}
       </div>
     )
