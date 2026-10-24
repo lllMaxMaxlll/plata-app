@@ -8,6 +8,8 @@
     "start": "next start",
     "lint": "eslint .",
     "test": "node --test 'lib/**/*.test.ts'",
+    "test:worker": "node scripts/smoke-cloudflare.mjs",
+    "check:cloudflare": "opennextjs-cloudflare build && node scripts/smoke-cloudflare.mjs",
     "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
     "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy"
   },
@@ -36,7 +38,7 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
-    "@opennextjs/cloudflare": "^1.20.4",
+    "@opennextjs/cloudflare": "1.20.13",
     "@tailwindcss/postcss": "^4.2.0",
     "@types/node": "^24",
     "@types/react": "^19",
@@ -46,7 +48,7 @@
     "postcss": "^8.5",
     "tailwindcss": "^4.2.0",
     "typescript": "5.7.3",
-    "wrangler": "^4.127.1"
+    "wrangler": "4.152.0"
   },
   "overrides": {
     "hono": "4.12.25"
