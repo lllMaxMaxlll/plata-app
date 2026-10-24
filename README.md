@@ -149,6 +149,22 @@ bun run build
 bun start
 ```
 
+Para validar el destino de producción en Cloudflare, ejecutá también:
+
+```bash
+bun run check:cloudflare
+```
+
+Este comando genera el bundle de OpenNext y prueba su arranque en `workerd`,
+consultando inicio, perfil, agenda, manifest y una ruta dinámica sin escribir
+datos. Un build de Next o una preview de Vercel no comprueban la compatibilidad
+con Workers. Después de cambiar Next, OpenNext o Wrangler, esta verificación
+debe pasar antes del deploy.
+
+Next 16.4 necesita un adaptador que incluya `server/preview-props.json` en el
+bundle: OpenNext 1.20.12 corrigió esta carga. El proyecto fija OpenNext 1.20.13
+y Wrangler 4.152.0, compatible con sus dependencias declaradas.
+
 ---
 
 ## Estructura del Proyecto
