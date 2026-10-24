@@ -34,9 +34,28 @@ export function startPwa() {
   })
   window.addEventListener("appinstalled", () => setInstallPrompt(null))
 
+  // Evita depender del fallback del router RSC cuando no hay red: la navegación
+  // completa pasa por el HTML precargado del service worker, también en iOS.
+  document.addEventListener("click", (event) => {
+    if (navigator.onLine || event.defaultPrevented || event.button !== 0 ||
+        event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+    const link = event.target instanceof Element ? event.target.closest("a[href]") : null
+    if (!(link instanceof HTMLAnchorElement) || link.download ||
+        (link.target && link.target !== "_self")) return
+    const url = new URL(link.href)
+    if (url.origin !== location.origin ||
+        (url.pathname === location.pathname && url.search === location.search)) return
+    event.preventDefault()
+    event.stopPropagation()
+    location.assign(url.href)
+  }, true)
+
   // En dev el service worker serviría chunks viejos por encima del HMR
   if (process.env.NODE_ENV !== "production" || !("serviceWorker" in navigator)) return
-  navigator.serviceWorker.register("/sw.js", { scope: "/" }).catch((error) => {
+  navigator.serviceWorker.register("/sw.js", { scope: "/", updateViaCache: "none" }).then(() => {
+    // Solicitud best effort: Safari puede rechazarla; el funcionamiento no depende de ella.
+    void navigator.storage?.persist?.().catch(() => {})
+  }).catch((error) => {
     console.warn("No se pudo registrar el service worker:", error)
   })
 }

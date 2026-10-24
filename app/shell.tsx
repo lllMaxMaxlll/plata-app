@@ -98,7 +98,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       {isDesktop && (
         <div className="flex h-screen w-full overflow-hidden bg-background text-foreground">
-          <aside className="flex h-full w-64 shrink-0 flex-col justify-between overflow-y-auto border-r-2 border-foreground bg-sidebar p-4">
+          <aside className="flex h-full w-64 shrink-0 flex-col justify-between overflow-y-auto border-r-2 border-border bg-sidebar p-4">
             <div className="flex flex-col gap-5">
               <Link href="/" className="px-1 text-3xl">
                 <Wordmark />
@@ -127,14 +127,14 @@ export function AppShell({ children }: { children: ReactNode }) {
                         aria-current={pathname === item.href ? "page" : undefined}
                         className={cn(
                           "flex items-center gap-2.5 rounded-xl border-2 px-2.5 py-2 text-sm font-bold transition-colors",
-                          open ? "border-foreground bg-lime text-ink shadow-xs" : "border-transparent hover:bg-muted"
+                          open ? "border-border bg-lime text-ink shadow-xs" : "border-transparent hover:bg-muted"
                         )}
                       >
                         <Icon className="size-4.5" />
                         {item.label}
                       </Link>
                       {subs.length > 0 && (
-                        <div className="mt-1 ml-[1.15rem] flex flex-col border-l-2 border-foreground/15 pl-2.5">
+                        <div className="mt-1 ml-[1.15rem] flex flex-col border-l-2 border-border pl-2.5">
                           {subs.map((sub) => {
                             const child = ROUTES[sub]
                             const active = pathname === child.href
@@ -160,7 +160,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               </nav>
             </div>
 
-            <div className="mt-4 flex flex-col gap-2 border-t-2 border-foreground pt-4">
+            <div className="mt-4 flex flex-col gap-2 border-t-2 border-border pt-4">
               <div className="flex items-center gap-2.5 px-1 py-1">
                 <UserAvatar user={user} className="size-8 text-xs" />
                 <div className="min-w-0 flex-1">
@@ -183,10 +183,10 @@ export function AppShell({ children }: { children: ReactNode }) {
 
           <main className="flex min-w-0 flex-1 flex-col overflow-y-auto bg-background">
             <OfflineBanner />
-            <header className="flex shrink-0 items-center justify-between gap-4 border-b-2 border-foreground bg-background px-6 py-3">
+            <header className="flex shrink-0 items-center justify-between gap-4 border-b-2 border-border bg-background px-6 py-3">
               {/* Ruta y no título: el <h1> lo pone cada vista con el mismo nombre. */}
               <nav aria-label="Ubicación" className="flex items-center gap-1.5 text-sm">
-                <span className="font-extrabold">lucas</span>
+                <span className="font-extrabold">EN MANO</span>
                 {parent && (
                   <>
                     <ChevronRight className="size-3.5 text-muted-foreground" aria-hidden />
@@ -197,12 +197,12 @@ export function AppShell({ children }: { children: ReactNode }) {
                 )}
                 <ChevronRight className="size-3.5 text-muted-foreground" aria-hidden />
                 <span className="font-semibold text-foreground" aria-current="page">
-                  {route?.label ?? "lucas"}
+                  {route?.label ?? "EN MANO"}
                 </span>
               </nav>
 
-              <div className="flex items-center gap-3 rounded-xl border-2 border-foreground bg-card px-3 py-1.5 font-mono">
-                <div className="border-r-2 border-foreground/15 pr-3">
+              <div className="flex items-center gap-3 rounded-xl border-2 border-border bg-card px-3 py-1.5 font-mono">
+                <div className="border-r-2 border-border pr-3">
                   <p className="text-[10px] font-semibold uppercase text-muted-foreground">Pesos</p>
                   <p className="text-xs font-bold tabular-nums">{ui.mask(formatShort(totalsByCurrency.ARS, "ARS"))}</p>
                 </div>

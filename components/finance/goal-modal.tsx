@@ -168,8 +168,8 @@ export function GoalModal({
                   onClick={() => setKind("reserve")}
                   className={`flex flex-col items-start gap-1 rounded-xl border-2 p-3 text-left transition-colors cursor-pointer ${
                     kind === "reserve"
-                      ? "border-foreground bg-grape text-ink"
-                      : "border-foreground/30 bg-card text-muted-foreground hover:border-foreground"
+                      ? "border-border bg-grape text-ink"
+                      : "border-border bg-card text-muted-foreground hover:border-border"
                   }`}
                 >
                   <div className="flex items-center gap-1.5 font-bold text-xs">
@@ -186,8 +186,8 @@ export function GoalModal({
                   onClick={() => setKind("purchase")}
                   className={`flex flex-col items-start gap-1 rounded-xl border-2 p-3 text-left transition-colors cursor-pointer ${
                     kind === "purchase"
-                      ? "border-foreground bg-grape text-ink"
-                      : "border-foreground/30 bg-card text-muted-foreground hover:border-foreground"
+                      ? "border-border bg-grape text-ink"
+                      : "border-border bg-card text-muted-foreground hover:border-border"
                   }`}
                 >
                   <div className="flex items-center gap-1.5 font-bold text-xs">

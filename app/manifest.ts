@@ -1,17 +1,18 @@
 import type { MetadataRoute } from "next"
+import { THEME_COLORS } from "@/lib/theme"
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
     id: "/",
-    name: "Lucas — Tu plata, anotada en criollo",
-    short_name: "Lucas",
+    name: "EN MANO — Tu plata, en claro",
+    short_name: "EN MANO",
     description: "Finanzas personales en pesos y dólares, en un solo lugar.",
     lang: "es-AR",
     start_url: "/",
     scope: "/",
     display: "standalone",
-    background_color: "#f3eee3",
-    theme_color: "#f3eee3",
+    background_color: THEME_COLORS.light,
+    theme_color: THEME_COLORS.light,
     // Android pide 192 y 512 para ofrecer la instalación. El maskable tiene el
     // fondo lleno y la moneda dentro de la zona segura: el launcher lo recorta
     // con su propia forma (círculo, squircle) y el ícono con esquinas

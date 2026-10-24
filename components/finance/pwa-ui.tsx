@@ -18,7 +18,7 @@ export function OfflineBanner() {
   return (
     <div
       role="status"
-      className="sticky top-0 z-40 flex items-center justify-center gap-2 border-b-2 border-foreground bg-coral px-4 pt-[calc(env(safe-area-inset-top)+0.375rem)] pb-1.5 text-xs font-bold text-ink"
+      className="sticky top-0 z-40 flex items-center justify-center gap-2 border-b-2 border-border bg-coral px-4 pt-[calc(env(safe-area-inset-top)+0.375rem)] pb-1.5 text-xs font-bold text-ink"
     >
       <CloudOff className="size-3.5 shrink-0" aria-hidden />
       Sin conexión: ves lo último guardado. Para anotar hace falta internet.
@@ -39,11 +39,11 @@ export function InstallAppSection() {
   if (context === "other" && !install) return null
 
   return (
-    <section className="flex items-start gap-3 rounded-2xl border-2 border-foreground bg-card p-4">
+    <section className="flex items-start gap-3 rounded-2xl border-2 border-border bg-card p-4">
       <IconTile Icon={Smartphone} className="bg-sky" />
       <div className="min-w-0 flex-1 space-y-2">
         <div>
-          <p className="font-bold">Instalá Lucas</p>
+          <p className="font-bold">Instalá EN MANO</p>
           <p className="text-xs text-muted-foreground">
             Queda en la pantalla de inicio como una app y abre aunque no tengas señal.
           </p>
@@ -59,7 +59,7 @@ export function InstallAppSection() {
             className="bg-lime text-ink hover:bg-lime/85"
             onClick={async () => {
               const outcome = await install?.()
-              if (outcome === "accepted") toast.success("Listo, Lucas quedó instalada.")
+              if (outcome === "accepted") toast.success("Listo, EN MANO quedó instalada.")
             }}
           >
             Instalar app

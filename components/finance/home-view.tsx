@@ -46,11 +46,11 @@ export function HomeView({ onEditTransaction }: { onEditTransaction: (tx: Transa
           <button
             type="button"
             onClick={ui.handleOpenAnotar}
-            className="flex w-full cursor-pointer items-center gap-2.5 rounded-2xl border-2 border-foreground bg-card px-3.5 py-3 text-left text-sm text-muted-foreground transition-colors hover:bg-lime/30"
+            className="flex w-full cursor-pointer items-center gap-2.5 rounded-2xl border-2 border-ink bg-lime px-3.5 py-3 text-left text-sm text-ink transition-colors hover:bg-lime/85"
           >
-            <Plus className="size-4.5 shrink-0 text-foreground" strokeWidth={2.5} />
+            <Plus className="size-4.5 shrink-0" strokeWidth={2.5} />
             <span className="min-w-0 truncate">
-              Anotá o preguntá… <b className="font-semibold text-foreground">“cuánto en nafta este mes”</b>
+              Anotá o preguntá… <b className="font-semibold">“cuánto en nafta este mes”</b>
             </span>
           </button>
 
@@ -61,11 +61,11 @@ export function HomeView({ onEditTransaction }: { onEditTransaction: (tx: Transa
           <section>
             <BlockHeader title="Se viene" href={ROUTES.agenda.href} linkLabel="agenda" />
             {agenda.length === 0 ? (
-              <p className="rounded-2xl border-2 border-dashed border-foreground/30 px-4 py-5 text-sm text-muted-foreground">
+              <p className="rounded-2xl border-2 border-dashed border-border px-4 py-5 text-sm text-muted-foreground">
                 Nada en los próximos 7 días. Estás al día 🙌
               </p>
             ) : (
-              <ul className="rounded-2xl border-2 border-foreground bg-card px-3.5">
+              <ul className="rounded-2xl border-2 border-border bg-card px-3.5">
                 {agenda.slice(0, 4).map((item) => (
                   <AgendaRow key={item.id} item={item} />
                 ))}
@@ -75,7 +75,7 @@ export function HomeView({ onEditTransaction }: { onEditTransaction: (tx: Transa
 
           <section>
             <BlockHeader title="Últimos" href={ROUTES.activity.href} linkLabel="todos" />
-            <div className="rounded-2xl border-2 border-foreground bg-card px-3.5 py-1">
+            <div className="rounded-2xl border-2 border-border bg-card px-3.5 py-1">
               <TransactionList
                 transactions={transactions.slice(0, 5)}
                 onEditTransaction={onEditTransaction}
@@ -119,11 +119,11 @@ function BalanceCard() {
   }
 
   return (
-    <section className="rounded-3xl border-2 border-foreground bg-lime p-4 text-ink shadow-md">
+    <section className="rounded-3xl border-2 border-border bg-card p-4 text-card-foreground shadow-md">
       <div className="flex items-center justify-between gap-2">
         <span className="text-sm font-bold">Tenés</span>
         <div className="flex items-center gap-1.5">
-          <div className="inline-flex overflow-hidden rounded-full border-2 border-ink bg-white" role="group" aria-label="Moneda">
+          <div className="inline-flex overflow-hidden rounded-full border-2 border-border bg-muted" role="group" aria-label="Moneda">
             {(["ARS", "USD"] as const).map((c) => (
               <button
                 key={c}
@@ -132,7 +132,7 @@ function BalanceCard() {
                 onClick={() => setCurrency(c)}
                 className={cn(
                   "cursor-pointer px-2.5 py-0.5 font-mono text-[11px] font-semibold",
-                  currency === c ? "bg-ink text-lime" : "text-ink"
+                  currency === c ? "bg-lime text-ink" : "text-muted-foreground"
                 )}
               >
                 {c}
@@ -143,7 +143,7 @@ function BalanceCard() {
             type="button"
             onClick={toggleBalancesHidden}
             aria-label={balancesHidden ? "Mostrar saldos" : "Ocultar saldos"}
-            className="flex size-8 cursor-pointer items-center justify-center rounded-full hover:bg-ink/10"
+            className="flex size-8 cursor-pointer items-center justify-center rounded-full hover:bg-muted"
           >
             {balancesHidden ? <EyeOff className="size-4.5" /> : <Eye className="size-4.5" />}
           </button>
@@ -178,7 +178,7 @@ function BalanceCard() {
               onClick={syncFx}
               disabled={syncing}
               aria-label="Actualizar cotización"
-              className="inline-flex cursor-pointer items-center rounded-full p-0.5 hover:bg-ink/10"
+              className="inline-flex cursor-pointer items-center rounded-full p-0.5 hover:bg-muted"
             >
               <RefreshCw className={cn("size-3", syncing && "animate-spin")} />
             </button>
@@ -202,7 +202,7 @@ function WeekMeter({ now }: { now: Date }) {
     <section>
       <BlockHeader title="Esta semana" href={ROUTES.analytics.href} linkLabel="en qué se va" />
       <div
-        className="h-4 overflow-hidden rounded-full border-2 border-foreground bg-card"
+        className="h-4 overflow-hidden rounded-full border-2 border-border bg-card"
         role="meter"
         aria-label="Gasto de la semana contra tu promedio"
         aria-valuemin={0}
@@ -210,7 +210,7 @@ function WeekMeter({ now }: { now: Date }) {
         aria-valuenow={Math.round(fill * 100)}
       >
         <div
-          className={cn("h-full border-foreground", over ? "bg-coral" : "bg-lime")}
+          className={cn("h-full border-border", over ? "bg-coral" : "bg-lime")}
           style={{ width: `${fill * 100}%`, borderRightWidth: fill > 0 && fill < 1 ? 2 : 0 }}
         />
       </div>

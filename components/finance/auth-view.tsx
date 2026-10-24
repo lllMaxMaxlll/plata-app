@@ -78,9 +78,9 @@ export function AuthView() {
       <Card className="p-8 md:p-10 shadow-xl">
         <div className="mb-8 flex flex-col items-center text-center">
           <AppIcon className="mb-4 size-16" />
-          <h1 className="text-4xl font-extrabold tracking-tighter">lucas</h1>
+          <h1 className="text-4xl font-extrabold tracking-tighter">EN MANO</h1>
           <p className="mt-1 text-xs text-muted-foreground text-balance">
-            Tu plata, anotada en criollo.
+            Tu plata, en claro.
           </p>
         </div>
 

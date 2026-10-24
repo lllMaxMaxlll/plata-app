@@ -72,7 +72,7 @@ export function SearchView({
                 placeholder="¿Cuánto gasté en el auto el verano pasado?"
                 aria-label="Buscar movimientos"
                 enterKeyHint="search"
-                className="h-14 w-full rounded-2xl border-2 border-foreground bg-card pr-11 pl-12 text-base font-semibold shadow-md outline-none placeholder:font-normal placeholder:text-muted-foreground focus-visible:ring-3 focus-visible:ring-lime"
+                className="h-14 w-full rounded-2xl border-2 border-border bg-card pr-11 pl-12 text-base font-semibold shadow-md outline-none placeholder:font-normal placeholder:text-muted-foreground focus-visible:ring-3 focus-visible:ring-ring"
               />
               {query && (
                 <button
@@ -104,7 +104,7 @@ export function SearchView({
 
           {result ? (
             <section className="space-y-4">
-              <div className="rounded-2xl border-2 border-foreground bg-sky p-4 text-ink shadow-sm">
+              <div className="rounded-2xl border-2 border-border bg-sky p-4 text-ink shadow-sm">
                 <div className="flex flex-wrap items-center gap-2 font-mono text-[11px] font-semibold">
                   <span>
                     {result.transactions.length} {result.transactions.length === 1 ? "movimiento" : "movimientos"}
@@ -130,19 +130,19 @@ export function SearchView({
               </div>
 
               {result.transactions.length === 0 ? (
-                <p className="rounded-2xl border-2 border-dashed border-foreground/30 py-8 text-center text-sm text-muted-foreground">
+                <p className="rounded-2xl border-2 border-dashed border-border py-8 text-center text-sm text-muted-foreground">
                   No encontré movimientos que coincidan.
                   {result.dateRange && ` El filtro de fecha fue: ${result.dateRange.label}.`}
                 </p>
               ) : (
-                <div className="rounded-2xl border-2 border-foreground bg-card px-3.5 py-1">
+                <div className="rounded-2xl border-2 border-border bg-card px-3.5 py-1">
                   <TransactionList transactions={result.transactions} onEditTransaction={onEditTransaction} />
                 </div>
               )}
             </section>
           ) : (
             !searching && (
-              <p className="rounded-2xl border-2 border-dashed border-foreground/30 px-4 py-8 text-center text-sm text-muted-foreground">
+              <p className="rounded-2xl border-2 border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
                 El <b className="text-foreground">qué</b> lo entiendo por significado y el{" "}
                 <b className="text-foreground">cuándo</b> lo leo de la frase: “el verano pasado”, “en marzo”, “este año”.
               </p>
@@ -161,7 +161,7 @@ export function SearchView({
                   setQuery(example)
                   void search(example)
                 }}
-                className="cursor-pointer rounded-full border-2 border-foreground bg-card px-3 py-1 text-left text-xs font-semibold transition-colors hover:bg-lime hover:text-ink"
+                className="cursor-pointer rounded-full border-2 border-border bg-card px-3 py-1 text-left text-xs font-semibold transition-colors hover:bg-lime hover:text-ink"
               >
                 {example}
               </button>
@@ -205,7 +205,7 @@ function IndexStatus({
 }) {
   if (!available) {
     return (
-      <p className="flex items-start gap-2 rounded-2xl border-2 border-dashed border-foreground/30 p-3 text-xs text-muted-foreground">
+      <p className="flex items-start gap-2 rounded-2xl border-2 border-dashed border-border p-3 text-xs text-muted-foreground">
         <Info className="mt-0.5 size-3.5 shrink-0" />
         <span>{UNAVAILABLE_COPY[reason ?? "no-binding"]}</span>
       </p>
@@ -215,7 +215,7 @@ function IndexStatus({
   if (pending === 0 && !syncing) return null
 
   return (
-    <div className="flex items-center justify-between gap-3 rounded-2xl border-2 border-foreground bg-card p-3">
+    <div className="flex items-center justify-between gap-3 rounded-2xl border-2 border-border bg-card p-3">
       <p className="text-xs text-muted-foreground">
         {syncing
           ? "Indexando movimientos…"

@@ -27,7 +27,7 @@ const tabsListVariants = cva(
   {
     variants: {
       variant: {
-        default: "border-2 border-foreground bg-card",
+        default: "border-2 border-border bg-card",
         line: "gap-1 bg-transparent",
       },
     },

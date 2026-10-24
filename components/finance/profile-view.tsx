@@ -54,7 +54,7 @@ export function ProfileView({
             <Stat label="Dólares" value={mask(formatShort(totalsByCurrency.USD, "USD"))} />
           </div>
 
-          <section className="space-y-3 rounded-2xl border-2 border-foreground bg-card p-4">
+          <section className="space-y-3 rounded-2xl border-2 border-border bg-card p-4">
             <div>
               <p className="font-bold">Tema</p>
               <p className="text-xs text-muted-foreground">Papel de día, tinta de noche, o lo que diga el sistema.</p>
@@ -68,7 +68,7 @@ export function ProfileView({
         <div className="space-y-5">
           <InstallAppSection />
 
-          <ul className="overflow-hidden rounded-2xl border-2 border-foreground bg-card">
+          <ul className="overflow-hidden rounded-2xl border-2 border-border bg-card">
             {items.map((item) => {
               const content = (
                 <>
@@ -81,7 +81,7 @@ export function ProfileView({
                 </>
               )
               const className =
-                "flex w-full cursor-pointer items-center gap-3 border-b-[1.5px] border-dashed border-foreground/15 px-4 py-3 text-left text-sm transition-colors hover:bg-lime/25"
+                "flex w-full cursor-pointer items-center gap-3 border-b-[1.5px] border-dashed border-border px-4 py-3 text-left text-sm transition-colors hover:bg-lime/25"
               return (
                 <li key={item.label} className="last:[&>*]:border-b-0">
                   {"href" in item ? (
@@ -134,7 +134,7 @@ function ProfileCard() {
   }
 
   return (
-    <section className="flex items-center gap-3.5 rounded-2xl border-2 border-foreground bg-lime p-4 text-ink shadow-md">
+    <section className="flex items-center gap-3.5 rounded-2xl border-2 border-border bg-card p-4 text-card-foreground shadow-md">
       <div className="relative shrink-0">
         <button
           type="button"
@@ -143,8 +143,8 @@ function ProfileCard() {
           aria-label={user?.avatarUrl ? "Cambiar foto de perfil" : "Agregar foto de perfil"}
           className="group relative block cursor-pointer rounded-full focus-visible:ring-3 focus-visible:ring-ink focus-visible:outline-none"
         >
-          <UserAvatar user={user} className={cn("size-16 border-ink bg-white text-2xl", busy === "photo" && "opacity-50")} />
-          <span className="absolute -right-1 -bottom-1 flex size-7 items-center justify-center rounded-full border-2 border-ink bg-card text-foreground transition-transform group-hover:scale-110">
+          <UserAvatar user={user} className={cn("size-16 border-border bg-muted text-2xl", busy === "photo" && "opacity-50")} />
+          <span className="absolute -right-1 -bottom-1 flex size-7 items-center justify-center rounded-full border-2 border-border bg-card text-foreground transition-transform group-hover:scale-110">
             <Camera className="size-3.5" />
           </span>
         </button>
@@ -178,13 +178,13 @@ function ProfileCard() {
               onChange={(e) => setName(e.target.value)}
               onKeyDown={(e) => e.key === "Escape" && setEditingName(false)}
               aria-label="Tu nombre"
-              className="h-9 min-w-0 flex-1 rounded-xl border-2 border-ink bg-white px-2.5 text-base font-extrabold outline-none focus-visible:ring-3 focus-visible:ring-ink/30"
+              className="h-9 min-w-0 flex-1 rounded-xl border-2 border-border bg-muted px-2.5 text-base font-extrabold outline-none focus-visible:ring-3 focus-visible:ring-ink/30"
             />
             <button
               type="submit"
               disabled={busy === "name" || !name.trim()}
               aria-label="Guardar nombre"
-              className="flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-xl border-2 border-ink bg-ink text-lime disabled:opacity-50"
+              className="flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-xl border-2 border-border bg-ink text-lime disabled:opacity-50"
             >
               <Check className="size-4" />
             </button>
@@ -192,7 +192,7 @@ function ProfileCard() {
               type="button"
               onClick={() => setEditingName(false)}
               aria-label="Cancelar"
-              className="flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-xl border-2 border-ink bg-white"
+              className="flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-xl border-2 border-border bg-muted"
             >
               <X className="size-4" />
             </button>
@@ -234,7 +234,7 @@ function DefaultAccountsSection() {
   const { accounts, defaultAccounts, setDefaultAccount } = useFinance()
 
   return (
-    <section className="space-y-3 rounded-2xl border-2 border-foreground bg-card p-4">
+    <section className="space-y-3 rounded-2xl border-2 border-border bg-card p-4">
       <div>
         <p className="font-bold">Cuentas por defecto</p>
         <p className="text-xs text-muted-foreground">Con estas arranca cada movimiento; las podés cambiar al cargarlo.</p>
@@ -262,7 +262,7 @@ function DefaultAccountsSection() {
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl border-2 border-foreground bg-card p-3 text-center">
+    <div className="rounded-2xl border-2 border-border bg-card p-3 text-center">
       <p className="truncate text-base font-extrabold">{value}</p>
       <p className="mt-0.5 font-mono text-[10px] uppercase text-muted-foreground">{label}</p>
     </div>

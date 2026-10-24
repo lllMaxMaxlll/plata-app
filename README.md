@@ -1,6 +1,6 @@
-# Lucas — Tu plata, anotada en criollo
+# EN MANO — Tu plata, en claro
 
-Lucas es una aplicación web progresiva (PWA) de finanzas personales diseñada especialmente para el contexto financiero argentino. Permite consolidar y gestionar de manera unificada cuentas en pesos (ARS) y dólares (USD), registrar transacciones, simular trading de acciones en mercados reales y realizar un control exhaustivo de vehículos y sus gastos.
+EN MANO es una aplicación web progresiva (PWA) de finanzas personales diseñada especialmente para el contexto financiero argentino. Permite consolidar y gestionar de manera unificada cuentas en pesos (ARS) y dólares (USD), registrar transacciones, simular trading de acciones en mercados reales y realizar un control exhaustivo de vehículos y sus gastos.
 
 ---
 

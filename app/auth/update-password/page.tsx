@@ -101,7 +101,7 @@ export default function UpdatePasswordPage() {
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-foreground">Elegí tu contraseña</h1>
             <p className="mt-1 text-sm text-muted-foreground text-balance">
-              Es la que vas a usar de ahora en más para entrar a Lucas.
+              Es la que vas a usar de ahora en más para entrar a EN MANO.
             </p>
           </div>
         </div>

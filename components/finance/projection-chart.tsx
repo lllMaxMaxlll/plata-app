@@ -146,12 +146,12 @@ export function ProjectionChart({
 
   const SCENARIOS = [
     { key: "optimistic", label: "Optimista", swatch: "border-dashed border-success" },
-    { key: "neutral", label: "Neutro", swatch: "border-foreground" },
+    { key: "neutral", label: "Neutro", swatch: "border-border" },
     { key: "pessimistic", label: "Pesimista", swatch: "border-dashed border-destructive" },
   ] as const
 
   return (
-    <section className="rounded-2xl border-2 border-foreground bg-card p-4">
+    <section className="rounded-2xl border-2 border-border bg-card p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-base font-extrabold tracking-tight">Cómo crece tu patrimonio</h2>
@@ -169,7 +169,7 @@ export function ProjectionChart({
               onClick={() => toggleScenario(key)}
               aria-pressed={activeScenarios[key]}
               className={`flex cursor-pointer items-center gap-1.5 rounded-full border-2 px-2.5 py-1 text-xs font-semibold transition-opacity ${
-                activeScenarios[key] ? "border-foreground bg-card" : "border-foreground/30 opacity-50"
+                activeScenarios[key] ? "border-border bg-card" : "border-border opacity-50"
               }`}
             >
               <span className={`w-4 border-t-[3px] ${swatch}`} aria-hidden />
@@ -299,7 +299,7 @@ export function ProjectionChart({
 
         {/* El valor del punto tocado, o del final si no se toca nada */}
         {hoverPoint && (
-          <div className="mt-2 flex flex-wrap items-center justify-between gap-3 rounded-xl border-2 border-foreground bg-background p-3 text-xs">
+          <div className="mt-2 flex flex-wrap items-center justify-between gap-3 rounded-xl border-2 border-border bg-background p-3 text-xs">
             <div className="flex flex-wrap items-center gap-2">
               <span className="rounded-md bg-foreground px-2 py-0.5 font-bold text-background">
                 {hoverPoint.month === 0 ? "Hoy" : `Mes ${hoverPoint.month} · ${hoverPoint.label}`}
@@ -308,7 +308,7 @@ export function ProjectionChart({
                 dólar est. ${Math.round(hoverPoint.exchangeRate)}
               </span>
               {hoverPoint.achievedGoalNames && hoverPoint.achievedGoalNames.length > 0 && (
-                <span className="inline-flex items-center gap-1 rounded-full border-[1.5px] border-foreground bg-lime px-2 py-0.5 font-semibold text-ink">
+                <span className="inline-flex items-center gap-1 rounded-full border-[1.5px] border-border bg-lime px-2 py-0.5 font-semibold text-ink">
                   <Sparkles className="size-3" /> {hoverPoint.achievedGoalNames.join(", ")}
                 </span>
               )}
@@ -336,7 +336,7 @@ export function ProjectionChart({
             </span>
             Ver los datos como tabla
           </summary>
-          <div className="mt-2 max-h-64 overflow-auto rounded-xl border-2 border-foreground/20">
+          <div className="mt-2 max-h-64 overflow-auto rounded-xl border-2 border-border">
             <table className="w-full font-mono text-[11px] tabular-nums">
               <caption className="sr-only">
                 Patrimonio proyectado por mes en los tres escenarios, en {displayCurrency}
@@ -352,7 +352,7 @@ export function ProjectionChart({
               </thead>
               <tbody>
                 {timeline.map((pt) => (
-                  <tr key={pt.month} className="border-t border-foreground/10">
+                  <tr key={pt.month} className="border-t border-border">
                     <th scope="row" className="px-2 py-1 text-left font-normal text-muted-foreground">
                       {pt.month === 0 ? "Actual" : `M${pt.month}`}
                     </th>

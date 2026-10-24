@@ -13,10 +13,11 @@
 export type ThemePreference = "light" | "dark" | "system"
 export type Theme = "light" | "dark"
 
+// Se conserva la clave para respetar el tema elegido antes del cambio de marca.
 export const THEME_KEY = "lucas:theme"
 
 /** Color de la barra del navegador para cada tema: el fondo de la app. */
-const THEME_COLORS: Record<Theme, string> = { light: "#f3eee3", dark: "#141414" }
+export const THEME_COLORS: Record<Theme, string> = { light: "#f1f3ef", dark: "#181a18" }
 
 export function readThemePreference(): ThemePreference {
   try {

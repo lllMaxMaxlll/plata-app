@@ -42,7 +42,7 @@ const LOG_METADATA: Record<VehicleLogType, { label: string; Icon: LucideIcon; to
 
 function Stat({ label, value, unit, hint }: { label: string; value: string; unit?: string; hint: string }) {
   return (
-    <section className="min-w-0 rounded-2xl border-2 border-foreground bg-card p-3">
+    <section className="min-w-0 rounded-2xl border-2 border-border bg-card p-3">
       <p className="font-mono text-[10px] font-semibold uppercase text-muted-foreground">{label}</p>
       <p className="mt-0.5 truncate text-lg font-extrabold tracking-tight sm:text-xl">
         {value}
@@ -277,7 +277,7 @@ export function VehiclesView() {
         <button
           type="button"
           onClick={handleAddVehicle}
-          className="mx-auto mt-10 flex w-full max-w-md cursor-pointer flex-col items-center gap-2 rounded-2xl border-2 border-dashed border-foreground/40 px-6 py-10 text-center transition-colors hover:bg-sky/30"
+          className="mx-auto mt-10 flex w-full max-w-md cursor-pointer flex-col items-center gap-2 rounded-2xl border-2 border-dashed border-border px-6 py-10 text-center transition-colors hover:bg-sky/30"
         >
           <IconTile Icon={Car} className="bg-sky" />
           <span className="text-lg font-extrabold">Agregá tu primer vehículo</span>
@@ -298,7 +298,7 @@ export function VehiclesView() {
                   onClick={() => setActiveVehId(v.id)}
                   aria-pressed={active}
                   className={cn(
-                    "flex shrink-0 cursor-pointer items-center gap-2 rounded-full border-2 border-foreground px-3.5 py-1.5 text-sm font-bold transition-colors",
+                    "flex shrink-0 cursor-pointer items-center gap-2 rounded-full border-2 border-border px-3.5 py-1.5 text-sm font-bold transition-colors",
                     active ? "bg-lime text-ink" : "bg-card hover:bg-muted"
                   )}
                 >
@@ -311,7 +311,7 @@ export function VehiclesView() {
             <button
               type="button"
               onClick={handleAddVehicle}
-              className="flex shrink-0 cursor-pointer items-center gap-1 rounded-full border-2 border-dashed border-foreground/40 px-3.5 py-1.5 text-sm font-semibold text-muted-foreground transition-colors hover:border-foreground hover:text-foreground"
+              className="flex shrink-0 cursor-pointer items-center gap-1 rounded-full border-2 border-dashed border-border px-3.5 py-1.5 text-sm font-semibold text-muted-foreground transition-colors hover:border-border hover:text-foreground"
             >
               <Plus className="size-4" />
               Vehículo
@@ -321,7 +321,7 @@ export function VehiclesView() {
           {activeVehicle && (
             <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
               <aside className="space-y-3 lg:sticky lg:top-0 lg:col-start-2 lg:row-start-1">
-                <section className="rounded-3xl border-2 border-foreground bg-sky p-4 text-ink shadow-md">
+                <section className="rounded-3xl border-2 border-border bg-sky p-4 text-ink shadow-md">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <p className="truncate text-xl font-extrabold tracking-tight">{activeVehicle.name}</p>
@@ -356,7 +356,7 @@ export function VehiclesView() {
                   <div
                     key={al.id}
                     className={cn(
-                      "flex items-start gap-2.5 rounded-2xl border-2 border-foreground p-3 text-sm",
+                      "flex items-start gap-2.5 rounded-2xl border-2 border-border p-3 text-sm",
                       al.type === "critical" ? "bg-coral text-ink" : "bg-card"
                     )}
                   >
@@ -385,19 +385,19 @@ export function VehiclesView() {
                   <Stat label="Total" value={formatShort(stats.totalSpent, "ARS")} hint="en la bitácora" />
                 </div>
 
-                <section className="rounded-2xl border-2 border-foreground bg-card p-4">
+                <section className="rounded-2xl border-2 border-border bg-card p-4">
                   <h2 className="mb-3 text-base font-extrabold tracking-tight">En qué se va</h2>
                   {stats.totalSpent === 0 ? (
                     <p className="text-sm text-muted-foreground">Todavía no hay gastos en la bitácora.</p>
                   ) : (
                     <>
-                      <div className="flex h-6 overflow-hidden rounded-lg border-2 border-foreground">
+                      <div className="flex h-6 overflow-hidden rounded-lg border-2 border-border">
                         {(Object.keys(stats.costByLogType) as VehicleLogType[])
                           .filter((t) => stats.costByLogType[t] > 0)
                           .map((t) => (
                             <span
                               key={t}
-                              className={cn("h-full border-r-2 border-foreground last:border-r-0", LOG_METADATA[t].tone)}
+                              className={cn("h-full border-r-2 border-border last:border-r-0", LOG_METADATA[t].tone)}
                               style={{ width: `${(stats.costByLogType[t] / stats.totalSpent) * 100}%` }}
                             />
                           ))}
@@ -408,7 +408,7 @@ export function VehiclesView() {
                           .map((t) => (
                             <li key={t} className="flex items-center justify-between gap-2">
                               <span className="flex items-center gap-2">
-                                <span className={cn("size-2.5 rounded-[3px] border-[1.5px] border-foreground", LOG_METADATA[t].tone)} />
+                                <span className={cn("size-2.5 rounded-[3px] border-[1.5px] border-border", LOG_METADATA[t].tone)} />
                                 {LOG_METADATA[t].label}
                               </span>
                               <span className="font-mono text-xs font-semibold">
@@ -439,7 +439,7 @@ export function VehiclesView() {
                       onChange={(e) => setSearchQuery(e.target.value)}
                       placeholder="Buscar: YPF, aceite, casco…"
                       aria-label="Buscar en la bitácora"
-                      className="h-10 w-full rounded-xl border-2 border-foreground bg-card pr-3 pl-9 text-sm outline-none placeholder:text-muted-foreground focus-visible:ring-3 focus-visible:ring-lime"
+                      className="h-10 w-full rounded-xl border-2 border-border bg-card pr-3 pl-9 text-sm outline-none placeholder:text-muted-foreground focus-visible:ring-3 focus-visible:ring-ring"
                     />
                   </div>
                   <div className="no-scrollbar -mx-1 mb-3 flex gap-1.5 overflow-x-auto px-1 pb-1" role="group" aria-label="Tipo de registro">
@@ -450,7 +450,7 @@ export function VehiclesView() {
                         aria-pressed={typeFilter === t}
                         onClick={() => setTypeFilter(t)}
                         className={cn(
-                          "shrink-0 cursor-pointer rounded-full border-2 border-foreground px-3 py-1 text-xs font-semibold transition-colors",
+                          "shrink-0 cursor-pointer rounded-full border-2 border-border px-3 py-1 text-xs font-semibold transition-colors",
                           typeFilter === t ? "bg-lime text-ink" : "bg-card hover:bg-muted"
                         )}
                       >
@@ -460,11 +460,11 @@ export function VehiclesView() {
                   </div>
 
                   {filteredLogs.length === 0 ? (
-                    <p className="rounded-2xl border-2 border-dashed border-foreground/30 py-8 text-center text-sm text-muted-foreground">
+                    <p className="rounded-2xl border-2 border-dashed border-border py-8 text-center text-sm text-muted-foreground">
                       {activeLogs.length === 0 ? "Cargá la primera nafta o el último service." : "Nada con ese filtro."}
                     </p>
                   ) : (
-                    <ul className="rounded-2xl border-2 border-foreground bg-card px-3.5 divide-y-[1.5px] divide-dashed divide-foreground/15">
+                    <ul className="rounded-2xl border-2 border-border bg-card px-3.5 divide-y-[1.5px] divide-dashed divide-foreground/15">
                       {pageLogs.map((l) => {
                         const meta = LOG_METADATA[l.type]
                         const details =

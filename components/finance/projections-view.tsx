@@ -278,7 +278,7 @@ export function ProjectionsView() {
           <button
             type="button"
             onClick={handleOpenAddGoal}
-            className="flex w-full cursor-pointer flex-col items-center gap-2 rounded-2xl border-2 border-dashed border-foreground/40 px-4 py-8 text-center transition-colors hover:bg-grape/25"
+            className="flex w-full cursor-pointer flex-col items-center gap-2 rounded-2xl border-2 border-dashed border-border px-4 py-8 text-center transition-colors hover:bg-grape/25"
           >
             <Target className="size-6" />
             <span className="font-bold">Poné tu primera meta</span>
@@ -293,16 +293,16 @@ export function ProjectionsView() {
                   key={goal.id}
                   className={cn(
                     "flex flex-col rounded-2xl border-2 p-4",
-                    isAchievedInHorizon ? "border-foreground bg-card" : "border-dashed border-foreground/50 bg-transparent"
+                    isAchievedInHorizon ? "border-border bg-card" : "border-dashed border-border bg-transparent"
                   )}
                 >
                   <div className="flex items-start gap-3">
-                    <span className="flex size-8 shrink-0 items-center justify-center rounded-full border-2 border-foreground bg-lime font-mono text-sm font-bold text-ink">
+                    <span className="flex size-8 shrink-0 items-center justify-center rounded-full border-2 border-border bg-lime font-mono text-sm font-bold text-ink">
                       {idx + 1}
                     </span>
                     <div className="min-w-0 flex-1">
                       <p className="truncate font-extrabold">{goal.name}</p>
-                      <span className="mt-0.5 inline-flex items-center gap-1 rounded-full border-[1.5px] border-foreground px-1.5 py-0.5 font-mono text-[10px] font-semibold">
+                      <span className="mt-0.5 inline-flex items-center gap-1 rounded-full border-[1.5px] border-border px-1.5 py-0.5 font-mono text-[10px] font-semibold">
                         {goal.kind === "reserve" ? <ShieldCheck className="size-3" /> : <ShoppingBag className="size-3" />}
                         {goal.kind === "reserve" ? "reserva" : "compra"}
                       </span>
@@ -321,12 +321,12 @@ export function ProjectionsView() {
                     </p>
                   )}
 
-                  <div className="mt-3 h-2 overflow-hidden rounded-full border-[1.5px] border-foreground bg-background">
+                  <div className="mt-3 h-2 overflow-hidden rounded-full border-[1.5px] border-border bg-background">
                     <div className="h-full bg-grape" style={{ width: `${coveragePercent}%` }} />
                   </div>
                   <p className="mt-1 font-mono text-[10px] text-muted-foreground">{coveragePercent}% cubierto con lo que tenés hoy</p>
 
-                  <div className="mt-3 flex items-center gap-1 border-t-[1.5px] border-dashed border-foreground/15 pt-2">
+                  <div className="mt-3 flex items-center gap-1 border-t-[1.5px] border-dashed border-border pt-2">
                     <Button
                       type="button"
                       variant="ghost"
