@@ -158,7 +158,7 @@ export function VehiclesView() {
 
     let costPerKm = 0
     if (activeLogs.length > 0) {
-      const odometers = activeLogs.map((l) => l.odometer).filter((o) => o > 0)
+      const odometers = activeLogs.map((l) => l.odometer).filter((o) => Number.isFinite(o) && o >= 0)
       const minOdometer = odometers.length > 0 ? Math.min(...odometers, activeVehicle.odometer) : activeVehicle.odometer
       const odometerSpan = activeVehicle.odometer - minOdometer
 
@@ -332,7 +332,7 @@ export function VehiclesView() {
                     </div>
                     <p className="text-xs">Registrar el service realizado actualiza el plan. Comprar aceite o repuestos no lo marca como hecho.</p>
                     <Button size="sm" onClick={handleService}>Registrar service realizado</Button>
-                    {latestService && <Button size="sm" variant="outline" onClick={() => handleEditLog(latestService)}>Editar programación</Button>}
+                    {latestService && <Button size="sm" variant="secondary" onClick={() => handleEditLog(latestService)}>Editar programación</Button>}
                   </section>
                 ))}
                 {!serviceAlerts.length && latestService && !latestService.nextServiceDate && !latestService.nextServiceOdometer && <p className="text-xs text-muted-foreground">Sin próximo service programado. Podés definirlo editando el último registro.</p>}
