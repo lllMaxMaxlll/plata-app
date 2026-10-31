@@ -1180,12 +1180,9 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
 
   const updateVehicleLog = useCallback(
     async (id: string, input: Omit<VehicleLog, "id">) => {
-      // Editar un registro es borrarlo y volver a crearlo: así el gasto asociado
-      // se recalcula por el mismo camino que una alta, sin lógica duplicada.
-      const { error: deleteError } = await supabase.rpc("delete_vehicle_log", { p_id: id })
-      if (deleteError) fail(deleteError, "No se pudo actualizar el registro.")
-
-      const { error } = await supabase.rpc("create_vehicle_log", {
+      // One database transaction: a failed edit retains the event and expense.
+      const { error } = await supabase.rpc("update_vehicle_log", {
+        p_id: id,
         p_vehicle_id: input.vehicleId,
         p_type: input.type,
         p_occurred_at: input.date,

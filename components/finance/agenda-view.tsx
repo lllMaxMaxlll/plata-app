@@ -7,7 +7,7 @@ import { es } from "date-fns/locale"
 import { CalendarClock, Car, Plus } from "lucide-react"
 import { formatShort, type DueItem } from "@/lib/finance-data"
 import type { AgendaItem } from "@/lib/agenda"
-import { ROUTES } from "@/lib/routes"
+import { ROUTES, vehicleServiceHref } from "@/lib/routes"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { useFinance } from "./finance-provider"
@@ -189,8 +189,8 @@ function AgendaCard({ item, onPay }: { item: AgendaItem; onPay: (item: DueItem) 
             {account ? `Pagar con ${account.name}` : "Pagar"}
           </Button>
         ) : (
-          <Button size="sm" variant="outline" render={<Link href={ROUTES.vehicles.href} />} nativeButton={false}>
-            Anotar service o km
+          <Button size="sm" variant="outline" render={<Link href={vehicleServiceHref(item.vehicleId)} />} nativeButton={false}>
+            Registrar service
           </Button>
         )}
       </div>

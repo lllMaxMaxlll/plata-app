@@ -1,6 +1,10 @@
 "use client"
 
 import { useState, useMemo } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
+import { buildAgenda } from "@/lib/agenda"
+import { latestVehicleService, formatVehicleDate } from "@/lib/vehicle-maintenance"
+import { vehicleExpenses, vehicleLogCurrency } from '@/lib/vehicle-expenses'
 import { useFinance } from "./finance-provider"
 import { Pagination, usePagination } from "./pagination"
 import { AddVehicleSheet } from "./add-vehicle-sheet"
@@ -54,7 +58,11 @@ function Stat({ label, value, unit, hint }: { label: string; value: string; unit
 }
 
 export function VehiclesView() {
-  const { vehicles, vehicleLogs } = useFinance()
+  const { vehicles, vehicleLogs, accounts, transactions, macroSettings } = useFinance()
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const requestedVehicle = searchParams.get("vehicle")
+  const [initialLogType, setInitialLogType] = useState<VehicleLogType>("fuel")
   const [activeVehId, setActiveVehId] = useState<string>("")
   const [vehicleSheetOpen, setVehicleSheetOpen] = useState(false)
   const [logSheetOpen, setLogSheetOpen] = useState(false)
@@ -66,11 +74,12 @@ export function VehiclesView() {
   const [nowTime] = useState(() => Date.now())
 
   const activeVehicle = useMemo(() => {
-    if (activeVehId) {
-      return vehicles.find((v) => v.id === activeVehId) || vehicles[0]
+    const selected = activeVehId || requestedVehicle
+    if (selected) {
+      return vehicles.find((v) => v.id === selected) || vehicles[0]
     }
     return vehicles[0]
-  }, [vehicles, activeVehId])
+  }, [vehicles, activeVehId, requestedVehicle])
 
   const activeLogs = useMemo(() => {
     if (!activeVehicle) return []
@@ -109,20 +118,17 @@ export function VehiclesView() {
         averageKmPerLiter: 0,
         lastKmPerLiter: 0,
         costPerKm: 0,
+        missingExchangeRate: false,
       }
     }
 
-    let totalSpent = 0
-    const costByLogType = { fuel: 0, service: 0, part: 0, gear: 0, insurance: 0, other: 0 } as Record<VehicleLogType, number>
-
-    activeLogs.forEach((l) => {
-      totalSpent += l.amount
-      costByLogType[l.type] = (costByLogType[l.type] || 0) + l.amount
-    })
+    const expenses = vehicleExpenses(activeLogs, accounts, transactions, macroSettings.lastUpdated ? macroSettings.exchangeRate : undefined)
+    const totalSpent = expenses.totalARS ?? 0
+    const costByLogType = expenses.byType
 
     const fuelLogs = [...activeLogs]
       .filter((l) => l.type === "fuel" && typeof l.liters === "number" && typeof l.odometer === "number")
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+      .sort((a, b) => a.date.slice(0, 10).localeCompare(b.date.slice(0, 10)) || a.odometer - b.odometer)
 
     let totalDistance = 0
     let totalLiters = 0
@@ -156,7 +162,7 @@ export function VehiclesView() {
       const minOdometer = odometers.length > 0 ? Math.min(...odometers, activeVehicle.odometer) : activeVehicle.odometer
       const odometerSpan = activeVehicle.odometer - minOdometer
 
-      const span = odometerSpan > 0 ? odometerSpan : activeVehicle.odometer
+      const span = odometerSpan
       if (span > 0) {
         const directVehicleCost = totalSpent - costByLogType.gear
         costPerKm = directVehicleCost / span
@@ -169,66 +175,31 @@ export function VehiclesView() {
       averageKmPerLiter,
       lastKmPerLiter,
       costPerKm,
+      spentByCurrency: expenses.original,
+      missingExchangeRate: expenses.missingExchangeRate,
     }
-  }, [activeVehicle, activeLogs])
+  }, [activeVehicle, activeLogs, accounts, transactions, macroSettings.exchangeRate, macroSettings.lastUpdated])
 
-  const alerts = useMemo(() => {
-    if (!activeVehicle) return []
-    const list: { id: string; title: string; type: "critical" | "warning" | "info"; description: string }[] = []
+  const latestService = useMemo(() => latestVehicleService(activeLogs), [activeLogs])
+  const serviceAlerts = useMemo(() => buildAgenda({ dueItems: [], vehicles: activeVehicle ? [activeVehicle] : [], vehicleLogs: activeLogs, now: new Date(nowTime) })
+    .filter(item => item.kind === "service"), [activeVehicle, activeLogs, nowTime])
+  const requestedServiceOpen = searchParams.get("action") === "service" && Boolean(requestedVehicle) && activeVehicle?.id === requestedVehicle
 
-    activeLogs
-      .filter((l) => l.type === "service" && typeof l.nextServiceOdometer === "number")
-      .forEach((l) => {
-        const nextOdo = l.nextServiceOdometer!
-        const diff = nextOdo - activeVehicle.odometer
-        const label = l.serviceType || "Mantenimiento general"
+  function closeLogForm() {
+    setLogSheetOpen(false)
+    setEditingLog(null)
+    if (requestedServiceOpen) {
+      const params = new URLSearchParams(searchParams.toString())
+      params.delete("action")
+      router.replace(`/vehicles?${params}`, { scroll: false })
+    }
+  }
 
-        if (diff <= 0) {
-          list.push({
-            id: `odo-crit-${l.id}`,
-            title: `Service Vencido: ${label}`,
-            type: "critical",
-            description: `Venció a los ${nextOdo} km. Tenés un exceso de ${Math.abs(diff)} km.`,
-          })
-        } else if (diff <= 300) {
-          list.push({
-            id: `odo-warn-${l.id}`,
-            title: `Service Próximo: ${label}`,
-            type: "warning",
-            description: `Toca a los ${nextOdo} km. Faltan sólo ${diff} km.`,
-          })
-        }
-      })
-
-    activeLogs
-      .filter((l) => l.type === "service" && l.nextServiceDate)
-      .forEach((l) => {
-        const nextDate = new Date(l.nextServiceDate!)
-        const diffDays = Math.ceil((nextDate.getTime() - nowTime) / (1000 * 60 * 60 * 24))
-        const label = l.serviceType || "Mantenimiento general"
-
-        if (diffDays <= 0) {
-          list.push({
-            id: `date-crit-${l.id}`,
-            title: `Service Vencido (por fecha): ${label}`,
-            type: "critical",
-            description: `Venció el ${nextDate.toLocaleDateString("es-AR")}.`,
-          })
-        } else if (diffDays <= 15) {
-          list.push({
-            id: `date-warn-${l.id}`,
-            title: `Service Próximo (por fecha): ${label}`,
-            type: "warning",
-            description: `Programado para el ${nextDate.toLocaleDateString("es-AR")} (en ${diffDays} días).`,
-          })
-        }
-      })
-
-    return list.sort((a, b) => {
-      const map = { critical: 2, warning: 1, info: 0 }
-      return map[b.type] - map[a.type]
-    })
-  }, [activeVehicle, activeLogs, nowTime])
+  function handleService() {
+    setEditingLog(null)
+    setInitialLogType("service")
+    setLogSheetOpen(true)
+  }
 
   function handleAddVehicle() {
     setEditingVehicle(null)
@@ -241,6 +212,7 @@ export function VehiclesView() {
   }
 
   function handleAddLog() {
+    setInitialLogType("fuel")
     setEditingLog(null)
     setLogSheetOpen(true)
   }
@@ -250,10 +222,6 @@ export function VehiclesView() {
     setLogSheetOpen(true)
   }
 
-  const formatLogDate = (iso: string) => {
-    const d = new Date(iso)
-    return d.toLocaleDateString("es-AR", { day: "2-digit", month: "short" })
-  }
 
   const VehicleIcon = (type: string) =>
     type === "motorcycle" ? Bike : type === "car" ? Car : type === "truck" ? Truck : Milestone
@@ -352,21 +320,23 @@ export function VehiclesView() {
                   </Button>
                 </section>
 
-                {alerts.map((al) => (
-                  <div
-                    key={al.id}
-                    className={cn(
-                      "flex items-start gap-2.5 rounded-2xl border-2 border-border p-3 text-sm",
-                      al.type === "critical" ? "bg-coral text-ink" : "bg-card"
-                    )}
-                  >
-                    <AlertTriangle className="mt-0.5 size-4 shrink-0" />
-                    <span>
-                      <span className="block font-bold">{al.title}</span>
-                      <span className="block text-xs">{al.description}</span>
-                    </span>
-                  </div>
+                {serviceAlerts.map(item => (
+                  <section key={item.id} aria-label="Próximo service" className={cn("flex flex-col gap-3 rounded-2xl border-2 border-border p-3 text-sm", item.urgency === "overdue" ? "bg-coral text-ink" : "bg-card")}>
+                    <div className="flex items-start gap-2.5">
+                      <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+                      <div>
+                        <p className="font-bold">{item.urgency === "overdue" ? "Service vencido" : "Próximo service"}: {latestService?.serviceType || "Mantenimiento general"}</p>
+                        {item.kmLeft !== null && <p className="text-xs">{item.kmLeft < 0 ? `Superado por ${Math.abs(item.kmLeft).toLocaleString("es-AR")} km` : item.kmLeft === 0 ? "Llegaste al kilometraje programado" : `Faltan ${item.kmLeft.toLocaleString("es-AR")} km`} · a los {item.targetOdometer?.toLocaleString("es-AR")} km.</p>}
+                        {item.date && <p className="text-xs">{(item.daysUntil ?? 0) < 0 ? "Venció el" : item.daysUntil === 0 ? "Toca hoy," : "Programado para el"} {formatVehicleDate(item.date)}.</p>}
+                      </div>
+                    </div>
+                    <p className="text-xs">Registrar el service realizado actualiza el plan. Comprar aceite o repuestos no lo marca como hecho.</p>
+                    <Button size="sm" onClick={handleService}>Registrar service realizado</Button>
+                    {latestService && <Button size="sm" variant="outline" onClick={() => handleEditLog(latestService)}>Editar programación</Button>}
+                  </section>
                 ))}
+                {!serviceAlerts.length && latestService && !latestService.nextServiceDate && !latestService.nextServiceOdometer && <p className="text-xs text-muted-foreground">Sin próximo service programado. Podés definirlo editando el último registro.</p>}
+
               </aside>
 
               <div className="min-w-0 space-y-6 lg:col-start-1 lg:row-start-1">
@@ -379,15 +349,16 @@ export function VehiclesView() {
                   />
                   <Stat
                     label="Por km"
-                    value={stats.costPerKm > 0 ? formatShort(stats.costPerKm, "ARS") : "—"}
-                    hint="gastos / km"
+                    value={!stats.missingExchangeRate && stats.costPerKm > 0 ? formatShort(stats.costPerKm, "ARS") : "—"}
+                    hint="desde el primer registro"
                   />
-                  <Stat label="Total" value={formatShort(stats.totalSpent, "ARS")} hint="en la bitácora" />
+                  <Stat label="Total" value={stats.missingExchangeRate ? "—" : formatShort(stats.totalSpent, "ARS")} hint={stats.spentByCurrency.USD > 0 ? "USD al cambio actual" : "en la bitácora"} />
                 </div>
+                {stats.spentByCurrency.USD > 0 && <p className="text-xs text-muted-foreground">Importes originales: {formatShort(stats.spentByCurrency.ARS, 'ARS')} + {formatShort(stats.spentByCurrency.USD, 'USD')}. {stats.missingExchangeRate ? 'Falta una cotización verificada para calcular el total y el costo por km en pesos.' : 'El total en pesos convierte los USD a la cotización actual, no a la fecha del gasto.'}</p>}
 
                 <section className="rounded-2xl border-2 border-border bg-card p-4">
                   <h2 className="mb-3 text-base font-extrabold tracking-tight">En qué se va</h2>
-                  {stats.totalSpent === 0 ? (
+                  {stats.missingExchangeRate ? <p className="text-sm text-muted-foreground">Actualizá la cotización para comparar gastos en distintas monedas.</p> : stats.totalSpent === 0 ? (
                     <p className="text-sm text-muted-foreground">Todavía no hay gastos en la bitácora.</p>
                   ) : (
                     <>
@@ -491,8 +462,8 @@ export function VehiclesView() {
                               </p>
                             </div>
                             <div className="shrink-0 text-right">
-                              <p className="font-mono text-sm font-semibold">−{formatShort(l.amount, "ARS")}</p>
-                              <p className="font-mono text-[11px] text-muted-foreground">{formatLogDate(l.date)}</p>
+                              <p className="font-mono text-sm font-semibold">−{formatShort(l.amount, vehicleLogCurrency(l, accounts, transactions))}</p>
+                              <p className="font-mono text-[11px] text-muted-foreground">{formatVehicleDate(l.date, "dd MMM")}</p>
                             </div>
                           </li>
                         )
@@ -517,13 +488,13 @@ export function VehiclesView() {
         vehicle={editingVehicle}
       />
 
-      {activeVehicle && (
+      {activeVehicle && (logSheetOpen || requestedServiceOpen) && (
         <AddVehicleLogSheet
-          open={logSheetOpen}
-          onClose={() => {
-            setLogSheetOpen(false)
-            setEditingLog(null)
-          }}
+          key={`${activeVehicle.id}:${editingLog?.id ?? "new"}`}
+          open={true}
+          onClose={closeLogForm}
+          initialType={requestedServiceOpen ? "service" : initialLogType}
+          serviceTemplate={latestService}
           vehicle={activeVehicle}
           log={editingLog}
         />

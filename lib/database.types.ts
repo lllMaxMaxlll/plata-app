@@ -689,6 +689,10 @@ export type Database = {
         }
       }
       delete_vehicle: { Args: { p_id: string }; Returns: undefined }
+      update_vehicle_log: {
+        Args: Database["public"]["Functions"]["create_vehicle_log"]["Args"] & { p_id: string }
+        Returns: Database["public"]["Functions"]["create_vehicle_log"]["Returns"]
+      }
       delete_vehicle_log: { Args: { p_id: string }; Returns: undefined }
       execute_stock_trade: {
         Args: {
