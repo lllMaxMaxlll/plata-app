@@ -165,6 +165,138 @@ Next 16.4 necesita un adaptador que incluya `server/preview-props.json` en el
 bundle: OpenNext 1.20.12 corrigió esta carga. El proyecto fija OpenNext 1.20.13
 y Wrangler 4.152.0, compatible con sus dependencias declaradas.
 
+### 8. Radar de mercado (acciones de EE. UU.)
+
+La pantalla **Acciones → Radar de mercado** permite guardar hasta 10 símbolos,
+incluso posiciones reales mantenidas fuera de la simulación de la app. El
+Worker revisa las reglas aunque la PWA esté cerrada. Es una adaptación de
+`trader-alerts` y `trader-analyst` de
+[day-trader-skill](https://github.com/Jakeschincariol/day-trader-skill), con
+licencia conservada en `THIRD_PARTY_NOTICES.md`. Los scripts Python de la skill
+no se ejecutan dentro del Worker: sus reglas se adaptaron a TypeScript.
+
+**Qué hace:**
+
+- Resumen a las **08:00 de Nueva York** y **5 minutos después del cierre**,
+  con ventanas de reintento de una hora. Respeta DST, feriados y cierres de
+  13:00 de NYSE para 2026–2027. En años desconocidos se detiene y exige
+  actualizar el calendario.
+- Cron cada **5 minutos**, de **04:00 a 20:00 Nueva York** en días bursátiles.
+  Quotes Finnhub con cache de 4 minutos, noticias de 15 y calendario de una hora.
+- Avisos cuando el precio llega al stop de referencia o al objetivo, o cae el
+  porcentaje configurado frente al cierre anterior. No evalúa precios con
+  más de 15 minutos de antigüedad, ausentes, inválidos o futuros.
+- Recordatorio diario de resultados a tres días calendario o menos; fechas
+  estimadas por Finnhub, que deben confirmarse en Relaciones con Inversores.
+- Noticias con enlace y hora: alerta sobre los últimos titulares de la última
+  hora, posteriores a la última configuración guardada, incluso sin clasificar
+  su impacto. No interpreta titulares como guidance confirmado.
+- Opcionalmente, ingresos y EPS diluido publicados en SEC EDGAR, comparación
+  interanual sobre períodos comparables y aviso de datos XBRL rezagados.
+  No deriva Q4, no procesa transcripciones ni resume automáticamente EX-99.1.
+- Push cifrado `aes128gcm` + VAPID, incluyendo Apple. Si ningún proveedor push
+  acepta el envío, usa Telegram cuando el usuario activó el respaldo.
+
+**Configuración del servidor:**
+
+1. Autenticar Wrangler (`bunx wrangler login` o `CLOUDFLARE_API_TOKEN`). Crear
+   el namespace y copiar su ID en la entrada existente `MARKET_MONITOR` de
+   `wrangler.jsonc` (no agregar dos bindings con el mismo nombre):
+
+   ```bash
+   bunx wrangler kv namespace create plata-market-monitor
+   ```
+
+   ```jsonc
+   "kv_namespaces": [{ "binding": "MARKET_MONITOR", "id": "ID_REAL" }]
+   ```
+
+   Sin ID, KV se puede emular en desarrollo; no implica que esté aprovisionado
+   en producción. El cron sólo corre en el Worker desplegado, no en `next dev`.
+
+2. Generar el par VAPID una sola vez:
+
+   ```bash
+   node scripts/generate-vapid.mjs
+   ```
+
+   El archivo `.secrets/market-vapid.env` está ignorado por Git y tiene permisos
+   `0600`; no se imprime la clave privada. Copiar sus valores a `.env.local`
+   para desarrollo y cargarlos como secrets del Worker. No rotar sin planificar
+   volver a suscribir los dispositivos.
+
+   ```bash
+   bunx wrangler secret put VAPID_PUBLIC_KEY
+   bunx wrangler secret put VAPID_PRIVATE_KEY
+   bunx wrangler secret put VAPID_SUBJECT
+   bunx wrangler secret put FINNHUB_API_KEY
+   ```
+
+   `VAPID_SUBJECT` debe ser una URL `mailto:` con un correo real de contacto.
+   Confirmar que el plan Finnhub permite **quote**, **company-news** y
+   **calendar/earnings** para los símbolos elegidos. Los errores se muestran;
+   no se sustituyen por cotizaciones de ejemplo. Si el plan no permite un
+   endpoint, esa parte del análisis queda incompleta.
+
+3. Para SEC EDGAR, cargar `SEC_USER_AGENT` con nombre y correo reales:
+
+   ```bash
+   bunx wrangler secret put SEC_USER_AGENT
+   ```
+
+   Se consultan `company_tickers.json`, company facts y submissions. Se
+   almacenan métricas normalizadas durante una hora, no los archivos completos.
+   La comparación se limita a hechos USD / USD por acción, de US GAAP en
+   10-Q/10-K; compañías extranjeras u otras taxonomías pueden no tener datos.
+
+4. Para Telegram, reutilizar `TELEGRAM_BOT_TOKEN` y
+   `TELEGRAM_ALLOWED_CHAT_ID` del bot. Configurar además el **UUID de Supabase
+   Auth del dueño de ese chat**, nunca el número de chat:
+
+   ```bash
+   bunx wrangler secret put MARKET_TELEGRAM_USER_ID
+   ```
+
+   No requiere contraseña de Supabase para enviar alertas. Sólo el usuario
+   vinculado puede activar ese respaldo. Debe haber iniciado previamente el
+   chat con el bot. El resto de usuarios utiliza sus propias suscripciones push.
+
+5. Validar y desplegar con el flujo habitual (`bun run check:cloudflare`,
+   `bun run deploy`). `worker.mjs` conserva `fetch` y los exports de OpenNext
+   y agrega `scheduled`; no cambiar `main` a `.open-next/worker.js`, porque se
+   perdería el cron. No es necesario migrar Postgres.
+
+**Activación en el teléfono:** abrir la PWA instalada en iPhone con iOS 16.4 o
+posterior → Acciones → Activar push en este dispositivo → conceder permiso →
+cargar símbolos y niveles → activar vigilancia y, si está disponible, respaldo
+Telegram → Guardar vigilancia → Enviar prueba. Actualizar análisis consulta los
+símbolos ya guardados y no envía notificaciones. Quitar un símbolo no modifica
+la tenencia ni las operaciones. Los cambios sólo se aplican al guardarlos.
+
+**Operación y límites:**
+
+- Se persisten configuración y reporte por usuario autenticado en KV. No se
+  expone el listado de suscripciones ni las claves privadas a la interfaz.
+- El panel muestra última revisión y último intento de envío. Un proveedor que
+  acepta un push no confirma recepción/lectura en el iPhone. Telegram no se
+  activa por silencio del dispositivo si el proveedor ya aceptó el push.
+- Stop/objetivo/caída: como máximo un aviso por nivel y día en condiciones
+  normales. Los envíos fallidos se reintentan en el siguiente ciclo. KV tiene
+  consistencia eventual: pueden aparecer duplicados ante solapamientos o
+  fallos después de enviar; no se promete entrega exactamente una vez.
+- La vigilancia usa consultas periódicas, no un feed en streaming. Una caída
+  puede ocurrir entre revisiones o fuera de horario; las cuotas del proveedor,
+  red, permisos y Focus de iOS también afectan los avisos. Noticias anteriores
+  a la ventana de una hora no se reenvían al recuperarse de una interrupción.
+- Diseñado para una cartera personal pequeña. Más usuarios requieren cola,
+  presupuesto compartido de API y deduplicación transaccional. Verificar costo
+  y cuotas de Workers/KV/Finnhub antes de escalar.
+- No coloca órdenes, no fija un stop en el broker ni aconseja comprar o vender.
+  Incluso un stop real puede ejecutarse por debajo de su nivel ante un gap.
+  Los botones de trading de esta app siguen siendo una simulación.
+
+Documento de uso: [`docs/radar-de-mercado.html`](docs/radar-de-mercado.html).
+
 ---
 
 ## Estructura del Proyecto

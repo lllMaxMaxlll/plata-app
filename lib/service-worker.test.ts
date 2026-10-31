@@ -50,13 +50,13 @@ function worker() {
 
 test("offline navigation uses cached HTML independently of the query", async () => {
   const sw = worker()
-  await sw.cache("lucas-pages-v2").put("/search", new Response("search shell"))
+  await sw.cache("lucas-pages-v3").put("/search", new Response("search shell"))
   assert.equal(await (await sw.navigate("/search?q=super")).text(), "search shell")
 })
 
 test("an uncached route falls back to the cached home offline", async () => {
   const sw = worker()
-  await sw.cache("lucas-pages-v2").put("/", new Response("home shell"))
+  await sw.cache("lucas-pages-v3").put("/", new Response("home shell"))
   assert.equal(await (await sw.navigate("/unknown")).text(), "home shell")
 })
 
@@ -69,12 +69,12 @@ test("first launch without a cache gives an actionable offline response", async 
 test("activation only removes old Lucas caches", async () => {
   const sw = worker()
   sw.cache("lucas-pages-v1")
-  sw.cache("lucas-pages-v2")
+  sw.cache("lucas-pages-v3")
   sw.cache("firebase-unrelated")
   let complete!: Promise<void>
   sw.listeners.activate({ waitUntil: (value: Promise<void>) => { complete = value } })
   await complete
   assert.equal(sw.stores.has("lucas-pages-v1"), false)
-  assert.equal(sw.stores.has("lucas-pages-v2"), true)
+  assert.equal(sw.stores.has("lucas-pages-v3"), true)
   assert.equal(sw.stores.has("firebase-unrelated"), true)
 })
