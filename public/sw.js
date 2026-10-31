@@ -10,7 +10,7 @@
 //
 // Subir VERSION descarta los caches anteriores en la próxima activación.
 
-const VERSION = "v2"
+const VERSION = "v3"
 const PAGES_CACHE = `lucas-pages-${VERSION}`
 const STATIC_CACHE = `lucas-static-${VERSION}`
 
@@ -50,6 +50,35 @@ const STATIC_LIMIT = 400
 const NAVIGATION_TIMEOUT_MS = 3500
 
 const STATIC_URL = /\/_next\/static\/[^"'\s)\\]+/g
+
+self.addEventListener("push", (event) => {
+  let message = {}
+  try { message = event.data?.json() ?? {} } catch { /* show a safe fallback */ }
+  event.waitUntil(self.registration.showNotification(
+    typeof message.title === "string" ? message.title : "EN MANO · Mercado",
+    {
+      body: typeof message.body === "string" ? message.body : "Tenés una actualización de mercado.",
+      icon: "/icon-192.png",
+      badge: "/icon-192.png",
+      data: { url: "/stocks" },
+    }
+  ))
+})
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close()
+  event.waitUntil((async () => {
+    const url = new URL("/stocks", self.location.origin).href
+    const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true })
+    for (const client of windows) {
+      if (new URL(client.url).origin === self.location.origin) {
+        await client.navigate(url)
+        return client.focus()
+      }
+    }
+    return self.clients.openWindow(url)
+  })())
+})
 
 self.addEventListener("install", (event) => {
   event.waitUntil(precache().then(() => self.skipWaiting()))

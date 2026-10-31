@@ -4,7 +4,10 @@
   // Cloudflare: OpenNext crea un service binding WORKER_SELF_REFERENCE contra
   // este nombre y el deploy falla con 10143 si no existe.
   "name": "plata-app",
-  "main": ".open-next/worker.js",
+  "main": "worker.mjs",
+  "triggers": { "crons": ["*/5 * * * *"] },
+  // En desarrollo se emula localmente; producción usa este namespace.
+  "kv_namespaces": [{ "binding": "MARKET_MONITOR", "id": "967d463b02374299bb3c2d0050976fd8" }],
   "compatibility_date": "2026-08-28",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   // Workers AI: la categorización automática de movimientos corre acá, sin API

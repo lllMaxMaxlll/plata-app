@@ -23,5 +23,10 @@ export default nextConfig
 if (process.env.NODE_ENV === "development") {
   initOpenNextCloudflareForDev().catch((error) => {
     console.warn("[opennext] bindings de Cloudflare no disponibles en dev:", error?.message ?? error)
+    // El radar usa KV local y no necesita login de Cloudflare. Un fallo de los
+    // bindings remotos de AI/Vectorize no debe apagar ese almacenamiento.
+    return initOpenNextCloudflareForDev({ remoteBindings: false })
+  }).catch((error) => {
+    console.warn("[opennext] tampoco se pudo iniciar el almacenamiento local:", error?.message ?? error)
   })
 }

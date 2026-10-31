@@ -67,6 +67,7 @@ interface VectorizeBinding {
 
 declare global {
   interface CloudflareEnv {
+    MARKET_MONITOR?: import('./lib/market-service').MarketKV
     /** Opcional: sin el binding, la categorización cae a las reglas locales. */
     AI?: WorkersAiBinding
     /** Opcional: sin el binding, la búsqueda semántica se desactiva sola. */

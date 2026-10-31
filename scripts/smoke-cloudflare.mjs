@@ -11,7 +11,7 @@ const port = Number(process.env.WORKER_SMOKE_PORT ?? 8788)
 const origin = `http://127.0.0.1:${port}`
 await access(".open-next/worker.js")
 const cli = join(dirname(require.resolve("wrangler/package.json")), "bin/wrangler.js")
-const child = spawn(process.execPath, [cli, "dev", "--local", "--ip", "127.0.0.1", "--port", String(port)], {
+const child = spawn(process.execPath, [cli, "dev", "--local", "--test-scheduled", "--ip", "127.0.0.1", "--port", String(port)], {
   stdio: ["ignore", "pipe", "pipe"],
 })
 let logs = ""
@@ -45,7 +45,13 @@ try {
   // GET no está implementado: debe responder 405, nunca fallar al cargar Next.
   const api = await fetch(origin + "/api/search", { signal: AbortSignal.timeout(10000) })
   assert.equal(api.status, 405, `La ruta dinámica falló en workerd.\n${logs}`)
-  console.log("Cloudflare smoke: inicio, perfil, agenda, manifest y ruta dinámica OK.")
+  const market = await fetch(origin + "/api/market", { signal: AbortSignal.timeout(10000) })
+  assert.equal(market.status, 401, `El radar debe rechazar lecturas sin autenticación.\n${logs}`)
+  // Saturday: verify the real scheduled handler loads without fetching prices
+  // or sending notifications. The rule/delivery tests exercise trading days.
+  const scheduled = await fetch(origin + "/__scheduled?time=1793448000000", { signal: AbortSignal.timeout(10000) })
+  assert.equal(scheduled.status, 200, `El handler programado falló en workerd.\n${logs}`)
+  console.log("Cloudflare smoke: páginas, manifest, API autenticada y cron OK.")
 } finally {
   child.kill("SIGTERM")
 }

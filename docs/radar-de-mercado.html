@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="es-AR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Radar de mercado — Documento del feature | EN MANO</title>
+  <style>
+    :root{--paper:#f5f4ed;--ink:#20251e;--muted:#62695e;--line:#d5d8cc;--lime:#d9f47a;--white:#fffef9;--amber:#fff0cf;--red:#8b3b2e}
+    *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.65 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}a{color:inherit;text-underline-offset:3px}a:hover{color:#455a1a}button{font:inherit;cursor:pointer}.wrap{max-width:1080px;padding:0 32px;margin:auto}
+    .top{border-bottom:2px solid var(--ink)}.top .wrap{display:flex;justify-content:space-between;align-items:center;gap:20px;padding-top:20px;padding-bottom:20px}.brand{font-size:15px;font-weight:900;letter-spacing:.12em}.meta{font-size:12px;color:var(--muted)}.print{border:1px solid var(--ink);background:transparent;border-radius:7px;padding:7px 12px;font-size:12px}
+    header{padding:70px 0 40px}.eyebrow{font-size:12px;font-weight:750;letter-spacing:.14em;text-transform:uppercase;margin:0 0 16px}.pill{display:inline-block;border:1px solid var(--ink);border-radius:99px;background:var(--lime);padding:4px 12px;font-size:12px;font-weight:750}h1{max-width:780px;font-size:clamp(42px,7vw,76px);line-height:1.03;letter-spacing:-.055em;margin:22px 0}h2{font-size:28px;letter-spacing:-.035em;line-height:1.2;margin:0 0 18px}h3{font-size:17px;line-height:1.4;margin:0 0 8px}p{margin:0 0 15px}.lead{max-width:720px;color:var(--muted);font-size:19px;line-height:1.6}.status{border:1px solid #b8a16d;border-left:5px solid #b8a16d;background:var(--amber);padding:20px 24px;border-radius:10px;margin:28px 0}.status p:last-child,.callout p:last-child{margin:0}.small{font-size:13px;color:var(--muted)}
+    nav{display:flex;flex-wrap:wrap;gap:8px 20px;padding:22px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);font-size:13px}section{padding:42px 0;border-bottom:1px solid var(--line);scroll-margin-top:20px}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}.card{padding:24px;background:var(--white);border:1px solid var(--line);border-radius:12px}.card p{font-size:14px;color:var(--muted);margin:0}.num{display:block;font:700 12px ui-monospace,monospace;margin-bottom:20px;color:var(--muted)}.two{display:grid;grid-template-columns:1fr 1fr;gap:24px}.callout{border:2px solid var(--ink);padding:24px;background:var(--white);border-radius:10px;margin-top:22px}.callout.lime{background:var(--lime)}
+    .timeline{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border:1px solid var(--line);border-radius:12px;background:var(--white);overflow:hidden}.time{padding:26px;border-right:1px solid var(--line)}.time:last-child{border:0}.clock{display:block;font-size:30px;font-weight:800;letter-spacing:-.04em}.time p{font-size:14px;color:var(--muted);margin-bottom:0}.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse;font-size:14px}th{text-align:left;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:12px;border-bottom:2px solid var(--ink)}td{padding:15px 12px;border-bottom:1px solid var(--line);vertical-align:top}td:first-child{font-weight:650;min-width:150px}ul,ol{padding-left:22px;margin:10px 0 18px}li{padding-left:3px;margin:7px 0}.steps{list-style:none;counter-reset:step;padding:0}.steps li{position:relative;counter-increment:step;padding:0 0 20px 45px}.steps li:before{content:counter(step);position:absolute;left:0;top:0;width:28px;height:28px;border-radius:50%;background:var(--ink);color:white;display:grid;place-items:center;font-size:12px;font-weight:750}.steps strong{display:block}.notification{max-width:520px;margin:20px 0;padding:22px;border-radius:20px;background:#e4e7de;border:1px solid #c8cdbf;box-shadow:0 10px 22px #20251e0a}.appname{font-size:10px;letter-spacing:.09em;font-weight:750;color:var(--muted);margin-bottom:8px}.notification p{font-size:14px;margin:8px 0 0}.code{font:12px/1.8 ui-monospace,SFMono-Regular,Consolas,monospace;background:var(--ink);color:#eff4e8;border-radius:9px;padding:18px;white-space:pre-wrap;overflow-wrap:anywhere;margin:16px 0}code{font-size:.88em;overflow-wrap:anywhere}.tag{display:inline-block;background:#e6ecd7;border-radius:4px;padding:2px 6px;font-size:11px;font-weight:700}.pending{background:var(--amber)}.note{color:var(--red);font-weight:650}details{border:1px solid var(--line);background:var(--white);border-radius:10px;padding:18px 22px;margin:12px 0}summary{font-weight:700;cursor:pointer}details[open] summary{margin-bottom:16px}.sources{font-size:13px}.sources li{margin-bottom:12px}footer{padding:30px 0 50px;font-size:12px;color:var(--muted)}.foot-grid{display:flex;justify-content:space-between;gap:20px}
+    @media(max-width:700px){.wrap{padding:0 20px}.top .wrap{flex-wrap:wrap}header{padding:40px 0 24px}.grid,.two,.timeline{grid-template-columns:1fr}.time{border-right:0;border-bottom:1px solid var(--line)}section{padding:30px 0}.lead{font-size:17px}.card{padding:20px}.foot-grid{flex-direction:column;gap:6px}th,td{padding:12px 8px}}
+    @media print{body{background:white;font-size:10pt;line-height:1.5}.wrap{max-width:none;padding:0}.print,nav{display:none}header{padding:25px 0}h1{font-size:38pt}h2{font-size:20pt}section{padding:22px 0}.card,.time,.notification,.callout,details{break-inside:avoid;box-shadow:none}.status{margin:16px 0}a{color:inherit}details> :not(summary){display:block!important}.two{gap:18px}footer{padding-bottom:0}@page{size:A4;margin:17mm}}
+  </style>
+</head>
+<body>
+  <div class="top"><div class="wrap"><span class="brand">EN MANO</span><span class="meta">Documento funcional · 31 de octubre de 2026</span><button class="print" type="button" onclick="window.print()">Imprimir / guardar PDF</button></div></div>
+  <main class="wrap">
+    <header>
+      <p class="eyebrow">Nuevo feature · Acciones</p>
+      <span class="pill">Radar de mercado</span>
+      <h1>Más contexto antes de asumir el riesgo.</h1>
+      <p class="lead">Un seguimiento de tus acciones que reúne resultados próximos, noticias y números publicados. Te avisa por la mañana, después del cierre y cuando un precio alcanza los niveles que definiste.</p>
+      <aside class="status" aria-label="Estado de entrega">
+        <h3>Publicado en producción. Falta activar las notificaciones en tu dispositivo.</h3>
+        <p>La interfaz y el proceso programado están desplegados en <a href="https://money.maxherr.com/stocks">money.maxherr.com</a>. Cloudflare tiene el almacenamiento, Finnhub, las claves de Web Push y la identificación de contacto para SEC configurados. Telegram queda disponible en el código, pero necesita un bot y chat propios.</p>
+        <p><strong>Abrí la PWA, concedé el permiso push, guardá tus símbolos y activá la vigilancia. La recepción en el iPhone aún debe comprobarse con Enviar prueba.</strong></p>
+      </aside>
+    </header>
+    <nav aria-label="Contenido del documento">
+      <a href="#incluye">Qué incluye</a><a href="#horarios">Horarios</a><a href="#alertas">Alertas</a><a href="#uso">Cómo usarlo</a><a href="#iphone">iPhone y Telegram</a><a href="#activacion">Activación</a><a href="#limites">Límites</a><a href="#verificacion">Pruebas</a>
+    </nav>
+
+    <section id="incluye">
+      <p class="eyebrow">01 / El feature</p><h2>Un radar sobre los símbolos que elegís.</h2>
+      <p>Está dentro de <strong>Acciones → Radar de mercado</strong>. Podés cargar hasta diez símbolos de EE. UU., traerlos de tu cartera y seguimiento, o agregar acciones que tengas en un broker externo. Agregar un símbolo sólo crea seguimiento.</p>
+      <div class="grid">
+        <article class="card"><span class="num">01</span><h3>Antes del evento</h3><p>Calendario de resultados para los próximos siete días y recordatorio cuando faltan tres días calendario o menos. Las fechas se muestran como estimaciones que necesitan confirmación.</p></article>
+        <article class="card"><span class="num">02</span><h3>Durante el día</h3><p>Comparación de precio contra stop, objetivo y caída diaria. Avisos de titulares recientes con fuente, hora y enlace para leer la noticia.</p></article>
+        <article class="card"><span class="num">03</span><h3>Con datos publicados</h3><p>Ingresos y EPS diluido de SEC EDGAR, cuando están configurados y disponibles. Compara trimestres equivalentes y señala datos faltantes o rezagados.</p></article>
+      </div>
+      <div class="callout"><h3>Cómo se usó la skill que compartiste</h3><p>Se instalaron <code>trader-alerts</code> y <code>trader-analyst</code> de <a href="https://github.com/Jakeschincariol/day-trader-skill">day-trader-skill</a>. Sus reglas de calendario, alertas y lectura de hechos trimestrales se adaptaron a TypeScript para Cloudflare. Se conserva la licencia MIT. La app no ejecuta una sesión de agente ni los scripts Python en cada revisión.</p></div>
+    </section>
+
+    <section id="horarios">
+      <p class="eyebrow">02 / La rutina</p><h2>Funciona aunque la app esté cerrada.</h2>
+      <p>El proceso corre en el servidor. Mantener una pestaña abierta o la pantalla encendida no es necesario. Todos los horarios se calculan en <strong>America/New_York</strong>, respetando el cambio estacional de hora.</p>
+      <div class="timeline">
+        <article class="time"><span class="clock">08:00</span><h3>Resumen de la mañana</h3><p>Precios disponibles, resultados próximos, titulares y métricas SEC disponibles. El precio matutino puede corresponder al cierre anterior: lleva su hora.</p></article>
+        <article class="time"><span class="clock">Cada 5 min</span><h3>Vigilancia</h3><p>De 04:00 a 20:00 de Nueva York, en días bursátiles. Consulta las reglas guardadas y envía los avisos que correspondan.</p></article>
+        <article class="time"><span class="clock">16:05</span><h3>Resumen del cierre</h3><p>Cinco minutos después del cierre regular. Si NYSE cierra a las 13:00, pasa a las 13:05. Las noticias posteriores pueden generar otro aviso.</p></article>
+      </div>
+      <p class="small" style="margin-top:16px">En Salta, la mañana de las 08:00 de Nueva York equivale a las 09:00 o 10:00, y el resumen regular del cierre llega a partir de las 17:05 o 18:05 según la época del año. Son horarios objetivo, no una garantía de entrega puntual.</p>
+      <p class="small">Cada resumen tiene una ventana de reintento de una hora. El calendario incorporado cubre 2026 y 2027; al llegar a un año no soportado, se detiene hasta actualizarlo. No se ejecuta vigilancia automática los fines de semana o feriados bursátiles.</p>
+    </section>
+
+    <section id="alertas">
+      <p class="eyebrow">03 / Qué dispara un aviso</p><h2>Reglas visibles, sin señales inventadas.</h2>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Aviso</th><th>Condición</th><th>Qué significa</th></tr></thead>
+        <tbody>
+          <tr><td>Stop de referencia</td><td>Precio ≤ nivel que guardaste.</td><td>Revisar tu plan y posición en el broker. La app no vendió ni colocó una orden.</td></tr>
+          <tr><td>Objetivo</td><td>Precio ≥ nivel que guardaste.</td><td>El precio alcanzó tu referencia para evaluar la posición. No confirma una venta.</td></tr>
+          <tr><td>Caída diaria</td><td>Variación frente al cierre anterior ≤ porcentaje negativo configurado.</td><td>Detecta un movimiento de mercado; no calcula la pérdida desde tu precio de compra.</td></tr>
+          <tr><td>Resultados próximos</td><td>Fecha informada a tres días calendario o menos.</td><td>Recordatorio diario para revisar exposición y confirmar fecha y horario con la compañía.</td></tr>
+          <tr><td>Noticia reciente</td><td>Titular de la última hora, posterior a la última configuración guardada.</td><td>Leer la fuente. El sistema no clasifica el titular como positivo/negativo ni confirma por sí mismo un cambio de guidance.</td></tr>
+          <tr><td>Mañana y cierre</td><td>Ventana horaria del resumen en un día bursátil.</td><td>Reúne la información disponible de tus símbolos. Si una fuente falla, se informa la parte faltante.</td></tr>
+        </tbody>
+      </table></div>
+      <p class="small" style="margin-top:16px">Los avisos de stop, objetivo y caída se limitan normalmente a uno por nivel y día. No se evalúan cotizaciones de más de 15 minutos, inválidas o futuras. Puede haber movimientos entre revisiones que el sistema no llegue a observar.</p>
+      <div class="two">
+        <div><h3>Ejemplo hipotético con INTC</h3><p>Si guardás un stop de referencia de USD 27 y el próximo dato válido es USD 26,80, se genera un aviso. Los valores siguientes sólo ilustran la mecánica; no son cotizaciones actuales ni una recomendación.</p><div class="notification"><div class="appname">EN MANO · RADAR DE MERCADO</div><strong>Alerta de mercado</strong><p>INTC alcanzó tu stop de referencia (27). USD 26,80 · cotización con fecha y hora. Verificá en tu broker; no se ejecutó ninguna orden.</p></div></div>
+        <div><h3>Para un caso como el que describiste</h3><p>El primer aviso útil es el calendario de resultados, antes de que se publique el informe. Después pueden llegar el titular y la alerta de caída. Esto ayuda a revisar la exposición con anticipación; no permite saber de antemano cómo reaccionará la cotización.</p><p class="small">Este documento no verifica ni reconstruye la caída de Intel que mencionaste. Describe la protección informativa implementada.</p></div>
+      </div>
+    </section>
+
+    <section id="uso">
+      <p class="eyebrow">04 / En la app</p><h2>Configurar, guardar y comprobar.</h2>
+      <ol class="steps">
+        <li><strong>Abrí Acciones.</strong> Buscá el panel Radar de mercado. Mostrará si está apagado o si falta configuración del servidor.</li>
+        <li><strong>Elegí tus símbolos.</strong> Escribí, por ejemplo, INTC y tocá Agregar. También podés traer los símbolos de la cartera y del seguimiento. Máximo: diez.</li>
+        <li><strong>Definí tus referencias.</strong> Stop y objetivo son precios en USD y pueden quedar vacíos. La caída diaria se configura en porcentaje; arranca en 5%, como valor editable, no como recomendación.</li>
+        <li><strong>Activá un canal.</strong> Habilitá push en el teléfono. Si tu usuario está vinculado al chat, podés activar Telegram como respaldo.</li>
+        <li><strong>Encendé y guardá la vigilancia.</strong> Los cambios locales no se aplican hasta tocar Guardar vigilancia. Debe haber al menos un símbolo y un canal configurado.</li>
+        <li><strong>Enviá una prueba.</strong> Confirmá que la notificación llega. Revisá la última ejecución y el último intento de envío que muestra el panel.</li>
+        <li><strong>Consultá el análisis cuando quieras.</strong> Actualizar análisis consulta los símbolos guardados, muestra datos y fuentes, y no envía una alerta.</li>
+      </ol>
+      <p>Para parar todo: apagá Vigilar mis símbolos y guardá. Para quitar push sólo en ese equipo: Desactivar push aquí. Quitar un símbolo del radar no modifica las acciones registradas en la app ni las de tu broker.</p>
+    </section>
+
+    <section id="iphone">
+      <p class="eyebrow">05 / Los canales</p><h2>Push en iPhone, con Telegram de respaldo.</h2>
+      <div class="two">
+        <article class="card"><h3>PWA instalada en iPhone</h3><p>iOS 16.4 o posterior admite Web Push en apps agregadas a la pantalla de inicio. Abrí EN MANO desde su ícono y tocá Activar push en este dispositivo; el permiso necesita esa acción tuya. No requiere una app de App Store. Al tocar la alerta, se abre Acciones.</p><p style="margin-top:12px">La entrega usa VAPID y cifrado <code>aes128gcm</code>, compatible con Apple. El servidor puede guardar hasta cinco suscripciones por usuario.</p></article>
+        <article class="card"><h3>Telegram</h3><p>Se reutiliza el bot y se vincula el UUID de tu usuario con el único chat autorizado en el servidor. Sólo ese usuario puede habilitar el respaldo. Tenés que haber iniciado el chat con el bot previamente.</p><p style="margin-top:12px">Se usa cuando no hay push disponible o ningún proveedor push acepta el envío. Un push aceptado pero silenciado por Focus no activa automáticamente Telegram.</p></article>
+      </div>
+      <div class="callout lime"><h3>Una prueba real en el teléfono sigue siendo necesaria</h3><p>La prueba automatizada valida el protocolo cifrado y el respaldo. No comprueba permisos, conexión, ajustes de Focus ni recepción en tu iPhone. “Aceptado por proveedor” tampoco significa leído o recibido en pantalla.</p></div>
+    </section>
+
+    <section id="activacion">
+      <p class="eyebrow">06 / Lo que falta activar</p><h2>Preparación del entorno de producción.</h2>
+      <p>El despliegue de producción se completó el 31/10/2026, con el cron cada cinco minutos y un namespace KV propio. Se verificaron el inicio, el service worker y el rechazo de la API a solicitudes sin sesión. La vigilancia personal requiere guardar las reglas y autorizar notificaciones en cada dispositivo.</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Requisito</th><th>Uso</th><th>Estado de esta entrega</th></tr></thead>
+        <tbody>
+          <tr><td>Worker + cron</td><td>Ejecutar cada cinco minutos sin depender del teléfono.</td><td><span class="tag">Desplegado</span> Cron confirmado en Cloudflare.</td></tr>
+          <tr><td>Cloudflare KV</td><td>Reglas, reportes, suscripciones y marcas de envío por usuario.</td><td><span class="tag">Creado y vinculado</span> Namespace de producción propio.</td></tr>
+          <tr><td>Finnhub</td><td>Precios, calendario y noticias.</td><td><span class="tag">Clave configurada</span> El acceso a cada endpoint depende del plan y del símbolo.</td></tr>
+          <tr><td>Claves VAPID</td><td>Autenticar envíos push.</td><td><span class="tag">Configuradas</span> Par generado y cargado como secrets, fuera de Git.</td></tr>
+          <tr><td>SEC User-Agent</td><td>Identificar al cliente ante SEC EDGAR.</td><td><span class="tag">Configurado</span> Contacto cargado; la consulta depende de disponibilidad y cobertura de SEC.</td></tr>
+          <tr><td>Telegram vinculado</td><td>Enviar sólo al dueño del chat configurado.</td><td><span class="tag pending">Verificar vinculación</span> Token, chat y UUID de Supabase Auth.</td></tr>
+          <tr><td>Permiso en iPhone</td><td>Crear la suscripción de ese dispositivo.</td><td><span class="tag pending">Acción del usuario</span> Activar desde la PWA y comprobar la prueba.</td></tr>
+        </tbody>
+      </table></div>
+      <details><summary>Pasos técnicos de activación</summary>
+        <p>Primero autenticar Wrangler. Después crear un namespace y poner el ID real en la entrada existente <code>MARKET_MONITOR</code> de <code>wrangler.jsonc</code>, evitando duplicarla:</p>
+        <pre class="code">bunx wrangler login
+bunx wrangler kv namespace create plata-market-monitor
+
+# Generar claves una sola vez, sin imprimir la privada:
+node scripts/generate-vapid.mjs</pre>
+        <p>Las claves quedan en <code>.secrets/market-vapid.env</code>, ignorado por Git. Cargar los valores como secrets del Worker; no publicar ni regenerar la clave privada después de suscribir dispositivos.</p>
+        <pre class="code">bunx wrangler secret put VAPID_PUBLIC_KEY
+bunx wrangler secret put VAPID_PRIVATE_KEY
+bunx wrangler secret put VAPID_SUBJECT
+bunx wrangler secret put FINNHUB_API_KEY
+
+# Opcionales, según el canal y análisis deseados:
+bunx wrangler secret put SEC_USER_AGENT
+bunx wrangler secret put MARKET_TELEGRAM_USER_ID</pre>
+        <p><code>VAPID_SUBJECT</code> usa un <code>mailto:</code> de contacto real. Telegram también necesita <code>TELEGRAM_BOT_TOKEN</code> y <code>TELEGRAM_ALLOWED_CHAT_ID</code>. La vinculación es al UUID del dueño, no al número de chat. No requiere contraseña de Supabase para enviar alertas.</p>
+        <pre class="code">bun run check:cloudflare
+bun run deploy</pre>
+        <p>El archivo de entrada es <code>worker.mjs</code>: conserva el servidor OpenNext y agrega el evento programado. <code>next dev</code> no dispara el cron. No se necesitan tablas ni migraciones nuevas en Supabase.</p>
+      </details>
+    </section>
+
+    <section id="limites">
+      <p class="eyebrow">07 / Alcance real</p><h2>Ayuda a decidir con contexto. No asegura el resultado.</h2>
+      <div class="two">
+        <div><h3>Qué informa el análisis</h3><ul><li>Precios y variaciones con marca de tiempo.</li><li>Próximos resultados estimados por Finnhub.</li><li>Titulares y enlaces para verificar la información.</li><li>Ingresos y EPS publicados, con comparación interanual cuando es válida.</li><li>Fuentes faltantes, datos antiguos y errores de acceso.</li></ul></div>
+        <div><h3>Qué queda fuera</h3><ul><li>Predicciones de precio o recomendaciones automáticas de compra/venta.</li><li>Colocación de órdenes o stops en el broker.</li><li>Lectura automática de llamadas de resultados y análisis completo de guidance o anexos EX-99.1.</li><li>Datos garantizados en tiempo real o vigilancia todos los días a toda hora.</li><li>La promesa de anticipar noticias imprevistas o evitar pérdidas.</li></ul></div>
+      </div>
+      <p>Precios: caché de cuatro minutos. Noticias: quince minutos. Calendario y métricas SEC: una hora. La app muestra el horario del dato; el proveedor puede tener demoras adicionales. Los datos SEC contemplan trimestres publicados de 80–100 días y conceptos US GAAP en USD; no derivan Q4 ni cubren todas las empresas o taxonomías.</p>
+      <p>Las marcas de envío reducen repeticiones y permiten reintentar fallos, pero Cloudflare KV tiene consistencia eventual. Puede haber duplicados por ejecuciones superpuestas o fallos después de enviar. Una interrupción superior a la ventana de noticias puede dejar titulares sin reenviar. Esta versión está pensada para una cartera personal pequeña; necesita otro diseño de cuotas y colas para escalar.</p>
+      <div class="callout"><h3>Una alerta de stop no es una protección ejecutada</h3><p>La alerta sólo te informa. Un stop real se configura en el broker y, si se convierte en una orden a mercado, tampoco garantiza el precio de ejecución ante una apertura con salto. Los botones de compra/venta de EN MANO siguen registrando operaciones simuladas. <a href="https://www.investor.gov/introduction-investing/investing-basics/how-stock-markets-work/types-orders">Referencia: SEC / Investor.gov sobre tipos de órdenes.</a></p></div>
+    </section>
+
+    <section id="verificacion">
+      <p class="eyebrow">08 / Evidencia de entrega</p><h2>Qué se verificó y qué requiere el entorno real.</h2>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Verificación</th><th>Resultado / alcance</th></tr></thead>
+        <tbody>
+          <tr><td>Reglas de mercado</td><td>Pruebas de DST, feriados, fin de semana, cierres anticipados, año desconocido y precios ausentes, futuros o vencidos.</td></tr>
+          <tr><td>Análisis SEC</td><td>Comparación trimestral, correcciones posteriores, exclusión de períodos anuales y comparación no válida con base cero.</td></tr>
+          <tr><td>Proceso programado</td><td>Prueba sin navegador con proveedores simulados; verifica alertas, marcas de envío, reintentos y apagado.</td></tr>
+          <tr><td>Push y Telegram</td><td>Prueba de cifrado <code>aes128gcm</code> + autorización VAPID; rechazo de destinos arbitrarios, eliminación de suscripción expirada y fallback limitado al dueño del chat.</td></tr>
+          <tr><td>Compilación y runtime</td><td>TypeScript, compilación Next/OpenNext y arranque del Worker en workerd. La API rechaza acceso no autenticado.</td></tr>
+          <tr><td>Interfaz</td><td>Revisión local en navegador: carga del panel, agregado de INTC, guardado con vigilancia apagada y consulta de cotización, calendario y titulares reales de Finnhub. SEC mostró su aviso de configuración faltante.</td></tr>
+          <tr><td>Entrega en iPhone</td><td><span class="tag pending">Pendiente en el dispositivo</span> El entorno ya está desplegado; faltan permiso, suscripción y confirmación en el iPhone real.</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <section id="fuentes">
+      <p class="eyebrow">09 / Referencias</p><h2>Fuentes y documentación.</h2>
+      <ul class="sources">
+        <li><a href="https://github.com/Jakeschincariol/day-trader-skill">day-trader-skill — Jake Schincariol</a>. Reglas adaptadas de trader-alerts y trader-analyst; licencia en THIRD_PARTY_NOTICES.md.</li>
+        <li><a href="https://webkit.org/blog/13878/">WebKit — Web Push para apps de iOS y iPadOS</a>. Requisitos de instalación y permiso del usuario.</li>
+        <li><a href="https://www.nyse.com/markets/hours-calendars">NYSE — Horarios y feriados</a>. Sesión regular y cierres anticipados.</li>
+        <li><a href="https://finnhub.io/docs/api/earnings-calendar">Finnhub — Calendario de resultados</a> y <a href="https://finnhub.io/docs/api/company-news">noticias de compañías</a>. Disponibilidad según plan y símbolo.</li>
+        <li><a href="https://www.sec.gov/search-filings/edgar-application-programming-interfaces">SEC — APIs de EDGAR</a>. Hechos XBRL e historial de presentaciones.</li>
+        <li><a href="https://developers.cloudflare.com/workers/configuration/cron-triggers/">Cloudflare — Cron Triggers</a> y <a href="https://developers.cloudflare.com/kv/concepts/how-kv-works/">consistencia de KV</a>.</li>
+        <li><a href="https://github.com/block65/webcrypto-web-push">webcrypto-web-push</a>. Implementación del envío cifrado compatible con Apple.</li>
+      </ul>
+      <p class="small">Documento autónomo: no usa tipografías, imágenes ni scripts externos. Puede compartirse como HTML o imprimirse desde el navegador. La guía de operación técnica también está en README.md.</p>
+    </section>
+  </main>
+  <footer class="wrap"><div class="foot-grid"><span><strong>EN MANO</strong> · Radar de mercado</span><span>Versión inicial · 31/10/2026 · Publicado; permiso y prueba en iPhone pendientes</span></div></footer>
+</body>
+</html>

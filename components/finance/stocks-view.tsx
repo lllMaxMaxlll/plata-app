@@ -21,6 +21,7 @@ import {
   ArrowUpRight,
 } from "lucide-react"
 import { StockTradeModal } from "./stock-trade-modal"
+import { MarketMonitorPanel } from "./market-monitor-panel"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -67,6 +68,7 @@ function monthLabelOf(key: string) {
 
 export function StocksView() {
   const {
+    user,
     watchlist,
     stockTransactions,
     stockPrices,
@@ -314,6 +316,8 @@ export function StocksView() {
           cuenta en Dólares (USD) registrada en la pestaña Cuentas.
         </div>
       )}
+
+      {user && <MarketMonitorPanel key={user.uid} symbols={[...holdings.map(h => h.symbol), ...watchlist.map(w => w.symbol)]} />}
 
       <Tabs value={activeTab} onValueChange={(val) => setActiveTab(val as typeof activeTab)} className="w-full">
         <TabsList className="grid w-full grid-cols-3">
