@@ -1,5 +1,7 @@
 -- Synthetic fixtures only; all changes are rolled back, including on failure.
 begin;
+create extension if not exists pgtap with schema extensions;
+select extensions.plan(1);
 insert into auth.users (id, instance_id, aud, role, email, encrypted_password, email_confirmed_at, created_at, updated_at) values
  ('82e3c08d-6c22-4ff9-bb78-12426801b951','00000000-0000-0000-0000-000000000000','authenticated','authenticated','vehicle-audit-a@example.invalid','',now(),now(),now()),
  ('82e3c08d-6c22-4ff9-bb78-12426801b952','00000000-0000-0000-0000-000000000000','authenticated','authenticated','vehicle-audit-b@example.invalid','',now(),now(),now());
@@ -43,5 +45,6 @@ begin
  assert denied, 'An absent uid must be rejected';
 end $$;
 reset role;
-select 'vehicle-log update: stable id, balance, rollback, RLS and missing auth OK' as verification;
+select extensions.pass('vehicle-log update: stable id, balance, rollback, RLS and missing auth OK');
+select * from extensions.finish();
 rollback;
