@@ -1,6 +1,9 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
+import { format } from "date-fns"
+import { vehicleDateValue, validateVehicleLogNumbers } from "@/lib/vehicle-maintenance"
+import { parseDecimalInput, formatDecimalInput } from "@/lib/decimal-input"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -37,105 +40,63 @@ export function AddVehicleLogSheet({
   onClose,
   vehicle,
   log,
+  initialType = "fuel",
+  serviceTemplate,
 }: {
   open: boolean
   onClose: () => void
   vehicle: Vehicle
   log?: VehicleLog | null
+  initialType?: VehicleLogType
+  serviceTemplate?: VehicleLog
 }) {
   const { addVehicleLog, updateVehicleLog, deleteVehicleLog, accounts } = useFinance()
   const confirm = useConfirm()
 
-  const [type, setType] = useState<VehicleLogType>("fuel")
-  const [date, setDate] = useState("")
-  const [odometer, setOdometer] = useState("")
-  const [amount, setAmount] = useState("")
-  const [accountId, setAccountId] = useState<string>("")
+  const [type, setType] = useState<VehicleLogType>(log?.type ?? initialType)
+  const [date, setDate] = useState(() => log ? vehicleDateValue(log.date) : format(new Date(), "yyyy-MM-dd"))
+  const [odometer, setOdometer] = useState(String(log?.odometer ?? vehicle.odometer))
+  const [amount, setAmount] = useState(log ? String(log.amount) : "")
+  const [accountId, setAccountId] = useState<string>(log?.accountId ?? "")
 
   // Combustible
-  const [liters, setLiters] = useState("")
-  const [gasStation, setGasStation] = useState("YPF")
-  const [customGasStation, setCustomGasStation] = useState("")
-  const [isFullTank, setIsFullTank] = useState(true)
+  const [liters, setLiters] = useState(log?.liters ? String(log.liters) : "")
+  const [gasStation, setGasStation] = useState(log?.gasStation ? GAS_STATIONS.includes(log.gasStation) ? log.gasStation : "Otro" : "YPF")
+  const [customGasStation, setCustomGasStation] = useState(log?.gasStation && !GAS_STATIONS.includes(log.gasStation) ? log.gasStation : "")
+  const [isFullTank, setIsFullTank] = useState(log?.isFullTank ?? true)
 
   // Service
-  const [serviceType, setServiceType] = useState("")
-  const [provider, setProvider] = useState("")
-  const [nextServiceOdometer, setNextServiceOdometer] = useState("")
-  const [nextServiceDate, setNextServiceDate] = useState("")
+  const [serviceType, setServiceType] = useState(log?.serviceType ?? (initialType === "service" ? serviceTemplate?.serviceType : "") ?? "")
+  const [provider, setProvider] = useState(log?.provider ?? (initialType === "service" ? serviceTemplate?.provider : "") ?? "")
+  const [nextServiceOdometer, setNextServiceOdometer] = useState(log?.nextServiceOdometer ? String(log.nextServiceOdometer) : "")
+  const [nextServiceDate, setNextServiceDate] = useState(log?.nextServiceDate ? vehicleDateValue(log.nextServiceDate) : "")
 
   // Repuestos / Indumentaria / Otro / Seguro
-  const [logDetails, setLogDetails] = useState("")
+  const [logDetails, setLogDetails] = useState(log?.itemName ?? log?.note ?? "")
 
   const [submitting, setSubmitting] = useState(false)
-
-  useEffect(() => {
-    if (open) {
-      if (log) {
-        setType(log.type)
-        setDate(log.date ? new Date(log.date).toISOString().split("T")[0] : new Date().toISOString().split("T")[0])
-        setOdometer(String(log.odometer))
-        setAmount(String(log.amount))
-        setAccountId(log.accountId || "")
-
-        if (log.type === "fuel") {
-          setLiters(log.liters ? String(log.liters) : "")
-          if (log.gasStation && GAS_STATIONS.includes(log.gasStation)) {
-            setGasStation(log.gasStation)
-            setCustomGasStation("")
-          } else if (log.gasStation) {
-            setGasStation("Otro")
-            setCustomGasStation(log.gasStation)
-          } else {
-            setGasStation("YPF")
-            setCustomGasStation("")
-          }
-          setIsFullTank(log.isFullTank ?? true)
-        } else if (log.type === "service") {
-          setServiceType(log.serviceType || "")
-          setProvider(log.provider || "")
-          setNextServiceOdometer(log.nextServiceOdometer ? String(log.nextServiceOdometer) : "")
-          setNextServiceDate(
-            log.nextServiceDate ? new Date(log.nextServiceDate).toISOString().split("T")[0] : ""
-          )
-        } else {
-          setLogDetails(log.itemName || log.note || "")
-        }
-      } else {
-        setType("fuel")
-        setDate(new Date().toISOString().split("T")[0])
-        setOdometer(vehicle ? String(vehicle.odometer) : "0")
-        setAmount("")
-        setAccountId("")
-        setLiters("")
-        setGasStation("YPF")
-        setCustomGasStation("")
-        setIsFullTank(true)
-        setServiceType("")
-        setProvider("")
-        setNextServiceOdometer("")
-        setNextServiceDate("")
-        setLogDetails("")
-      }
-    }
-  }, [open, log, vehicle])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
 
-    const parsedOdometer = parseInt(odometer)
-    if (isNaN(parsedOdometer) || parsedOdometer < 0) {
-      toast.error("Ingresá un kilometraje válido.")
+    let numbers: ReturnType<typeof validateVehicleLogNumbers>
+    try {
+      numbers = validateVehicleLogNumbers({ odometer, amount, liters, nextOdometer: nextServiceOdometer, type })
+      if (!vehicleDateValue(date)) throw new Error("Elegí una fecha válida.")
+      if (date > format(new Date(), "yyyy-MM-dd")) throw new Error("No se puede registrar un service o gasto futuro como realizado.")
+      if (type === "service" && nextServiceDate && (!vehicleDateValue(nextServiceDate) || nextServiceDate <= date)) throw new Error("La fecha del próximo service debe ser posterior a la de este registro.")
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Revisá los valores.")
       return
     }
-
-    const parsedAmount = parseFloat(amount) || 0
+    const parsedOdometer = numbers.odometer
+    const parsedAmount = numbers.amount
 
     const selectedGasStation = gasStation === "Otro" ? customGasStation.trim() : gasStation
 
     setSubmitting(true)
     try {
-      const data: any = {
+      const data: Omit<VehicleLog, "id"> = {
         vehicleId: vehicle.id,
         type,
         date: new Date(`${date}T12:00:00`).toISOString(),
@@ -145,21 +106,21 @@ export function AddVehicleLogSheet({
       }
 
       if (type === "fuel") {
-        data.liters = liters ? parseFloat(liters) || undefined : undefined
+        data.liters = numbers.liters
         data.gasStation = selectedGasStation || undefined
         data.isFullTank = isFullTank
         if (data.liters && parsedAmount > 0) {
           data.pricePerLiter = Number((parsedAmount / data.liters).toFixed(2))
         }
         data.itemName = undefined
-        data.note = undefined
+        data.note = log?.note
       } else if (type === "service") {
         data.serviceType = serviceType.trim() || undefined
         data.provider = provider.trim() || undefined
-        data.nextServiceOdometer = nextServiceOdometer ? parseInt(nextServiceOdometer) || undefined : undefined
-        data.nextServiceDate = nextServiceDate ? new Date(`${nextServiceDate}T12:00:00`).toISOString() : undefined
+        data.nextServiceOdometer = numbers.nextOdometer
+        data.nextServiceDate = nextServiceDate || undefined
         data.itemName = undefined
-        data.note = undefined
+        data.note = log?.note
       } else if (type === "part" || type === "gear" || type === "insurance" || type === "other") {
         data.itemName = logDetails || undefined
         data.note = logDetails || undefined
@@ -209,10 +170,10 @@ export function AddVehicleLogSheet({
       <ResponsiveDialogContent className="w-full max-w-[calc(100vw-2rem)] sm:max-w-lg rounded-xl bg-card border border-border p-6 shadow-2xl overflow-y-auto max-h-[90vh]">
         <ResponsiveDialogHeader className="text-left pb-1">
           <ResponsiveDialogTitle className="text-lg font-semibold tracking-tight text-foreground">
-            {log ? "Editar registro" : "Nuevo registro"}
+            {log ? "Editar registro" : initialType === "service" ? "Registrar service realizado" : "Nuevo registro"}
           </ResponsiveDialogTitle>
           <ResponsiveDialogDescription className="text-xs text-muted-foreground">
-            {log ? "Modificá los detalles del registro" : `Registrar evento para ${vehicle.name}`}
+            {log ? "Modificá los detalles del registro" : initialType === "service" ? `Registrá lo que ya hiciste en ${vehicle.name} y definí el próximo service. No se guarda hasta confirmar.` : `Registrar evento para ${vehicle.name}`}
           </ResponsiveDialogDescription>
         </ResponsiveDialogHeader>
 
@@ -262,12 +223,14 @@ export function AddVehicleLogSheet({
             {/* Odometer */}
             <div className="space-y-1.5">
               <Label htmlFor="log-odo" className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                Kilometraje Actual (Km)
+                Kilometraje del registro (km)
               </Label>
               <Input
                 id="log-odo"
                 type="number"
                 required
+                min="0"
+                step="1"
                 value={odometer}
                 onChange={(e) => setOdometer(e.target.value)}
                 className="h-10 text-sm rounded-xl border-border bg-card/60"
@@ -285,10 +248,10 @@ export function AddVehicleLogSheet({
                   </Label>
                   <Input
                     id="fuel-liters"
-                    type="number"
-                    step="any"
-                    value={liters}
-                    onChange={(e) => setLiters(e.target.value)}
+                    type="text"
+                    inputMode="decimal"
+                    value={formatDecimalInput(liters)}
+                    onChange={(e) => setLiters(parseDecimalInput(e.target.value))}
                     placeholder="Ej. 10.5"
                     className="h-10 text-sm rounded-xl border-border bg-card/60"
                   />
@@ -372,7 +335,9 @@ export function AddVehicleLogSheet({
                     type="number"
                     value={nextServiceOdometer}
                     onChange={(e) => setNextServiceOdometer(e.target.value)}
-                    placeholder="Ej. 6000"
+                    placeholder="Mayor al kilometraje del registro"
+                    min={Number(odometer) + 1}
+                    step="1"
                     className="h-10 text-sm rounded-xl border-border bg-card/60"
                   />
                 </div>
@@ -421,14 +386,14 @@ export function AddVehicleLogSheet({
           <div className="space-y-3 rounded-2xl border border-border/40 bg-card/40 p-3.5">
             <div className="space-y-1.5">
               <Label htmlFor="log-amount" className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                Costo Total ($)
+                Costo total ({accounts.find(a => a.id === accountId)?.currency ?? "ARS"})
               </Label>
               <Input
                 id="log-amount"
-                type="number"
-                step="any"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
+                type="text"
+                inputMode="decimal"
+                value={formatDecimalInput(amount)}
+                onChange={(e) => setAmount(parseDecimalInput(e.target.value))}
                 placeholder="0.00"
                 className="h-10 text-sm font-semibold rounded-xl border-border bg-card/60"
               />
@@ -467,7 +432,7 @@ export function AddVehicleLogSheet({
               ) : log ? (
                 "Guardar cambios"
               ) : (
-                "Registrar evento"
+                type === "service" ? "Guardar service realizado" : "Registrar evento"
               )}
             </Button>
 

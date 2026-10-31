@@ -18,6 +18,7 @@ import {
 } from "lucide-react"
 import { formatShort } from "@/lib/finance-data"
 import { relativeDays, type AgendaItem } from "@/lib/agenda"
+import { vehicleServiceHref } from '@/lib/routes'
 import { cn } from "@/lib/utils"
 import { useFinance } from "./finance-provider"
 import { useUI } from "./ui-context"
@@ -133,7 +134,7 @@ export function AgendaRow({ item }: { item: AgendaItem }) {
       {item.kind === "due" ? (
         <span className="shrink-0 font-mono text-xs font-semibold">{mask(formatShort(item.amount, item.currency))}</span>
       ) : (
-        <Pill tone={item.urgency === "later" ? "plain" : "coral"}>{item.urgency === "overdue" ? "ya toca" : "pronto"}</Pill>
+        <Link href={vehicleServiceHref(item.vehicleId)} className="shrink-0 rounded-lg px-2 py-3 text-xs font-semibold underline" aria-label={`Registrar service de ${item.vehicleName}`}>Registrar service</Link>
       )}
     </li>
   )

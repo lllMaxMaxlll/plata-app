@@ -8,6 +8,7 @@ import { useUI } from "@/components/finance/ui-context"
 import { AuthView } from "@/components/finance/auth-view"
 import { LoadingSkeleton } from "@/components/finance/loading-skeleton"
 import { BottomNav } from "@/components/finance/bottom-nav"
+import { MobileNavigation } from '@/components/finance/mobile-navigation'
 import { AnotarSheet } from "@/components/finance/anotar-sheet"
 import { TransactionSheet } from "@/components/finance/transaction-sheet"
 import { AddAccountSheet } from "@/components/finance/add-account-sheet"
@@ -31,19 +32,15 @@ import {
   type LucideIcon,
 } from "lucide-react"
 import { formatShort } from "@/lib/finance-data"
-import { ROUTES, activeTab, findRoute, type RouteKey } from "@/lib/routes"
+import { ROUTES, NAV_GROUPS, activeTab, findRoute } from "@/lib/routes"
 import { useIsDesktop } from "@/lib/use-is-desktop"
 import { cn } from "@/lib/utils"
 import { UserAvatar } from "@/components/finance/user-avatar"
 import { OfflineBanner } from "@/components/finance/pwa-ui"
 
 /** El sidebar de escritorio repite las pestañas de mobile, con sus pantallas colgando. */
-const NAV: { tab: RouteKey; Icon: LucideIcon; children: RouteKey[] }[] = [
-  { tab: "home", Icon: Home, children: ["activity", "search"] },
-  { tab: "plata", Icon: Coins, children: ["accounts", "analytics", "stocks", "projections", "vehicles"] },
-  { tab: "agenda", Icon: CalendarDays, children: ["dueItems"] },
-  { tab: "profile", Icon: User, children: [] },
-]
+const TAB_ICONS: Record<typeof NAV_GROUPS[number]['tab'], LucideIcon> = { home: Home, plata: Coins, agenda: CalendarDays, profile: User }
+const NAV = NAV_GROUPS.map(group => ({ ...group, Icon: TAB_ICONS[group.tab] }))
 
 export function AppShell({ children }: { children: ReactNode }) {
   const { user, loading, logout, totalsByCurrency } = useFinance()
@@ -91,7 +88,8 @@ export function AppShell({ children }: { children: ReactNode }) {
       {!isDesktop && (
         <div className="mx-auto min-h-dvh w-full max-w-md bg-background">
           <OfflineBanner />
-          <main className="pt-[env(safe-area-inset-top)] pb-28">{children}</main>
+          <MobileNavigation />
+          <main className="pb-[calc(env(safe-area-inset-bottom)+7rem)]">{children}</main>
           <BottomNav onAnotar={ui.handleOpenAnotar} />
         </div>
       )}

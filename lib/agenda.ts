@@ -9,6 +9,7 @@
 
 import { differenceInCalendarDays, parseISO } from "date-fns"
 import type { Currency, DueItem, Vehicle, VehicleLog } from "./finance-data.ts"
+import { latestVehicleService, vehicleDateValue } from './vehicle-maintenance.ts'
 
 export type Urgency = "overdue" | "soon" | "later"
 
@@ -64,16 +65,14 @@ function dueUrgency(item: DueItem, days: number): Urgency {
  * "próximo service", pero ya quedó atrás cuando se hizo el siguiente.
  */
 function latestServiceWithTarget(logs: VehicleLog[]): VehicleLog | undefined {
-  return logs
-    .filter((l) => l.type === "service")
-    .sort((a, b) => b.date.localeCompare(a.date) || b.odometer - a.odometer)
-    .find((l) => typeof l.nextServiceOdometer === "number" || Boolean(l.nextServiceDate))
+  return latestVehicleService(logs)
 }
 
 function serviceItem(vehicle: Vehicle, log: VehicleLog, now: Date, horizonDays: number): ServiceAgendaItem | null {
   const target = typeof log.nextServiceOdometer === "number" ? log.nextServiceOdometer : null
   const kmLeft = target === null ? null : target - vehicle.odometer
-  const days = log.nextServiceDate ? daysUntil(log.nextServiceDate, now) : null
+  const date = log.nextServiceDate ? vehicleDateValue(log.nextServiceDate) : ''
+  const days = date ? daysUntil(date, now) : null
 
   const overdue = (kmLeft !== null && kmLeft <= 0) || (days !== null && days < 0)
   const soon = (kmLeft !== null && kmLeft <= SERVICE_SOON_KM) || (days !== null && days <= SERVICE_SOON_DAYS)
@@ -96,7 +95,7 @@ function serviceItem(vehicle: Vehicle, log: VehicleLog, now: Date, horizonDays: 
     progress,
     targetOdometer: target,
     currentOdometer: vehicle.odometer,
-    date: log.nextServiceDate ?? null,
+    date: date || null,
   }
 }
 

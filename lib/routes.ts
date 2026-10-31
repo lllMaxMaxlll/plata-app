@@ -40,6 +40,16 @@ export type RouteKey = keyof typeof ROUTES
 /** Las pestañas, en el orden en que aparecen. Anotar va entre Plata y Agenda. */
 export const TABS = ["home", "plata", "agenda", "profile"] as const satisfies readonly RouteKey[]
 
+export const NAV_GROUPS: { tab: typeof TABS[number]; children: RouteKey[] }[] = [
+  { tab: 'home', children: ['activity', 'search'] },
+  { tab: 'plata', children: ['accounts', 'analytics', 'stocks', 'projections', 'vehicles'] },
+  { tab: 'agenda', children: ['dueItems'] },
+  { tab: 'profile', children: [] },
+]
+export function vehicleServiceHref(vehicleId: string) {
+  return `${ROUTES.vehicles.href}?${new URLSearchParams({ vehicle: vehicleId, action: 'service' })}`
+}
+
 const ALL_ROUTES: readonly AppRoute[] = Object.values(ROUTES)
 
 export function findRoute(pathname: string): AppRoute | undefined {
